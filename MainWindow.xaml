@@ -1,0 +1,59 @@
+﻿<Window x:Class="Stack_Solver_v3.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Stack_Solver_v3"
+        mc:Ignorable="d"
+        Title="Stack Solver" Height="450" Width="800" Loaded="Window_Loaded">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+        <Viewport3D Name="MainViewPort" ClipToBounds="True" Margin="290,160,10,10" MouseWheel="MainViewPort_MouseWheel">
+            <Viewport3D.Camera>
+                <PerspectiveCamera
+        FarPlaneDistance="100"
+        LookDirection="-12,-11,-10"
+        UpDirection="0,1,0"
+        NearPlaneDistance="1"
+        Position="11,10,9"
+        FieldOfView="75" />
+            </Viewport3D.Camera>
+            <ModelVisual3D>
+                <ModelVisual3D.Content>
+                    <DirectionalLight
+          Color="White"
+          Direction="-2,-3,-1"
+                        x:Name="dirLightDefault"/>
+                </ModelVisual3D.Content>
+            </ModelVisual3D>
+        </Viewport3D>
+        <Label Content="Pallet" HorizontalAlignment="Left" Margin="30,10,0,0" VerticalAlignment="Top" Height="33" Width="120" FontFamily="Calibri" FontSize="18" FontWeight="Bold" Background="Transparent" Foreground="#FFFF7272"/>
+        <TextBox x:Name="pL" HorizontalAlignment="Left" Margin="30,48,0,0" TextWrapping="Wrap" Text="120" VerticalAlignment="Top" Width="40"/>
+        <TextBox x:Name="pW" HorizontalAlignment="Left" Margin="110,48,0,0" TextWrapping="Wrap" Text="80" VerticalAlignment="Top" Width="40"/>
+        <TextBox x:Name="pH" HorizontalAlignment="Left" Margin="190,48,0,0" TextWrapping="Wrap" Text="14.4" VerticalAlignment="Top" Width="40"/>
+        <TextBox x:Name="pHlim" HorizontalAlignment="Left" Margin="290,48,0,0" TextWrapping="Wrap" Text="180" VerticalAlignment="Top" Width="40"/>
+        <TextBox x:Name="pWght" HorizontalAlignment="Left" Margin="390,48,0,0" TextWrapping="Wrap" Text="33" VerticalAlignment="Top" Width="40"/>
+        <TextBox x:Name="pWghtlim" HorizontalAlignment="Left" Margin="495,48,0,0" TextWrapping="Wrap" Text="950" VerticalAlignment="Top" Width="40"/>
+        <TextBox x:Name="bL" HorizontalAlignment="Left" Margin="30,121,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="40"/>
+        <TextBox x:Name="bW" HorizontalAlignment="Left" Margin="110,121,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="40"/>
+        <TextBox x:Name="bH" HorizontalAlignment="Left" Margin="190,121,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="40"/>
+        <TextBox x:Name="bWght" HorizontalAlignment="Left" Margin="290,123,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="40"/>
+        <Label Content="Boxes" HorizontalAlignment="Left" Margin="30,83,0,0" VerticalAlignment="Top" Height="33" Width="120" FontFamily="Calibri" FontSize="18" FontWeight="Bold" Foreground="#FFFF7272"/>
+        <Label Content="L" HorizontalAlignment="Left" Margin="10,118,0,0" VerticalAlignment="Top" Height="24" Width="20" FontFamily="Calibri" FontWeight="Bold"/>
+        <Label Content="L" HorizontalAlignment="Left" Margin="10,45,0,0" VerticalAlignment="Top" Height="24" Width="20" FontFamily="Calibri" FontWeight="Bold"/>
+        <Label Content="W" HorizontalAlignment="Left" Margin="80,118,0,0" VerticalAlignment="Top" Height="24" Width="25" FontFamily="Calibri" FontWeight="Bold"/>
+        <Label Content="W" Margin="75,45,0,0" Width="30" Height="24" FontFamily="Calibri" FontWeight="Bold" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        <Label Content="H" HorizontalAlignment="Left" Margin="165,118,0,0" VerticalAlignment="Top" Height="24" Width="20" FontFamily="Calibri" FontWeight="Bold"/>
+        <Label Content="H" HorizontalAlignment="Left" Margin="165,45,0,0" VerticalAlignment="Top" Height="24" Width="20" FontFamily="Calibri" FontWeight="Bold"/>
+        <Label Content="Wght" HorizontalAlignment="Left" Margin="245,120,0,0" VerticalAlignment="Top" Height="24" Width="40" FontFamily="Calibri" FontWeight="Bold"/>
+        <Label Content="Hlim" HorizontalAlignment="Left" Margin="245,45,0,0" Width="40" VerticalAlignment="Top" Height="24" FontFamily="Calibri" FontWeight="Bold"/>
+        <Label Content="Wght" HorizontalAlignment="Left" Margin="345,45,0,0" Width="40" VerticalAlignment="Top" Height="24" FontFamily="Calibri" FontWeight="Bold"/>
+        <Label Content="Wght lim" HorizontalAlignment="Left" Margin="435,45,0,0" Width="55" VerticalAlignment="Top" Height="24" FontFamily="Calibri" FontWeight="Bold"/>
+        <Button x:Name="calculateBtn" Content="Generate" HorizontalAlignment="Left" Margin="365,118,0,0" VerticalAlignment="Top" Height="23" Width="170" Click="calculateBtn_Click"/>
+        <TextBox x:Name="resultTextBox" HorizontalAlignment="Left" Margin="10,160,0,10" TextWrapping="Wrap" Text="The info will be displayed here upon pressing the Generate button." Width="275" IsReadOnly="True"/>
+        <Button x:Name="rotationBtn" Content="Rotate 10 deg" HorizontalAlignment="Left" Margin="540,118,0,0" VerticalAlignment="Top" Height="23" Width="110" Click="rotationBtn_Click"/>
+        <Button x:Name="excelBtn" Content="Make Excel file" HorizontalAlignment="Left" Margin="365,145,0,0" VerticalAlignment="Top" Width="170" Background="#FF63A94B" Click="excelBtn_Click"/>
+    </Grid>
+</Window>
