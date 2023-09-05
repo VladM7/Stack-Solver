@@ -22,6 +22,7 @@ using static System.Windows.Input.ModifierKeys;
 using Microsoft.Office.Interop.Excel;
 using Window = System.Windows.Window;
 using Point = System.Windows.Point;
+using Microsoft.Win32;
 
 namespace Stack_Solver_v3
 {
@@ -80,6 +81,8 @@ namespace Stack_Solver_v3
         public double width;
 
         public double area_occupied;
+
+        public int zPositionOffset = 80;
 
         Brush brush = Brushes.SandyBrown;
 
@@ -259,6 +262,32 @@ namespace Stack_Solver_v3
             c.weight = Convert.ToDouble(bWght.Text);
         }
 
+        private void readBoxes()
+        {
+            if (bL.Text == "" || bW.Text == "" || bH.Text == "" || bWght.Text == "" || pWghtlim.Text == "")
+                return;
+
+            p.weight_limit = Convert.ToDouble(pWghtlim.Text);
+
+            c.length = Convert.ToDouble(bL.Text);
+            c.width = Convert.ToDouble(bW.Text);
+            c.height = Convert.ToDouble(bH.Text);
+            c.weight = Convert.ToDouble(bWght.Text);
+        }
+
+        private void readPallets()
+        {
+            if (pL.Text == "" || pW.Text == "" || pH.Text == "" || pHlim.Text == ""
+                || pWght.Text == "" || pWghtlim.Text == "")
+                return;
+            p.length = Convert.ToDouble(pL.Text);
+            p.width = Convert.ToDouble(pW.Text);
+            p.height = Convert.ToDouble(pH.Text);
+            p.height_limit = Convert.ToDouble(pHlim.Text);
+            p.weight = Convert.ToDouble(pWght.Text);
+            p.weight_limit = Convert.ToDouble(pWghtlim.Text);
+        }
+
         double max(double a, double b)
         {
             return Math.Max(a, b);
@@ -336,11 +365,11 @@ namespace Stack_Solver_v3
             pallet_width += 0.5 * (max_boxes_width1 + max_boxes_width2);
 
             brush = Brushes.BurlyWood;
-            generateStack(pallet_len, pallet_width, p.height, 1, 1, 1, -pallet_len / 2, -pallet_width / 2, 0, ref triangle);
+            generateStack(pallet_len, pallet_width, p.height, 1, 1, 1, -pallet_len / 2, -pallet_width / 2, -zPositionOffset, ref triangle);
 
             brush = Brushes.SandyBrown;
-            generateStack(c.length, c.width, c.height, nrboxes1, max_boxes_width2, levels, -pallet_len / 2, inset1 - pallet_width / 2, p.height, ref triangle);
-            generateStack(c.width, c.length, c.height, nrboxes2, max_boxes_width1, levels, xc - pallet_len / 2, inset2 - pallet_width / 2, p.height, ref triangle);
+            generateStack(c.length, c.width, c.height, nrboxes1, max_boxes_width2, levels, -pallet_len / 2, inset1 - pallet_width / 2, p.height - zPositionOffset, ref triangle);
+            generateStack(c.width, c.length, c.height, nrboxes2, max_boxes_width1, levels, xc - pallet_len / 2, inset2 - pallet_width / 2, p.height - zPositionOffset, ref triangle);
             //MessageBox.Show(c.length.ToString());
 
             ModelVisual3D Model = new ModelVisual3D();
@@ -470,8 +499,45 @@ namespace Stack_Solver_v3
 
         private void calculateBtn_Click(object sender, RoutedEventArgs e)
         {
-            readValues();
-            compare_results();
+            foreach (object i in MainViewPort.Children)
+                if (i.GetType() == typeof(ModelVisual3D))
+                {
+                    ModelVisual3D model = (ModelVisual3D)i;
+                    if (model == null)
+                    { continue; }
+                    if (model != defaultLights)
+                    {
+                        MainViewPort.Children.Remove(model);
+                        break;
+                    }
+                }
+            zPositionOffset = Convert.ToInt16(ZPositionTextBox.Text);
+            if (pickMultipleBoxSizes.IsChecked == true)
+            {
+                if (runAllCheckbox.IsChecked == true)
+                    readExcelFile(0);
+                else
+                {
+                    readPallets();
+                    readExcelFile(1);
+                }
+            }
+            else
+            {
+                if (runAllCheckbox.IsChecked == true)
+                {
+                    readBoxes();
+                    run_all_tests();
+                }
+                else
+                {
+                    readValues();
+                    compare_results();
+                }
+            }
+            excelBtn.IsEnabled = true;
+            //readValues();
+            //compare_results();
         }
 
         private double rotationAngleX = 0, rotationAngleY = 0;
@@ -647,6 +713,288 @@ namespace Stack_Solver_v3
             oWB.Close(true, Missing.Value, Missing.Value);
             xlApp.Quit();
             MessageBox.Show("File saved in C:/Users/User/Documents/stack-solver.xlsx");
+        }
+
+        private string excelFilePath;
+
+        private void openToolStripMenuItem_Click()
+        {
+            OpenFileDialog theDialog = new OpenFileDialog();
+            theDialog.Title = "Open Excel File";
+            theDialog.Filter = "Excel files|*.xlsx";
+            theDialog.InitialDirectory = @"C:\";
+            if (theDialog.ShowDialog() == true)
+            {
+                excelFilePath = theDialog.FileName.ToString();
+            }
+        }
+
+        private void chooseExcelFileButton_Click(object sender, RoutedEventArgs e)
+        {
+            openToolStripMenuItem_Click();
+        }
+
+        private void downloadSampleButton_Click(object sender, RoutedEventArgs e)
+        {
+            Microsoft.Office.Interop.Excel.Application xlApp = new Microsoft.Office.Interop.Excel.Application();
+            if (xlApp == null)
+            {
+                MessageBox.Show("Excel is not properly installed!");
+                return;
+            }
+            Microsoft.Office.Interop.Excel._Workbook oWB;
+            Microsoft.Office.Interop.Excel._Worksheet oSheet;
+            oWB = xlApp.Workbooks.Add(Missing.Value);
+            oSheet = (Microsoft.Office.Interop.Excel._Worksheet)oWB.ActiveSheet;
+
+            oSheet.Cells[1, 1] = "Box Length";
+            oSheet.Cells[1, 2] = "Box Width";
+            oSheet.Cells[1, 3] = "Box Height";
+            oSheet.Cells[1, 4] = "Box Weight";
+            oSheet.Columns[1].ColumnWidth = 20;
+            oSheet.Columns[2].ColumnWidth = 20;
+            oSheet.Columns[3].ColumnWidth = 20;
+            oSheet.Columns[4].ColumnWidth = 20;
+
+            oWB.SaveAs("stack-solver-sample.xlsx");
+            oWB.Close(true, Missing.Value, Missing.Value);
+            xlApp.Quit();
+            MessageBox.Show("Sample file saved!");
+        }
+
+        private void CheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            if (pickMultipleBoxSizes.IsChecked == true)
+            {
+                chooseExcelFileButton.IsEnabled = true;
+                downloadSampleButton.IsEnabled = true;
+                bL.IsReadOnly = true;
+                bW.IsReadOnly = true;
+                bH.IsReadOnly = true;
+                bWght.IsReadOnly = true;
+            }
+            else
+            {
+                chooseExcelFileButton.IsEnabled = false;
+                downloadSampleButton.IsEnabled = false;
+                bL.IsReadOnly = false;
+                bW.IsReadOnly = false;
+                bH.IsReadOnly = false;
+                bWght.IsReadOnly = false;
+            }
+        }
+
+        struct pallet_sizes
+        {
+            public double length, width, height, weight;
+            public double areaMax1, areaMax2;
+            public int areaMaxPos1, areaMaxPos2;
+            public arii[] pareas1, pareas2;
+        }
+
+        pallet_sizes[] ps = new pallet_sizes[4];
+
+        private void init_dimensions()
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                ps[i].pareas1 = new arii[105];
+                ps[i].pareas2 = new arii[105];
+                ps[i].areaMax1 = 0;
+                ps[i].areaMax2 = 0;
+                ps[i].areaMaxPos1 = 0;
+                ps[i].areaMaxPos2 = 0;
+            }
+            ps[0].length = 120;
+            ps[0].width = 100;
+            ps[0].height = 14.4;
+            ps[0].weight = 33;
+            ps[1].length = 120;
+            ps[1].width = 80;
+            ps[1].height = 14.5;
+            ps[1].weight = 25;
+            ps[2].length = 80;
+            ps[2].width = 60;
+            ps[2].height = 14.4;
+            ps[2].weight = 9.5;
+        }
+
+        public void run_all_tests()
+        {
+            init_dimensions();
+            for (int i = 0; i < 3; i++)
+            {
+                calcul_arie(ps[i].length, ps[i].width, 1, ref ps[i].areaMax1, ref ps[i].areaMaxPos1, ref ps[i].pareas1);
+                calcul_arie(ps[i].width, ps[i].length, 2, ref ps[i].areaMax2, ref ps[i].areaMaxPos2, ref ps[i].pareas2);
+            }
+            double vmax = 0, best_eff = 0;
+            int palType = -1, orientType = -1;
+            if (bestEffSolutionCheckbox.IsChecked == true)
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    aria_palet = ps[i].length * ps[i].width;
+                    if (ps[i].areaMax1 / aria_palet * 100 > best_eff)
+                    {
+                        best_eff = ps[i].areaMax1 / aria_palet * 100;
+                        palType = i;
+                        orientType = 1;
+                    }
+                    if (ps[i].areaMax2 / aria_palet * 100 > best_eff)
+                    {
+                        best_eff = ps[i].areaMax2 / aria_palet * 100;
+                        palType = i;
+                        orientType = 2;
+                    }
+                }
+            }
+            else
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    aria_palet = ps[i].length * ps[i].width;
+                    if (ps[i].areaMax1 >= vmax)
+                    {
+                        vmax = ps[i].areaMax1;
+                        palType = i;
+                        orientType = 1;
+                    }
+                    if (ps[i].areaMax2 > vmax)
+                    {
+                        vmax = ps[i].areaMax2;
+                        palType = i;
+                        orientType = 2;
+                    }
+                }
+            }
+            p.length = ps[palType].length;
+            p.width = ps[palType].width;
+            p.weight = ps[palType].weight;
+            p.height = ps[palType].height;
+            p.height_limit = Convert.ToDouble(pHlim.Text);
+            if (orientType == 1)
+                generateDrawing(ps[palType].length, ps[palType].width, 1, (int)ps[palType].areaMax1, ps[palType].areaMaxPos1, ps[palType].pareas1);
+            else
+                generateDrawing(ps[palType].width, ps[palType].length, 2, (int)ps[palType].areaMax2, ps[palType].areaMaxPos2, ps[palType].pareas2);
+        }
+
+        private void runAllCheckbox_Click(object sender, RoutedEventArgs e)
+        {
+            if (runAllCheckbox.IsChecked == true)
+            {
+                pL.IsReadOnly = true;
+                pW.IsReadOnly = true;
+                pH.IsReadOnly = true;
+                pWght.IsReadOnly = true;
+                bestEffSolutionCheckbox.IsEnabled = true;
+            }
+            else
+            {
+                pL.IsReadOnly = false;
+                pW.IsReadOnly = false;
+                pH.IsReadOnly = false;
+                pWght.IsReadOnly = false;
+                bestEffSolutionCheckbox.IsEnabled = false;
+            }
+        }
+
+        private void readExcelFile(int mode)
+        {
+            Microsoft.Office.Interop.Excel.Application excel = new Microsoft.Office.Interop.Excel.Application();
+            Workbook wb;
+            Worksheet ws;
+            wb = excel.Workbooks.Open(excelFilePath);
+            ws = wb.Worksheets[1];
+
+            Microsoft.Office.Interop.Excel.Application excelf = new Microsoft.Office.Interop.Excel.Application();
+            Workbook oWB;
+            Worksheet oSheet;
+            oWB = excelf.Workbooks.Add(Missing.Value);
+            oSheet = oWB.Worksheets[1];
+
+            for (int i = 3; i <= 6; i++)
+                oSheet.Columns[i].ColumnWidth = 11;
+            for (int i = 7; i <= 13; i++)
+                oSheet.Columns[i].ColumnWidth = 17;
+            oSheet.Columns[2].ColumnWidth = 18;
+            oSheet.Columns[7].ColumnWidth = 21;
+            oSheet.Columns[9].ColumnWidth = 21;
+            oSheet.Columns[10].ColumnWidth = 29;
+            oSheet.Columns[11].ColumnWidth = 30;
+            oSheet.Columns[12].ColumnWidth = 20;
+            oSheet.Columns[13].ColumnWidth = 20;
+            oSheet.Columns[14].ColumnWidth = 20;
+            oSheet.Columns[15].ColumnWidth = 15;
+            oSheet.Columns[16].ColumnWidth = 21;
+            oSheet.Columns[17].ColumnWidth = 13;
+
+            oSheet.Rows[2].RowHeight = 45;
+
+            oSheet.Cells[1, 1] = "Name";
+            oSheet.Cells[1, 2] = "Description";
+            oSheet.Cells[1, 3] = "Length (cm)";
+            oSheet.Cells[1, 4] = "Width (cm)";
+            oSheet.Cells[1, 5] = "Height (cm)";
+            oSheet.Cells[1, 6] = "Weight (kg)";
+            oSheet.Cells[1, 7] = "Total number of boxes";
+            oSheet.Cells[1, 8] = "Number of levels";
+            oSheet.Cells[1, 9] = "Number of boxes/level";
+            oSheet.Cells[1, 10] = "Load dimensions (cm x cm x cm)";
+            oSheet.Cells[1, 11] = "Pallet dimensions (cm x cm x cm)";
+            oSheet.Cells[1, 12] = "Pallet length (cm)";
+            oSheet.Cells[1, 13] = "Pallet width (cm)";
+            oSheet.Cells[1, 14] = "Pallet height (cm)";
+            oSheet.Cells[1, 15] = "Load weight (kg)";
+            oSheet.Cells[1, 16] = "Total pallet weight (kg)";
+            oSheet.Cells[1, 17] = "Efficiency (%)";
+            int lastRow = ws.Cells.SpecialCells(XlCellType.xlCellTypeLastCell, Type.Missing).Row;
+            for (int row = 2; row <= lastRow; row++)
+            {
+                c.length = double.Parse(ws.Cells[row, 1].Value2.ToString());
+                c.width = double.Parse(ws.Cells[row, 2].Value2.ToString());
+                c.height = double.Parse(ws.Cells[row, 3].Value2.ToString());
+                c.weight = double.Parse(ws.Cells[row, 4].Value2.ToString());
+                //MessageBox.Show(double.Parse(ws.Cells[row, 1].Value2.ToString()).ToString());
+
+                if (mode == 0)
+                    run_all_tests();
+                else
+                    compare_results();
+
+                oSheet.Cells[row, 1] = "Box" + (row - 1).ToString();
+                oSheet.Cells[row, 3] = c.length;
+                oSheet.Cells[row, 4] = c.width;
+                oSheet.Cells[row, 5] = c.height;
+                oSheet.Cells[row, 6] = c.weight;
+                oSheet.Cells[row, 7] = nr_levels * box_type_nr;
+                oSheet.Cells[row, 8] = nr_levels;
+                oSheet.Cells[row, 9] = box_type_nr;
+                oSheet.Cells[row, 10] = length + "x" + width + "x" + (eff_height - p.height);
+                oSheet.Cells[row, 11] = p.length + "x" + p.width + "x" + eff_height;
+                oSheet.Cells[row, 12] = p.length;
+                oSheet.Cells[row, 13] = p.width;
+                oSheet.Cells[row, 14] = eff_height;
+                oSheet.Cells[row, 15] = nr_levels * box_type_nr * c.weight;
+                oSheet.Cells[row, 16] = nr_levels * box_type_nr * c.weight + p.weight;
+                oSheet.Cells[row, 17] = Math.Round((area_occupied / aria_palet * 100), 2, MidpointRounding.AwayFromZero) + "%";
+            }
+
+            oSheet.Cells[1, 1].EntireRow.Font.Bold = true;
+            var tableRange = oSheet.get_Range("a1", "q" + lastRow.ToString());
+            tableRange.Borders.get_Item(Microsoft.Office.Interop.Excel.XlBordersIndex.xlEdgeLeft).LineStyle = Microsoft.Office.Interop.Excel.XlLineStyle.xlContinuous;
+            tableRange.Borders.get_Item(Microsoft.Office.Interop.Excel.XlBordersIndex.xlEdgeRight).LineStyle = Microsoft.Office.Interop.Excel.XlLineStyle.xlContinuous;
+            tableRange.Borders.get_Item(Microsoft.Office.Interop.Excel.XlBordersIndex.xlInsideHorizontal).LineStyle = Microsoft.Office.Interop.Excel.XlLineStyle.xlContinuous;
+            tableRange.Borders.get_Item(Microsoft.Office.Interop.Excel.XlBordersIndex.xlInsideVertical).LineStyle = Microsoft.Office.Interop.Excel.XlLineStyle.xlContinuous;
+            tableRange.BorderAround2();
+
+            wb.Close(true, Missing.Value, Missing.Value);
+            excel.Quit();
+
+            oWB.SaveAs("stack-solver.xlsx");
+            oWB.Close(true, Missing.Value, Missing.Value);
+            excelf.Quit();
+            MessageBox.Show("File saved!");
+            resultTextBox.Text = "Results are only generated in excel files.";
         }
     }
 }
