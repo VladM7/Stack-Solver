@@ -23,6 +23,7 @@ using Microsoft.Office.Interop.Excel;
 using Window = System.Windows.Window;
 using Point = System.Windows.Point;
 using Microsoft.Win32;
+using System.Security.Cryptography;
 
 namespace Stack_Solver_v3
 {
@@ -180,6 +181,7 @@ namespace Stack_Solver_v3
 
         private void generateStack(double size_x, double size_y, double size_z, int nr_x, int nr_y, int nr_z, double offset_x, double offset_y, double offset_z, ref Model3DGroup triangle)
         {
+            //MessageBox.Show(offset_x + "x, " + offset_y + "y");
             for (int i = 0; i < nr_x; i++)
                 for (int j = 0; j < nr_y; j++)
                     for (int k = 0; k < nr_z; k++)
@@ -326,7 +328,7 @@ namespace Stack_Solver_v3
                 }
         }
 
-        private void draw3D(arii[] aria, int nrb, double pallet_len, double pallet_width, int levels, double inset, int inset_type)
+        private void draw3D(arii[] aria, int nrb, double pallet_len, double pallet_width, int levels, double inset, int inset_type, double offset_x, double offset_y)
         {
             Type t = typeof(DirectionalLight);
             for (int i = MainViewPort.Children.Count - 1; i >= 0; i--)
@@ -365,11 +367,11 @@ namespace Stack_Solver_v3
             pallet_width += 0.5 * (max_boxes_width1 + max_boxes_width2);
 
             brush = Brushes.BurlyWood;
-            generateStack(pallet_len, pallet_width, p.height, 1, 1, 1, -pallet_len / 2, -pallet_width / 2, -zPositionOffset, ref triangle);
+            generateStack(pallet_len, pallet_width, p.height, 1, 1, 1, -pallet_len / 2, -pallet_width / 2, zPositionOffset, ref triangle);
 
             brush = Brushes.SandyBrown;
-            generateStack(c.length, c.width, c.height, nrboxes1, max_boxes_width2, levels, -pallet_len / 2, inset1 - pallet_width / 2, p.height - zPositionOffset, ref triangle);
-            generateStack(c.width, c.length, c.height, nrboxes2, max_boxes_width1, levels, xc - pallet_len / 2, inset2 - pallet_width / 2, p.height - zPositionOffset, ref triangle);
+            generateStack(c.length, c.width, c.height, nrboxes1, max_boxes_width2, levels, offset_x - pallet_len / 2, offset_y + inset1 - pallet_width / 2, p.height + zPositionOffset, ref triangle);
+            generateStack(c.width, c.length, c.height, nrboxes2, max_boxes_width1, levels, offset_x + xc - pallet_len / 2, offset_y + inset2 - pallet_width / 2, p.height + zPositionOffset, ref triangle);
             //MessageBox.Show(c.length.ToString());
 
             ModelVisual3D Model = new ModelVisual3D();
@@ -472,7 +474,7 @@ namespace Stack_Solver_v3
                 + "kg\nWeight on first level: " + (nr_levels - 1) * c.weight +
                 "kg\nTotal number of boxes: " + (nr_levels * box_type_nr) + "\n\n";
 
-            draw3D(aria, nrb, pallet_len, pallet_width, nr_levels, inset, inset_type);
+            draw3D(aria, nrb, pallet_len, pallet_width, nr_levels, inset, inset_type, offset_length, offset_width);
         }
 
         private void compare_results()
@@ -514,6 +516,11 @@ namespace Stack_Solver_v3
             zPositionOffset = Convert.ToInt16(ZPositionTextBox.Text);
             if (pickMultipleBoxSizes.IsChecked == true)
             {
+                if (excelFilePath == null)
+                {
+                    MessageBox.Show("Pick an Excel file first", "Error", MessageBoxButton.OK, MessageBoxImage.Error, MessageBoxResult.OK);
+                    return;
+                }
                 if (runAllCheckbox.IsChecked == true)
                     readExcelFile(0);
                 else
@@ -618,10 +625,10 @@ namespace Stack_Solver_v3
                         rotationAngleX += deltaX;
                         rotationAngleY -= deltaY;
                         RotateTransform3D rotateTransformX = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), rotationAngleX));
-                        RotateTransform3D rotateTransformY = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 0, 1), rotationAngleY));
+                        //RotateTransform3D rotateTransformY = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(1, 0, 0), rotationAngleY));
                         Transform3DGroup rotateTransformGroup = new Transform3DGroup();
                         rotateTransformGroup.Children.Add(rotateTransformX);
-                        rotateTransformGroup.Children.Add(rotateTransformY);
+                        //rotateTransformGroup.Children.Add(rotateTransformY);
                         mdg.Transform = rotateTransformGroup;
                     }
 
@@ -726,6 +733,7 @@ namespace Stack_Solver_v3
             if (theDialog.ShowDialog() == true)
             {
                 excelFilePath = theDialog.FileName.ToString();
+                excelFileLabel.Content = excelFilePath;
             }
         }
 
@@ -883,19 +891,29 @@ namespace Stack_Solver_v3
             if (runAllCheckbox.IsChecked == true)
             {
                 pL.IsReadOnly = true;
+                pL.IsEnabled = false;
                 pW.IsReadOnly = true;
-                pH.IsReadOnly = true;
-                pWght.IsReadOnly = true;
+                pW.IsEnabled = false;
                 bestEffSolutionCheckbox.IsEnabled = true;
             }
             else
             {
                 pL.IsReadOnly = false;
+                pL.IsEnabled = true;
                 pW.IsReadOnly = false;
-                pH.IsReadOnly = false;
-                pWght.IsReadOnly = false;
+                pW.IsEnabled = true;
                 bestEffSolutionCheckbox.IsEnabled = false;
             }
+        }
+
+        private void runAllCheckbox_Checked(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void pickMultipleBoxSizes_Checked(object sender, RoutedEventArgs e)
+        {
+
         }
 
         private void readExcelFile(int mode)
@@ -995,6 +1013,62 @@ namespace Stack_Solver_v3
             excelf.Quit();
             MessageBox.Show("File saved!");
             resultTextBox.Text = "Results are only generated in excel files.";
+        }
+
+        private void keyboardFocusSelectAll(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (e.KeyboardDevice.IsKeyDown(Key.Tab))
+                ((System.Windows.Controls.TextBox)sender).SelectAll();
+        }
+
+        private void pW_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            keyboardFocusSelectAll(sender, e);
+        }
+
+        private void pH_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            keyboardFocusSelectAll(sender, e);
+        }
+
+        private void pHlim_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            keyboardFocusSelectAll(sender, e);
+        }
+
+        private void pWght_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            keyboardFocusSelectAll(sender, e);
+        }
+
+        private void pWghtlim_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            keyboardFocusSelectAll(sender, e);
+        }
+
+        private void bL_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            keyboardFocusSelectAll(sender, e);
+        }
+
+        private void bW_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            keyboardFocusSelectAll(sender, e);
+        }
+
+        private void bH_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            keyboardFocusSelectAll(sender, e);
+        }
+
+        private void bWght_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            keyboardFocusSelectAll(sender, e);
+        }
+
+        private void pL_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            keyboardFocusSelectAll(sender, e);
         }
     }
 }
