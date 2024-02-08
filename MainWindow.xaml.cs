@@ -24,6 +24,10 @@ using Window = System.Windows.Window;
 using Point = System.Windows.Point;
 using Microsoft.Win32;
 using System.Security.Cryptography;
+using Wpf.Ui.Controls;
+using MessageBoxButton = System.Windows.MessageBoxButton;
+using MessageBoxResult = System.Windows.MessageBoxResult;
+using MessageBox = System.Windows.MessageBox;
 
 namespace Stack_Solver_v3
 {
@@ -84,6 +88,8 @@ namespace Stack_Solver_v3
         public double area_occupied;
 
         public int zPositionOffset = 80;
+
+        bool generationError = false;
 
         Brush brush = Brushes.SandyBrown;
 
@@ -400,6 +406,10 @@ namespace Stack_Solver_v3
             if (nr_levels == 0)
             {
                 resultTextBox.Text = "Error.";
+                statusInfoBar.Severity = InfoBarSeverity.Error;
+                statusInfoBar.Title = "Error";
+                statusInfoBar.IsOpen = true;
+                generationError = true;
                 return;
             }
 
@@ -482,11 +492,21 @@ namespace Stack_Solver_v3
             if (c.height + p.height > p.height_limit)
             {
                 resultTextBox.Text = "Cargo exceeds height limit!";
+                statusInfoBar.Severity = InfoBarSeverity.Error;
+                statusInfoBar.Title = "Error";
+                statusInfoBar.Message = "Cargo exceeds height limit.";
+                statusInfoBar.IsOpen = true;
+                generationError = true;
                 return;
             }
             if (max(c.length, c.width) > max(p.length, p.width))
             {
                 resultTextBox.Text = "Cargo exceeds pallet dimensions!";
+                statusInfoBar.Severity = InfoBarSeverity.Error;
+                statusInfoBar.Title = "Error";
+                statusInfoBar.Message = "Cargo exceeds pallet dimensions.";
+                statusInfoBar.IsOpen = true;
+                generationError = true;
                 return;
             }
             double areaMax1 = 0, areaMax2 = 0;
@@ -501,6 +521,7 @@ namespace Stack_Solver_v3
 
         private void calculateBtn_Click(object sender, RoutedEventArgs e)
         {
+            generationError = false;
             foreach (object i in MainViewPort.Children)
                 if (i.GetType() == typeof(ModelVisual3D))
                 {
@@ -518,7 +539,12 @@ namespace Stack_Solver_v3
             {
                 if (excelFilePath == null)
                 {
-                    MessageBox.Show("Pick an Excel file first", "Error", MessageBoxButton.OK, MessageBoxImage.Error, MessageBoxResult.OK);
+                    //MessageBox.Show("Pick an Excel file first", "Error", MessageBoxButton.OK, MessageBoxImage.Error, MessageBoxResult.OK);
+                    statusInfoBar.Severity = InfoBarSeverity.Error;
+                    statusInfoBar.Title = "Error";
+                    statusInfoBar.Message = "Pick an Excel file first.";
+                    statusInfoBar.IsOpen = true;
+                    generationError = true;
                     return;
                 }
                 if (runAllCheckbox.IsChecked == true)
@@ -545,6 +571,13 @@ namespace Stack_Solver_v3
             excelBtn.IsEnabled = true;
             //readValues();
             //compare_results();
+            if (generationError == false)
+            {
+                statusInfoBar.Severity = InfoBarSeverity.Success;
+                statusInfoBar.Title = "Success";
+                statusInfoBar.Message = "Generation complete.";
+                statusInfoBar.IsOpen = true;
+            }
         }
 
         private double rotationAngleX = 0, rotationAngleY = 0;

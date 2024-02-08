@@ -29,7 +29,6 @@
                 </ModelVisual3D.Content>
             </ModelVisual3D>
         </Viewport3D>
-        <Label Content="Pallet" HorizontalAlignment="Left" Margin="30,14,0,0" VerticalAlignment="Top" Height="29" Width="120" FontSize="18" FontWeight="Bold" Background="Transparent" Foreground="Black"/>
         <TextBox x:Name="pL" HorizontalAlignment="Left" Margin="30,48,0,0" TextWrapping="Wrap" Text="120" VerticalAlignment="Top" Width="60" GotKeyboardFocus="pL_GotKeyboardFocus" Height="35"/>
         <TextBox x:Name="pW" HorizontalAlignment="Left" Margin="110,48,0,0" TextWrapping="Wrap" Text="80" VerticalAlignment="Top" Width="50" GotKeyboardFocus="pW_GotKeyboardFocus" Height="35"/>
         <TextBox x:Name="pH" HorizontalAlignment="Left" Margin="190,48,0,0" TextWrapping="Wrap" Text="14.4" VerticalAlignment="Top" Width="55" GotKeyboardFocus="pH_GotKeyboardFocus" Height="35"/>
@@ -40,9 +39,8 @@
         <TextBox x:Name="bW" HorizontalAlignment="Left" Margin="110,121,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="50" GotKeyboardFocus="bW_GotKeyboardFocus"/>
         <TextBox x:Name="bH" HorizontalAlignment="Left" Margin="190,121,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="50" GotKeyboardFocus="bH_GotKeyboardFocus"/>
         <TextBox x:Name="bWght" HorizontalAlignment="Left" Margin="290,123,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" GotKeyboardFocus="bWght_GotKeyboardFocus" Width="50"/>
-        <Label Content="Boxes" HorizontalAlignment="Left" Margin="30,88,0,0" VerticalAlignment="Top" Height="28" Width="120" FontSize="18" FontWeight="Bold" Foreground="Black"/>
         <Label Content="L" HorizontalAlignment="Left" Margin="10,118,0,0" VerticalAlignment="Top" Height="24" Width="20" FontFamily="Calibri" FontWeight="Bold"/>
-        <Label Content="L" HorizontalAlignment="Left" Margin="10,48,0,0" Height="35" Width="20" FontFamily="Calibri" FontWeight="Bold" VerticalAlignment="Top"/>
+        <Label Content="L" HorizontalAlignment="Left" Margin="10,48,0,0" Height="35" Width="20" FontFamily="Calibri" FontWeight="Bold" VerticalAlignment="Top" />
         <Label Content="W" HorizontalAlignment="Left" Margin="80,118,0,0" VerticalAlignment="Top" Height="24" Width="25" FontFamily="Calibri" FontWeight="Bold"/>
         <Label Content="W" Margin="75,45,0,0" Width="30" Height="24" FontFamily="Calibri" FontWeight="Bold" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" HorizontalAlignment="Left" VerticalAlignment="Top"/>
         <Label Content="H" HorizontalAlignment="Left" Margin="165,118,0,0" VerticalAlignment="Top" Height="24" Width="20" FontFamily="Calibri" FontWeight="Bold"/>
@@ -51,14 +49,13 @@
         <Label Content="Hlim" HorizontalAlignment="Left" Margin="245,45,0,0" Width="40" VerticalAlignment="Top" Height="24" FontFamily="Calibri" FontWeight="Bold"/>
         <Label Content="Wght" HorizontalAlignment="Left" Margin="345,45,0,0" Width="40" VerticalAlignment="Top" Height="24" FontFamily="Calibri" FontWeight="Bold"/>
         <Label Content="Wght lim" HorizontalAlignment="Left" Margin="435,45,0,0" Width="55" VerticalAlignment="Top" Height="24" FontFamily="Calibri" FontWeight="Bold"/>
-        <ui:Button x:Name="calculateBtn" Content="Generate" Margin="345,130,0,0" VerticalAlignment="Top" Height="54" Width="142" Click="calculateBtn_Click" Background="#FFFFCECE"/>
-        <TextBox x:Name="resultTextBox" HorizontalAlignment="Left" Margin="10,189,0,50" TextWrapping="Wrap" Text="The info will be displayed here upon pressing the Generate button." Width="275" IsReadOnly="True"/>
-        <ui:Button x:Name="excelBtn" Content="Make Excel file" Margin="10,0,0,10" VerticalAlignment="Bottom" Background="White" Click="excelBtn_Click" Width="275" Height="32"/>
+        <ui:Button x:Name="calculateBtn" Content="Generate" Margin="350,106,0,0" VerticalAlignment="Top" Height="54" Width="142" Click="calculateBtn_Click" Background="#FFFFCECE"/>
+        <ui:Button x:Name="excelBtn" Content="Make Excel file" Margin="10,0,0,10" VerticalAlignment="Bottom" Background="White" Click="excelBtn_Click" Height="32" Width="275"/>
         <TextBox x:Name="ZPositionTextBox" HorizontalAlignment="Left" Margin="703,45,0,0" TextWrapping="Wrap" Text="-80" VerticalAlignment="Top" Width="58" Height="35"/>
         <Label Content="Drawing position (Z):" HorizontalAlignment="Left" Margin="576,53,0,0" VerticalAlignment="Top"/>
-        <Label Content="All sizes are in cm." HorizontalAlignment="Left" Margin="10,164,0,0" VerticalAlignment="Top" Width="275" Background="{x:Null}" Foreground="Black" Height="20" FontSize="14"/>
+        <Label Content="All sizes are in cm." HorizontalAlignment="Left" Margin="35,164,0,0" VerticalAlignment="Top" Width="250" Background="{x:Null}" Foreground="Black" Height="20" FontSize="14"/>
         <Label Content="v1.0r3" Margin="0,1,0,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="45"/>
-        <ui:CardExpander HorizontalAlignment="Left" Height="244" Header="Additional Options" Margin="492,130,0,0" VerticalAlignment="Top" Width="318" RenderTransformOrigin="0.5,0.5">
+        <ui:CardExpander HorizontalAlignment="Left" Height="244" Header="Additional Options" Margin="497,106,0,0" VerticalAlignment="Top" Width="318" RenderTransformOrigin="0.5,0.5">
             <ui:CardExpander.RenderTransform>
                 <TransformGroup>
                     <ScaleTransform/>
@@ -76,5 +73,10 @@
                 <Label x:Name="excelFileLabel" Content="No file chosen" Margin="0,135,0,0" Height="22" Background="White" FontStyle="Italic" VerticalAlignment="Top" FontFamily="Calibri"/>
             </Grid>
         </ui:CardExpander>
+        <ui:InfoBar x:Name="statusInfoBar" Content="InfoBar" Margin="290,0,100,10" VerticalAlignment="Bottom" Height="50"/>
+        <ui:TextBlock x:Name="resultTextBox" HorizontalAlignment="Left" Margin="10,189,0,0" TextWrapping="Wrap" Text="The info will be displayed here upon pressing the Generate button." VerticalAlignment="Top" Height="373" Width="275" FontSize="14"/>
+        <ui:SymbolIcon Symbol="Info24" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,164,0,0" Height="20" Width="20"/>
+        <GroupBox Header="Pallet" HorizontalAlignment="Left" Width="555" Height="94" VerticalAlignment="Top" FontWeight="Bold"/>
+        <GroupBox Header="Boxes" Margin="0,94,0,0" Height="70" VerticalAlignment="Top" HorizontalAlignment="Left" Width="345" FontWeight="Bold"/>
     </Grid>
 </Window>
