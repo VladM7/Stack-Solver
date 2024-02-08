@@ -968,12 +968,13 @@ namespace Stack_Solver_v3
             int lastRow = ws.Cells.SpecialCells(XlCellType.xlCellTypeLastCell, Type.Missing).Row;
             for (int row = 2; row <= lastRow; row++)
             {
+                if (ws.Cells[row, 1].Value2 == null || ws.Cells[row, 2].Value2 == null || ws.Cells[row, 3].Value2 == null || ws.Cells[row, 4].Value2 == null)
+                    continue;
                 c.length = double.Parse(ws.Cells[row, 1].Value2.ToString());
                 c.width = double.Parse(ws.Cells[row, 2].Value2.ToString());
                 c.height = double.Parse(ws.Cells[row, 3].Value2.ToString());
                 c.weight = double.Parse(ws.Cells[row, 4].Value2.ToString());
                 //MessageBox.Show(double.Parse(ws.Cells[row, 1].Value2.ToString()).ToString());
-
                 if (mode == 0)
                     run_all_tests();
                 else
