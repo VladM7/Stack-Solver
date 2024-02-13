@@ -52,7 +52,7 @@
         <ui:Button x:Name="calculateBtn" Content="Generate" Margin="3,165,0,0" VerticalAlignment="Top" Height="54" Width="142" Click="calculateBtn_Click" Background="#FFE0E0E0"/>
         <ui:Button x:Name="excelBtn" Content="Make Excel file" Margin="10,0,0,10" VerticalAlignment="Bottom" Background="White" Click="excelBtn_Click" Height="32" Width="275"/>
         <Label Content="All sizes are in cm." HorizontalAlignment="Left" Margin="34,239,0,0" VerticalAlignment="Top" Width="250" Background="{x:Null}" Foreground="Black" Height="20" FontSize="14"/>
-        <Label Content="v1.0r3" Margin="0,1,0,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="45"/>
+        <Label Content="v1.0-beta.1" Margin="0,1,0,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="80"/>
         <ui:DynamicScrollViewer Margin="2,264,0,47" HorizontalAlignment="Left" Width="290">
             <ui:TextBlock x:Name="resultTextBox" Margin="0,0,0,0" TextWrapping="Wrap" Text="The info will be displayed here upon pressing the Generate button." Height="395" Width="264" FontSize="14"/>
         </ui:DynamicScrollViewer>
