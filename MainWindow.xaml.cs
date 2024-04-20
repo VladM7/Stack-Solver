@@ -91,6 +91,8 @@ namespace Stack_Solver_v3
 
         bool generationError = false;
 
+        Brush boxBrush = Brushes.SandyBrown;
+        Brush palletBrush = Brushes.BurlyWood;
         Brush brush = Brushes.SandyBrown;
 
         public PerspectiveCamera myPCamera = new PerspectiveCamera();
@@ -372,10 +374,10 @@ namespace Stack_Solver_v3
             pallet_len += 0.5 * (nrboxes1 + nrboxes2);
             pallet_width += 0.5 * (max_boxes_width1 + max_boxes_width2);
 
-            brush = Brushes.BurlyWood;
+            brush = palletBrush;
             generateStack(pallet_len, pallet_width, p.height, 1, 1, 1, -pallet_len / 2, -pallet_width / 2, zPositionOffset, ref triangle);
 
-            brush = Brushes.SandyBrown;
+            brush = boxBrush;
             generateStack(c.length, c.width, c.height, nrboxes1, max_boxes_width2, levels, offset_x - pallet_len / 2, offset_y + inset1 - pallet_width / 2, p.height + zPositionOffset, ref triangle);
             generateStack(c.width, c.length, c.height, nrboxes2, max_boxes_width1, levels, offset_x + xc - pallet_len / 2, offset_y + inset2 - pallet_width / 2, p.height + zPositionOffset, ref triangle);
             //MessageBox.Show(c.length.ToString());
@@ -469,17 +471,21 @@ namespace Stack_Solver_v3
             double inv_len = max(pallet_len, pallet_width);
             double inv_wid = min(pallet_len, pallet_width);
 
-            resultTextBox.Text = "Area occupied: " + vmax + "cm^2\nUnoccupied space: "
+            resultRunTextBlock.Text = "Area occupied: " + vmax + "cm³\nUnoccupied space: "
                 + (aria_palet - vmax)
-                + "cm^2\nEfficiency: " + Math.Round((vmax / aria_palet * 100), 2, MidpointRounding.AwayFromZero) + "%\n\nPallet type: " +
+                + "cm²\nEfficiency: " + Math.Round((vmax / aria_palet * 100), 2, MidpointRounding.AwayFromZero) + "%\n\nPallet type: " +
                 inv_len + "x" + inv_wid +
-                "cm\n\nNumber of boxes/level: " + box_type_nr
+                "cm\n" +
+                "_________________________________________\n\n" +
+                "Number of boxes/level: " + box_type_nr
                 + "\nNumber of levels: "
-                + nr_levels + "\nEffective height: " + eff_height + "cm\nLoad dimensions: " + length + "x" + width + "x"
-                + (eff_height - p.height)
-                + "cm^3\nPallet dimensions: " + pallet_len + "x" + pallet_width + "x"
-                + eff_height + "cm^3\nOffset (x, y): " + offset_length + "cm, " + offset_width +
-                "cm\n\nLoad weight: " + (nr_levels * box_type_nr * c.weight) + "kg\nTotal weight: "
+                + nr_levels + "\nEffective height: " + Math.Round(eff_height, 2) + "cm\nLoad dimensions: " + Math.Round(length, 2) + "x" + Math.Round(width, 2) + "x"
+                + Math.Round((eff_height - p.height), 2)
+                + "cm³\nPallet dimensions: " + pallet_len + "x" + pallet_width + "x"
+                + Math.Round(eff_height, 2) + "cm³\nOffset (x, y): " + Math.Round(offset_length, 2) + "cm, " + Math.Round(offset_width, 2) +
+                "cm\n" +
+                "_________________________________________\n\n" +
+                "Load weight: " + (nr_levels * box_type_nr * c.weight) + "kg\nTotal weight: "
                 + (nr_levels * box_type_nr * c.weight + p.weight)
                 + "kg\nWeight on first level: " + (nr_levels - 1) * c.weight +
                 "kg\nTotal number of boxes: " + (nr_levels * box_type_nr) + "\n\n";
@@ -762,7 +768,7 @@ namespace Stack_Solver_v3
             OpenFileDialog theDialog = new OpenFileDialog();
             theDialog.Title = "Open Excel File";
             theDialog.Filter = "Excel files|*.xlsx";
-            theDialog.InitialDirectory = @"C:\";
+            theDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             if (theDialog.ShowDialog() == true)
             {
                 excelFilePath = theDialog.FileName.ToString();
@@ -1098,6 +1104,69 @@ namespace Stack_Solver_v3
         private void bWght_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
         {
             keyboardFocusSelectAll(sender, e);
+        }
+
+        private Point3D cameraPosition1 = new Point3D(0, 40, 0);
+        private Vector3D vector3DLookDirection1 = new Vector3D(0, -1, 0);
+        private Vector3D vector3DUpDirection1 = new Vector3D(0, 0, -1);
+
+        private Point3D cameraPosition2 = new Point3D(11, 10, 9);
+        private Vector3D vector3DLookDirection2 = new Vector3D(-12, -11, -10);
+        private Vector3D vector3DUpDirection2 = new Vector3D(0, 1, 0);
+
+        private void topDownToggleSwitch_Click(object sender, RoutedEventArgs e)
+        {
+            if (topDownToggleSwitch.IsChecked == true)
+            {
+                threedCamera.Position = cameraPosition1;
+                threedCamera.LookDirection = vector3DLookDirection1;
+                threedCamera.UpDirection = vector3DUpDirection1;
+            }
+            else
+            {
+                threedCamera.Position = cameraPosition2;
+                threedCamera.LookDirection = vector3DLookDirection2;
+                threedCamera.UpDirection = vector3DUpDirection2;
+            }
+        }
+
+        private void exitMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            System.Windows.Application.Current.Shutdown();
+        }
+
+        private void releasesMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var destinationurl = "https://github.com/VladM7/Stack-Solver/releases/";
+            var sInfo = new System.Diagnostics.ProcessStartInfo(destinationurl)
+            {
+                UseShellExecute = true,
+            };
+            System.Diagnostics.Process.Start(sInfo);
+        }
+
+        private void palletColorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (palletColorComboBox.SelectedIndex == 0)
+                palletBrush = Brushes.BurlyWood;
+            else if (palletColorComboBox.SelectedIndex == 1)
+                palletBrush = Brushes.SaddleBrown;
+            else if (boxColorComboBox.SelectedIndex == 2)
+                palletBrush = Brushes.Black;
+            else if (boxColorComboBox.SelectedIndex == 3)
+                palletBrush = Brushes.White;
+        }
+
+        private void boxColorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (boxColorComboBox.SelectedIndex == 0)
+                boxBrush = Brushes.SandyBrown;
+            else if (boxColorComboBox.SelectedIndex == 1)
+                boxBrush = Brushes.Sienna;
+            else if (boxColorComboBox.SelectedIndex == 2)
+                boxBrush = Brushes.Black;
+            else if (boxColorComboBox.SelectedIndex == 3)
+                boxBrush = Brushes.White;
         }
 
         private void pL_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)

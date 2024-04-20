@@ -26,9 +26,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Extended.Wpf.Toolkit" Version="4.6.0" />
     <PackageReference Include="OpenTK" Version="4.8.2" />
-    <PackageReference Include="WPF-UI" Version="3.0.0" />
+    <PackageReference Include="WPF-UI" Version="3.0.4" />
   </ItemGroup>
 
 </Project>
