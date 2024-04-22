@@ -95,6 +95,8 @@ namespace Stack_Solver_v3
         Brush palletBrush = Brushes.BurlyWood;
         Brush brush = Brushes.SandyBrown;
 
+        private int cameraType = 0;
+
         public PerspectiveCamera myPCamera = new PerspectiveCamera();
 
         private Vector3D CalculateTriangleNormal(Point3D p0, Point3D p1, Point3D p2)
@@ -205,8 +207,16 @@ namespace Stack_Solver_v3
 
         private void MainViewPort_MouseWheel(object sender, MouseWheelEventArgs e)
         {
-            // Get the scale transform from the Viewport3D's camera
-            PerspectiveCamera camera = (PerspectiveCamera)MainViewPort.Camera;
+            Camera camera;
+            if (MainViewPort.Camera.GetType() == typeof(PerspectiveCamera))
+            {
+                camera = (PerspectiveCamera)MainViewPort.Camera;
+            }
+            else
+            {
+                camera = (OrthographicCamera)MainViewPort.Camera;
+            }
+
             ScaleTransform3D? transform = camera.Transform as ScaleTransform3D;
 
             // If the transform is null, create a new one
@@ -410,6 +420,7 @@ namespace Stack_Solver_v3
                 resultTextBox.Text = "Error.";
                 statusInfoBar.Severity = InfoBarSeverity.Error;
                 statusInfoBar.Title = "Error";
+                statusInfoBar.Message = "No levels can be placed on the pallet.";
                 statusInfoBar.IsOpen = true;
                 generationError = true;
                 return;
@@ -489,7 +500,6 @@ namespace Stack_Solver_v3
                 + (nr_levels * box_type_nr * c.weight + p.weight)
                 + "kg\nWeight on first level: " + (nr_levels - 1) * c.weight +
                 "kg\nTotal number of boxes: " + (nr_levels * box_type_nr) + "\n\n";
-
             draw3D(aria, nrb, pallet_len, pallet_width, nr_levels, inset, inset_type, offset_length, offset_width);
         }
 
@@ -525,9 +535,8 @@ namespace Stack_Solver_v3
                 generateDrawing(p.width, p.length, 2, (int)areaMax2, areaMaxPos2, aria2);
         }
 
-        private void calculateBtn_Click(object sender, RoutedEventArgs e)
+        private void clearViewport()
         {
-            generationError = false;
             foreach (object i in MainViewPort.Children)
                 if (i.GetType() == typeof(ModelVisual3D))
                 {
@@ -540,12 +549,17 @@ namespace Stack_Solver_v3
                         break;
                     }
                 }
+        }
+
+        private void calculateBtn_Click(object sender, RoutedEventArgs e)
+        {
+            generationError = false;
+            clearViewport();
             zPositionOffset = Convert.ToInt16(ZPositionTextBox.Text);
             if (pickMultipleBoxSizes.IsChecked == true)
             {
                 if (excelFilePath == null)
                 {
-                    //MessageBox.Show("Pick an Excel file first", "Error", MessageBoxButton.OK, MessageBoxImage.Error, MessageBoxResult.OK);
                     statusInfoBar.Severity = InfoBarSeverity.Error;
                     statusInfoBar.Title = "Error";
                     statusInfoBar.Message = "Pick an Excel file first.";
@@ -584,6 +598,7 @@ namespace Stack_Solver_v3
                 statusInfoBar.Message = "Generation complete.";
                 statusInfoBar.IsOpen = true;
             }
+            //ShowAxes();
         }
 
         private double rotationAngleX = 0, rotationAngleY = 0;
@@ -609,21 +624,28 @@ namespace Stack_Solver_v3
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            // Get the scale transform from the Viewport3D's camera
-            PerspectiveCamera camera = (PerspectiveCamera)MainViewPort.Camera;
-            ScaleTransform3D? transform = camera.Transform as ScaleTransform3D;
-
-            // If the transform is null, create a new one
-            if (transform == null)
+            if (MainViewPort.Camera.GetType() == typeof(PerspectiveCamera))
             {
-                transform = new ScaleTransform3D();
-                camera.Transform = transform;
-            }
+                // Get the scale transform from the Viewport3D's camera
+                PerspectiveCamera camera = (PerspectiveCamera)MainViewPort.Camera;
+                ScaleTransform3D? transform = camera.Transform as ScaleTransform3D;
 
-            double delta = 20;
-            transform.ScaleX *= delta;
-            transform.ScaleY *= delta;
-            transform.ScaleZ *= delta;
+                // If the transform is null, create a new one
+                if (transform == null)
+                {
+                    transform = new ScaleTransform3D();
+                    camera.Transform = transform;
+                }
+
+                double delta = 20;
+                transform.ScaleX *= delta;
+                transform.ScaleY *= delta;
+                transform.ScaleZ *= delta;
+            }
+            else
+            {
+                MessageBox.Show("Camera is not PerspectiveCamera");
+            }
         }
 
         private void MainViewPort_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -952,11 +974,28 @@ namespace Stack_Solver_v3
 
         private void pickMultipleBoxSizes_Checked(object sender, RoutedEventArgs e)
         {
-
+            multipleSizesGroupBox.Visibility = Visibility.Visible;
+            multipleSizesLabel.Visibility = Visibility.Visible;
+            boxSizeComboBox.Visibility = Visibility.Visible;
+            bL.IsEnabled = false;
+            bW.IsEnabled = false;
+            bH.IsEnabled = false;
+            bWght.IsEnabled = false;
         }
+
+        private double[][] allBoxSizesFromExcel = new double[4][];
 
         private void readExcelFile(int mode)
         {
+            allBoxSizesFromExcel = new double[4][];
+            for (int i = 0; i < 4; i++)
+            {
+                allBoxSizesFromExcel[i] = new double[1001];
+            }
+
+            boxSizeComboBox.Items.Clear();
+            boxSizeComboBox.Items.Add("None");
+            boxSizeComboBox.SelectedIndex = 0;
             Microsoft.Office.Interop.Excel.Application excel = new Microsoft.Office.Interop.Excel.Application();
             Workbook wb;
             Worksheet ws;
@@ -1014,10 +1053,18 @@ namespace Stack_Solver_v3
                 c.height = double.Parse(ws.Cells[row, 3].Value2.ToString());
                 c.weight = double.Parse(ws.Cells[row, 4].Value2.ToString());
                 //MessageBox.Show(double.Parse(ws.Cells[row, 1].Value2.ToString()).ToString());
+                boxSizeComboBox.Items.Add(c.length + " x " + c.width + " x " + c.height + "cm³ / " + c.weight + "kg");
+
+                allBoxSizesFromExcel[0][row - 2] = c.length;
+                allBoxSizesFromExcel[1][row - 2] = c.width;
+                allBoxSizesFromExcel[2][row - 2] = c.height;
+                allBoxSizesFromExcel[3][row - 2] = c.weight;
+
                 if (mode == 0)
                     run_all_tests();
                 else
                     compare_results();
+                clearViewport();
 
                 oSheet.Cells[row, 1] = "Box" + (row - 1).ToString();
                 oSheet.Cells[row, 3] = c.length;
@@ -1052,7 +1099,7 @@ namespace Stack_Solver_v3
             oWB.Close(true, Missing.Value, Missing.Value);
             excelf.Quit();
             MessageBox.Show("File saved!");
-            resultTextBox.Text = "Results are only generated in excel files.";
+            resultRunTextBlock.Text = "Select box type to display.";
         }
 
         private void keyboardFocusSelectAll(object sender, KeyboardFocusChangedEventArgs e)
@@ -1116,17 +1163,30 @@ namespace Stack_Solver_v3
 
         private void topDownToggleSwitch_Click(object sender, RoutedEventArgs e)
         {
+            OrthographicCamera? orthographicCamera = FindName("threedOrthoCamera") as OrthographicCamera;
             if (topDownToggleSwitch.IsChecked == true)
             {
                 threedCamera.Position = cameraPosition1;
                 threedCamera.LookDirection = vector3DLookDirection1;
                 threedCamera.UpDirection = vector3DUpDirection1;
+
+                if (orthographicCamera == null)
+                    return;
+                orthographicCamera.Position = new Point3D(0, 60, 0);
+                orthographicCamera.LookDirection = vector3DLookDirection1;
+                orthographicCamera.UpDirection = vector3DUpDirection1;
             }
             else
             {
                 threedCamera.Position = cameraPosition2;
                 threedCamera.LookDirection = vector3DLookDirection2;
                 threedCamera.UpDirection = vector3DUpDirection2;
+
+                if (orthographicCamera == null)
+                    return;
+                orthographicCamera.Position = new Point3D(51, 50, 49);
+                orthographicCamera.LookDirection = vector3DLookDirection2;
+                orthographicCamera.UpDirection = vector3DUpDirection2;
             }
         }
 
@@ -1151,9 +1211,9 @@ namespace Stack_Solver_v3
                 palletBrush = Brushes.BurlyWood;
             else if (palletColorComboBox.SelectedIndex == 1)
                 palletBrush = Brushes.SaddleBrown;
-            else if (boxColorComboBox.SelectedIndex == 2)
+            else if (palletColorComboBox.SelectedIndex == 2)
                 palletBrush = Brushes.Black;
-            else if (boxColorComboBox.SelectedIndex == 3)
+            else if (palletColorComboBox.SelectedIndex == 3)
                 palletBrush = Brushes.White;
         }
 
@@ -1169,9 +1229,117 @@ namespace Stack_Solver_v3
                 boxBrush = Brushes.White;
         }
 
+        private void switchCameraButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (cameraType == 0)
+            {
+                OrthographicCamera orthographicCamera = new OrthographicCamera();
+                RegisterName("threedOrthoCamera", orthographicCamera);
+                orthographicCamera.Position = new Point3D(51, 50, 49);
+                orthographicCamera.LookDirection = new Vector3D(-12, -11, -10);
+                orthographicCamera.FarPlaneDistance = 500;
+                orthographicCamera.NearPlaneDistance = 1;
+                orthographicCamera.UpDirection = new Vector3D(0, 1, 0);
+                orthographicCamera.Width = 450;
+                MainViewPort.Camera = orthographicCamera;
+
+                switchCameraButton.Content = "Switch to perspective camera";
+                cameraType = 1;
+            }
+            else
+            {
+                if (MainViewPort.Camera.GetType() == typeof(OrthographicCamera))
+                    UnregisterName("threedOrthoCamera");
+                MainViewPort.Camera = threedCamera;
+
+                switchCameraButton.Content = "Switch to orthographic camera";
+                cameraType = 0;
+            }
+        }
+
         private void pL_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
         {
             keyboardFocusSelectAll(sender, e);
+        }
+
+        private void pickMultipleBoxSizes_Unchecked(object sender, RoutedEventArgs e)
+        {
+            multipleSizesGroupBox.Visibility = Visibility.Collapsed;
+            multipleSizesLabel.Visibility = Visibility.Collapsed;
+            boxSizeComboBox.Visibility = Visibility.Collapsed;
+            bL.IsEnabled = true;
+            bW.IsEnabled = true;
+            bH.IsEnabled = true;
+            bWght.IsEnabled = true;
+        }
+
+        private void boxSizeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            clearViewport();
+            if (boxSizeComboBox.SelectedIndex == 0)
+            {
+                resultRunTextBlock.Text = "Select box type to display.";
+                return;
+            }
+            c.length = allBoxSizesFromExcel[0][boxSizeComboBox.SelectedIndex - 1];
+            c.width = allBoxSizesFromExcel[1][boxSizeComboBox.SelectedIndex - 1];
+            c.height = allBoxSizesFromExcel[2][boxSizeComboBox.SelectedIndex - 1];
+            c.weight = allBoxSizesFromExcel[3][boxSizeComboBox.SelectedIndex - 1];
+            if (runAllCheckbox.IsChecked == true)
+                run_all_tests();
+            else
+                compare_results();
+        }
+
+        private void ShowAxes()
+        {
+            Model3DGroup axesModelGroup = new Model3DGroup();
+            var lineX = new GeometryModel3D()
+            {
+                Geometry = new MeshGeometry3D()
+                {
+                    Positions = {
+                       new Point3D(-150, -50, 51),
+                       new Point3D( 150, -50, 51),
+                       new Point3D(-150, -50, 50),
+                       new Point3D( 150, -50, 50)
+                   },
+                    TriangleIndices = { 0, 1, 2, 2, 1, 3 }
+                },
+                Material = new DiffuseMaterial(Brushes.Black)
+            };
+            var lineY = new GeometryModel3D()
+            {
+                Geometry = new MeshGeometry3D()
+                {
+                    Positions = {
+                       new Point3D(-50, -150, 51),
+                       new Point3D(-50, 150, 51),
+                       new Point3D(-50, -150, 50),
+                       new Point3D(-50, 150, 50)
+                   },
+                    TriangleIndices = { 0, 1, 2, 2, 1, 3 }
+                },
+                Material = new DiffuseMaterial(Brushes.Black)
+            };
+            var lineZ = new GeometryModel3D()
+            {
+                Geometry = new MeshGeometry3D()
+                {
+                    Positions = {
+                       new Point3D(-50, 51, -150),
+                       new Point3D(-50, 51, 150),
+                       new Point3D(-50, 50, -150),
+                       new Point3D(-50, 50, 150)
+                   },
+                    TriangleIndices = { 0, 1, 2, 2, 1, 3 }
+                },
+                Material = new DiffuseMaterial(Brushes.Black)
+            };
+            axesModelGroup.Children.Add(lineX);
+            axesModelGroup.Children.Add(lineY);
+            axesModelGroup.Children.Add(lineZ);
+            MainViewPort.Children.Add(new ModelVisual3D() { Content = axesModelGroup });
         }
     }
 }

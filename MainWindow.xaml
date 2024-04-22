@@ -10,7 +10,7 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
-        <Viewport3D Name="MainViewPort" ClipToBounds="True" Margin="290,181,10,-11" MouseWheel="MainViewPort_MouseWheel">
+        <Viewport3D Name="MainViewPort" ClipToBounds="True" Margin="290,181,18,-11" MouseWheel="MainViewPort_MouseWheel">
             <Viewport3D.Camera>
                 <PerspectiveCamera x:Name="threedCamera"
         FarPlaneDistance="100"
@@ -49,7 +49,7 @@
         <Label Content="Height limit" HorizontalAlignment="Left" Margin="222,79,0,0" Width="80" VerticalAlignment="Top" Height="24"/>
         <Label Content="Weight" HorizontalAlignment="Left" Margin="307,79,0,0" Width="50" VerticalAlignment="Top" Height="23"/>
         <Label Content="Weight limit" HorizontalAlignment="Left" Margin="377,79,0,0" Width="85" VerticalAlignment="Top" Height="25"/>
-        <ui:Button x:Name="calculateBtn" Content="Generate" Margin="3,165,0,0" VerticalAlignment="Top" Height="54" Width="142" Click="calculateBtn_Click" Background="#FFE0E0E0"/>
+        <ui:Button x:Name="calculateBtn" Content="Generate" Margin="3,165,0,0" VerticalAlignment="Top" Height="54" Width="142" Click="calculateBtn_Click" Background="#FFE0E0E0" Icon="{ui:SymbolIcon ArrowTurnDownRight48}"/>
         <ui:Button x:Name="excelBtn" Content="Make Excel file" Margin="10,0,0,10" VerticalAlignment="Bottom" Background="White" Click="excelBtn_Click" Height="32" Width="275"/>
         <Label Content="All measurements are in cm / kg." HorizontalAlignment="Left" Margin="34,239,0,0" VerticalAlignment="Top" Width="250" Background="{x:Null}" Foreground="Black" Height="25" FontSize="14"/>
         <Label Content="v1.0-beta.2" Margin="0,1,0,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="80"/>
@@ -68,7 +68,7 @@
                 </TransformGroup>
             </ui:CardExpander.RenderTransform>
             <Grid Height="149" Background="White" Margin="-10,0,-7,0">
-                <CheckBox x:Name="pickMultipleBoxSizes" Content="Pick multiple box sizes from excel file" Margin="10,70,0,0" VerticalAlignment="Top" Click="CheckBox_Click" Checked="pickMultipleBoxSizes_Checked" Height="23"/>
+                <CheckBox x:Name="pickMultipleBoxSizes" Content="Pick multiple box sizes from excel file" Margin="10,70,0,0" VerticalAlignment="Top" Click="CheckBox_Click" Checked="pickMultipleBoxSizes_Checked" Height="23" Unchecked="pickMultipleBoxSizes_Unchecked"/>
                 <Button x:Name="chooseExcelFileButton" Content="Choose file" Margin="10,100,0,0" VerticalAlignment="Top" Click="chooseExcelFileButton_Click" IsEnabled="False"/>
                 <Button x:Name="downloadSampleButton" Content="Download sample" Margin="110,100,0,0" VerticalAlignment="Top" Click="downloadSampleButton_Click" IsEnabled="False"/>
                 <CheckBox x:Name="runAllCheckbox" Content="Run all standard pallet sizes" Margin="10,0,0,0" VerticalAlignment="Top" Click="runAllCheckbox_Click" Checked="runAllCheckbox_Checked"/>
@@ -94,20 +94,21 @@
             </MenuItem>
         </Menu>
         <ui:TextBlock HorizontalAlignment="Left" Margin="9,13,0,0" TextWrapping="Wrap" Text="Stack Solver" VerticalAlignment="Top" Height="18" Width="119" FontSize="16" FontFamily="Unispace" TextDecorations="Underline"/>
-        <ui:CardExpander HorizontalAlignment="Left" Height="259" Header="Drawing Options" Margin="482,165,0,0" VerticalAlignment="Top" Width="290">
-            <Grid Height="164" Margin="-12,0,-13,0">
-                <Label Content="Drawing position (Z):" HorizontalAlignment="Left" Margin="10,7,0,0" VerticalAlignment="Top"/>
-                <TextBox x:Name="ZPositionTextBox" HorizontalAlignment="Left" Margin="150,0,0,0" TextWrapping="Wrap" Text="-80" VerticalAlignment="Top" Width="65" Height="35"/>
-                <ui:ToggleSwitch x:Name="topDownToggleSwitch" Content="Top-Down View" Margin="10,45,0,0" Height="27" Click="topDownToggleSwitch_Click" VerticalAlignment="Top"/>
-                <Label Content="Box color:" HorizontalAlignment="Left" Margin="10,87,0,0" VerticalAlignment="Top"/>
-                <ComboBox x:Name="boxColorComboBox" HorizontalAlignment="Left" Margin="90,80,0,0" VerticalAlignment="Top" Width="132" Height="35" SelectedIndex="0" SelectionChanged="boxColorComboBox_SelectionChanged">
+        <ui:CardExpander Height="304" Header="Drawing Options" Margin="482,165,0,0" VerticalAlignment="Top" HorizontalAlignment="Left" Width="290">
+            <Grid Height="214" Margin="-12,0,-13,0">
+                <ui:Button x:Name="switchCameraButton" Content="Switch to orthographic camera" Margin="10,6,0,0" VerticalAlignment="Top" Height="54" Click="switchCameraButton_Click" Icon="{ui:SymbolIcon Camera28}" Width="235"/>
+                <Label Content="Drawing position (Z):" HorizontalAlignment="Left" Margin="10,72,0,0" VerticalAlignment="Top"/>
+                <TextBox x:Name="ZPositionTextBox" HorizontalAlignment="Left" Margin="150,65,0,0" TextWrapping="Wrap" Text="-80" VerticalAlignment="Top" Width="65" Height="35"/>
+                <ui:ToggleSwitch x:Name="topDownToggleSwitch" Content="Top-Down View" Margin="10,105,0,0" Height="27" Click="topDownToggleSwitch_Click" VerticalAlignment="Top"/>
+                <Label Content="Box color:" HorizontalAlignment="Left" Margin="10,140,0,0" VerticalAlignment="Top"/>
+                <ComboBox x:Name="boxColorComboBox" HorizontalAlignment="Left" Margin="90,134,0,0" VerticalAlignment="Top" Width="132" Height="35" SelectedIndex="0" SelectionChanged="boxColorComboBox_SelectionChanged">
                     <ComboBoxItem Content="Brown"/>
                     <ComboBoxItem Content="Dark Brown"/>
                     <ComboBoxItem Content="Black"/>
                     <ComboBoxItem Content="White"/>
                 </ComboBox>
-                <Label Content="Pallet color:" HorizontalAlignment="Left" Margin="10,130,0,0" VerticalAlignment="Top"/>
-                <ComboBox x:Name="palletColorComboBox" HorizontalAlignment="Left" Margin="90,125,0,0" VerticalAlignment="Top" Width="132" Height="35" SelectedIndex="0" SelectionChanged="palletColorComboBox_SelectionChanged">
+                <Label Content="Pallet color:" HorizontalAlignment="Left" Margin="10,180,0,0" VerticalAlignment="Top"/>
+                <ComboBox x:Name="palletColorComboBox" HorizontalAlignment="Left" Margin="90,174,0,0" VerticalAlignment="Top" Width="132" Height="35" SelectedIndex="0" SelectionChanged="palletColorComboBox_SelectionChanged">
                     <ComboBoxItem Content="Brown"/>
                     <ComboBoxItem Content="Dark Brown"/>
                     <ComboBoxItem Content="Black"/>
@@ -115,5 +116,8 @@
                 </ComboBox>
             </Grid>
         </ui:CardExpander>
+        <GroupBox x:Name="multipleSizesGroupBox" Header="Multiple sizes" Margin="775,50,0,0" FontFamily="Segoe UI Semibold" HorizontalAlignment="Left" Width="235" Height="110" VerticalAlignment="Top" Visibility="Collapsed"/>
+        <ComboBox x:Name="boxSizeComboBox" HorizontalAlignment="Left" Margin="785,102,0,0" VerticalAlignment="Top" Width="210" Visibility="Collapsed" SelectionChanged="boxSizeComboBox_SelectionChanged"/>
+        <Label x:Name="multipleSizesLabel" Content="Choose which box type to display:" HorizontalAlignment="Left" Margin="785,79,0,0" VerticalAlignment="Top" Visibility="Collapsed"/>
     </Grid>
 </Window>
