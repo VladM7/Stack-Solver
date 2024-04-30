@@ -28,6 +28,7 @@ using Wpf.Ui.Controls;
 using MessageBoxButton = System.Windows.MessageBoxButton;
 using MessageBoxResult = System.Windows.MessageBoxResult;
 using MessageBox = System.Windows.MessageBox;
+using System.IO;
 
 namespace Stack_Solver_v3
 {
@@ -44,6 +45,8 @@ namespace Stack_Solver_v3
             MainViewPort.MouseMove += MainViewPort_MouseMove;
             MainViewPort.MouseLeftButtonDown += MainViewPort_MouseLeftButtonDown;
             MainViewPort.MouseLeftButtonUp += MainViewPort_MouseLeftButtonUp;
+            boxColorComboBox.SelectedIndex = 1;
+            palletColorComboBox.SelectedIndex = 2;
         }
 
         private Point previousMousePosition;
@@ -385,7 +388,24 @@ namespace Stack_Solver_v3
             pallet_width += 0.5 * (max_boxes_width1 + max_boxes_width2);
 
             brush = palletBrush;
-            generateStack(pallet_len, pallet_width, p.height, 1, 1, 1, -pallet_len / 2, -pallet_width / 2, zPositionOffset, ref triangle);
+            generateStack(pallet_len, pallet_width, p.height / 4, 1, 1, 1, -pallet_len / 2, -pallet_width / 2, zPositionOffset + 0.75 * p.height, ref triangle);
+
+            generateStack(pallet_len, 10, p.height / 4, 1, 1, 1, -pallet_len / 2, -pallet_width / 2, zPositionOffset, ref triangle);
+            generateStack(pallet_len, 10, p.height / 4, 1, 1, 1, -pallet_len / 2, -5, zPositionOffset, ref triangle);
+            generateStack(pallet_len, 10, p.height / 4, 1, 1, 1, -pallet_len / 2, pallet_width / 2 - 10, zPositionOffset, ref triangle);
+
+            //front
+            generateStack(10, 10, p.height, 1, 1, 1, -pallet_len / 2, -pallet_width / 2, zPositionOffset, ref triangle);
+            generateStack(10, 10, p.height, 1, 1, 1, -pallet_len / 2, -5, zPositionOffset, ref triangle);
+            generateStack(10, 10, p.height, 1, 1, 1, -pallet_len / 2, pallet_width / 2 - 10, zPositionOffset, ref triangle);
+            //middle
+            generateStack(10, 10, p.height, 1, 1, 1, -5, -pallet_width / 2, zPositionOffset, ref triangle);
+            generateStack(10, 10, p.height, 1, 1, 1, -5, -5, zPositionOffset, ref triangle);
+            generateStack(10, 10, p.height, 1, 1, 1, -5, pallet_width / 2 - 10, zPositionOffset, ref triangle);
+            //back
+            generateStack(10, 10, p.height, 1, 1, 1, pallet_len / 2 - 10, -pallet_width / 2, zPositionOffset, ref triangle);
+            generateStack(10, 10, p.height, 1, 1, 1, pallet_len / 2 - 10, -5, zPositionOffset, ref triangle);
+            generateStack(10, 10, p.height, 1, 1, 1, pallet_len / 2 - 10, pallet_width / 2 - 10, zPositionOffset, ref triangle);
 
             brush = boxBrush;
             generateStack(c.length, c.width, c.height, nrboxes1, max_boxes_width2, levels, offset_x - pallet_len / 2, offset_y + inset1 - pallet_width / 2, p.height + zPositionOffset, ref triangle);
@@ -488,7 +508,7 @@ namespace Stack_Solver_v3
                 inv_len + "x" + inv_wid +
                 "cm\n" +
                 "_________________________________________\n\n" +
-                "Number of boxes/level: " + box_type_nr
+                "Number of boxes / level: " + box_type_nr
                 + "\nNumber of levels: "
                 + nr_levels + "\nEffective height: " + Math.Round(eff_height, 2) + "cm\nLoad dimensions: " + Math.Round(length, 2) + "x" + Math.Round(width, 2) + "x"
                 + Math.Round((eff_height - p.height), 2)
@@ -498,7 +518,7 @@ namespace Stack_Solver_v3
                 "_________________________________________\n\n" +
                 "Load weight: " + (nr_levels * box_type_nr * c.weight) + "kg\nTotal weight: "
                 + (nr_levels * box_type_nr * c.weight + p.weight)
-                + "kg\nWeight on first level: " + (nr_levels - 1) * c.weight +
+                + "kg\nWeight / level: " + box_type_nr * c.weight +
                 "kg\nTotal number of boxes: " + (nr_levels * box_type_nr) + "\n\n";
             draw3D(aria, nrb, pallet_len, pallet_width, nr_levels, inset, inset_type, offset_length, offset_width);
         }
@@ -598,7 +618,7 @@ namespace Stack_Solver_v3
                 statusInfoBar.Message = "Generation complete.";
                 statusInfoBar.IsOpen = true;
             }
-            //ShowAxes();
+            ShowAxes();
         }
 
         private double rotationAngleX = 0, rotationAngleY = 0;
@@ -675,7 +695,6 @@ namespace Stack_Solver_v3
                 foreach (object o in MainViewPort.Children)
                     if (o.GetType() == typeof(ModelVisual3D))
                     {
-
                         ModelVisual3D? mdv = o as ModelVisual3D;
                         Model3DGroup? mdg = mdv.Content as Model3DGroup;
                         if (mdv == null || mdg == null)
@@ -974,9 +993,7 @@ namespace Stack_Solver_v3
 
         private void pickMultipleBoxSizes_Checked(object sender, RoutedEventArgs e)
         {
-            multipleSizesGroupBox.Visibility = Visibility.Visible;
-            multipleSizesLabel.Visibility = Visibility.Visible;
-            boxSizeComboBox.Visibility = Visibility.Visible;
+            boxSizeComboBox.IsEnabled = true;
             bL.IsEnabled = false;
             bW.IsEnabled = false;
             bH.IsEnabled = false;
@@ -1161,34 +1178,13 @@ namespace Stack_Solver_v3
         private Vector3D vector3DLookDirection2 = new Vector3D(-12, -11, -10);
         private Vector3D vector3DUpDirection2 = new Vector3D(0, 1, 0);
 
-        private void topDownToggleSwitch_Click(object sender, RoutedEventArgs e)
-        {
-            OrthographicCamera? orthographicCamera = FindName("threedOrthoCamera") as OrthographicCamera;
-            if (topDownToggleSwitch.IsChecked == true)
-            {
-                threedCamera.Position = cameraPosition1;
-                threedCamera.LookDirection = vector3DLookDirection1;
-                threedCamera.UpDirection = vector3DUpDirection1;
+        private Point3D cameraPosition3 = new Point3D(40, 0, 0);
+        private Vector3D vector3DLookDirection3 = new Vector3D(-1, 0, 0);
+        private Vector3D vector3DUpDirection3 = new Vector3D(0, 1, 0);
 
-                if (orthographicCamera == null)
-                    return;
-                orthographicCamera.Position = new Point3D(0, 60, 0);
-                orthographicCamera.LookDirection = vector3DLookDirection1;
-                orthographicCamera.UpDirection = vector3DUpDirection1;
-            }
-            else
-            {
-                threedCamera.Position = cameraPosition2;
-                threedCamera.LookDirection = vector3DLookDirection2;
-                threedCamera.UpDirection = vector3DUpDirection2;
-
-                if (orthographicCamera == null)
-                    return;
-                orthographicCamera.Position = new Point3D(51, 50, 49);
-                orthographicCamera.LookDirection = vector3DLookDirection2;
-                orthographicCamera.UpDirection = vector3DUpDirection2;
-            }
-        }
+        private Point3D cameraPosition4 = new Point3D(0, 0, 40);
+        private Vector3D vector3DLookDirection4 = new Vector3D(0, 0, -1);
+        private Vector3D vector3DUpDirection4 = new Vector3D(0, 1, 0);
 
         private void exitMenuItem_Click(object sender, RoutedEventArgs e)
         {
@@ -1212,8 +1208,10 @@ namespace Stack_Solver_v3
             else if (palletColorComboBox.SelectedIndex == 1)
                 palletBrush = Brushes.SaddleBrown;
             else if (palletColorComboBox.SelectedIndex == 2)
-                palletBrush = Brushes.Black;
+                palletBrush = Brushes.Gold;
             else if (palletColorComboBox.SelectedIndex == 3)
+                palletBrush = Brushes.Black;
+            else if (palletColorComboBox.SelectedIndex == 4)
                 palletBrush = Brushes.White;
         }
 
@@ -1222,10 +1220,12 @@ namespace Stack_Solver_v3
             if (boxColorComboBox.SelectedIndex == 0)
                 boxBrush = Brushes.SandyBrown;
             else if (boxColorComboBox.SelectedIndex == 1)
-                boxBrush = Brushes.Sienna;
+                boxBrush = Brushes.Chocolate;
             else if (boxColorComboBox.SelectedIndex == 2)
-                boxBrush = Brushes.Black;
+                boxBrush = Brushes.Sienna;
             else if (boxColorComboBox.SelectedIndex == 3)
+                boxBrush = Brushes.Black;
+            else if (boxColorComboBox.SelectedIndex == 4)
                 boxBrush = Brushes.White;
         }
 
@@ -1238,7 +1238,7 @@ namespace Stack_Solver_v3
                 orthographicCamera.Position = new Point3D(51, 50, 49);
                 orthographicCamera.LookDirection = new Vector3D(-12, -11, -10);
                 orthographicCamera.FarPlaneDistance = 500;
-                orthographicCamera.NearPlaneDistance = 1;
+                orthographicCamera.NearPlaneDistance = -100;
                 orthographicCamera.UpDirection = new Vector3D(0, 1, 0);
                 orthographicCamera.Width = 450;
                 MainViewPort.Camera = orthographicCamera;
@@ -1255,6 +1255,7 @@ namespace Stack_Solver_v3
                 switchCameraButton.Content = "Switch to orthographic camera";
                 cameraType = 0;
             }
+            freeCameraRadioButton.IsChecked = true;
         }
 
         private void pL_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
@@ -1264,9 +1265,7 @@ namespace Stack_Solver_v3
 
         private void pickMultipleBoxSizes_Unchecked(object sender, RoutedEventArgs e)
         {
-            multipleSizesGroupBox.Visibility = Visibility.Collapsed;
-            multipleSizesLabel.Visibility = Visibility.Collapsed;
-            boxSizeComboBox.Visibility = Visibility.Collapsed;
+            boxSizeComboBox.IsEnabled = false;
             bL.IsEnabled = true;
             bW.IsEnabled = true;
             bH.IsEnabled = true;
@@ -1291,55 +1290,279 @@ namespace Stack_Solver_v3
                 compare_results();
         }
 
+        private void saveImageButton_Click(object sender, RoutedEventArgs e)
+        {
+            RenderTargetBitmap bmp = new RenderTargetBitmap(2560, 1440, 200, 200, PixelFormats.Pbgra32);
+            bmp.Render(MainViewPort);
+            PngBitmapEncoder png = new PngBitmapEncoder();
+            png.Frames.Add(BitmapFrame.Create(bmp));
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Filter = "PNG Image|*.png";
+            saveFileDialog.Title = "Save output";
+            saveFileDialog.FileName = "stack-solver-image.png";
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                using (Stream stm = File.Create(saveFileDialog.FileName))
+                {
+                    png.Save(stm);
+                }
+            }
+        }
+
+        private void topDownViewRadioButton_Checked(object sender, RoutedEventArgs e)
+        {
+            OrthographicCamera? orthographicCamera = FindName("threedOrthoCamera") as OrthographicCamera;
+            threedCamera.Position = cameraPosition1;
+            threedCamera.LookDirection = vector3DLookDirection1;
+            threedCamera.UpDirection = vector3DUpDirection1;
+
+            if (orthographicCamera == null)
+                return;
+            orthographicCamera.Position = new Point3D(0, 60, 0);
+            orthographicCamera.LookDirection = vector3DLookDirection1;
+            orthographicCamera.UpDirection = vector3DUpDirection1;
+        }
+
+        private void freeCameraRadioButton_Checked(object sender, RoutedEventArgs e)
+        {
+            OrthographicCamera? orthographicCamera = FindName("threedOrthoCamera") as OrthographicCamera;
+            threedCamera.Position = cameraPosition2;
+            threedCamera.LookDirection = vector3DLookDirection2;
+            threedCamera.UpDirection = vector3DUpDirection2;
+
+            if (orthographicCamera == null)
+                return;
+            orthographicCamera.Position = new Point3D(51, 50, 49);
+            orthographicCamera.LookDirection = vector3DLookDirection2;
+            orthographicCamera.UpDirection = vector3DUpDirection2;
+        }
+
+        private void sideViewXRadioButton_Checked(object sender, RoutedEventArgs e)
+        {
+            foreach (object o in MainViewPort.Children)
+                if (o is ModelVisual3D)
+                {
+                    ModelVisual3D? mdv = o as ModelVisual3D;
+                    Model3DGroup? mdg = mdv.Content as Model3DGroup;
+                    if (mdv == null || mdg == null)
+                        continue;
+                    RotateTransform3D rotateTransformX = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), -rotationAngleX));
+                    mdg.Transform = rotateTransformX;
+                    rotationAngleX = 0;
+                    mdg.Transform = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(1, 0, 0), 0));
+                }
+
+            OrthographicCamera? orthographicCamera = FindName("threedOrthoCamera") as OrthographicCamera;
+            threedCamera.Position = cameraPosition3;
+            threedCamera.LookDirection = vector3DLookDirection3;
+            threedCamera.UpDirection = vector3DUpDirection3;
+
+            if (orthographicCamera == null)
+                return;
+            orthographicCamera.Position = new Point3D(60, 0, 0);
+            orthographicCamera.LookDirection = vector3DLookDirection3;
+            orthographicCamera.UpDirection = vector3DUpDirection3;
+        }
+
+        private void sideViewYRadioButton_Checked(object sender, RoutedEventArgs e)
+        {
+            foreach (object o in MainViewPort.Children)
+                if (o is ModelVisual3D)
+                {
+                    ModelVisual3D? mdv = o as ModelVisual3D;
+                    Model3DGroup? mdg = mdv.Content as Model3DGroup;
+                    if (mdv == null || mdg == null)
+                        continue;
+                    RotateTransform3D rotateTransformX = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), -rotationAngleX));
+                    mdg.Transform = rotateTransformX;
+                    rotationAngleX = 0;
+                    mdg.Transform = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(1, 0, 0), 0));
+                }
+
+            OrthographicCamera? orthographicCamera = FindName("threedOrthoCamera") as OrthographicCamera;
+            threedCamera.Position = cameraPosition4;
+            threedCamera.LookDirection = vector3DLookDirection4;
+            threedCamera.UpDirection = vector3DUpDirection4;
+
+            if (orthographicCamera == null)
+                return;
+            orthographicCamera.Position = new Point3D(0, 0, 60);
+            orthographicCamera.LookDirection = vector3DLookDirection4;
+            orthographicCamera.UpDirection = vector3DUpDirection4;
+
+        }
+
         private void ShowAxes()
         {
-            Model3DGroup axesModelGroup = new Model3DGroup();
-            var lineX = new GeometryModel3D()
+            var lineX1 = new GeometryModel3D()
             {
                 Geometry = new MeshGeometry3D()
                 {
                     Positions = {
-                       new Point3D(-150, -50, 51),
-                       new Point3D( 150, -50, 51),
-                       new Point3D(-150, -50, 50),
-                       new Point3D( 150, -50, 50)
+                       new Point3D(-500, zPositionOffset + p.height, 1 + p.width/2),
+                       new Point3D( 500, zPositionOffset + p.height, 1 + p.width/2),
+                       new Point3D(-500, zPositionOffset + p.height, p.width/2),
+                       new Point3D( 500, zPositionOffset + p.height, p.width/2)
                    },
                     TriangleIndices = { 0, 1, 2, 2, 1, 3 }
                 },
-                Material = new DiffuseMaterial(Brushes.Black)
+                Material = new DiffuseMaterial(Brushes.Gray)
             };
-            var lineY = new GeometryModel3D()
+            var lineX2 = new GeometryModel3D()
             {
                 Geometry = new MeshGeometry3D()
                 {
                     Positions = {
-                       new Point3D(-50, -150, 51),
-                       new Point3D(-50, 150, 51),
-                       new Point3D(-50, -150, 50),
-                       new Point3D(-50, 150, 50)
+                       new Point3D(-500, zPositionOffset + p.height, 1 - p.width/2),
+                       new Point3D( 500, zPositionOffset + p.height, 1 - p.width/2),
+                       new Point3D(-500, zPositionOffset + p.height, -p.width/2),
+                       new Point3D( 500, zPositionOffset + p.height, -p.width/2)
                    },
                     TriangleIndices = { 0, 1, 2, 2, 1, 3 }
                 },
-                Material = new DiffuseMaterial(Brushes.Black)
+                Material = new DiffuseMaterial(Brushes.Gray)
             };
-            var lineZ = new GeometryModel3D()
+            var lineX1Above = new GeometryModel3D()
             {
                 Geometry = new MeshGeometry3D()
                 {
                     Positions = {
-                       new Point3D(-50, 51, -150),
-                       new Point3D(-50, 51, 150),
-                       new Point3D(-50, 50, -150),
-                       new Point3D(-50, 50, 150)
+                       new Point3D(-500, zPositionOffset + eff_height, 1 + p.width/2),
+                       new Point3D( 500, zPositionOffset + eff_height, 1 + p.width/2),
+                       new Point3D(-500, zPositionOffset + eff_height, p.width/2),
+                       new Point3D( 500, zPositionOffset + eff_height, p.width/2)
                    },
                     TriangleIndices = { 0, 1, 2, 2, 1, 3 }
                 },
-                Material = new DiffuseMaterial(Brushes.Black)
+                Material = new DiffuseMaterial(Brushes.Gray)
             };
-            axesModelGroup.Children.Add(lineX);
-            axesModelGroup.Children.Add(lineY);
-            axesModelGroup.Children.Add(lineZ);
-            MainViewPort.Children.Add(new ModelVisual3D() { Content = axesModelGroup });
+            var lineX2Above = new GeometryModel3D()
+            {
+                Geometry = new MeshGeometry3D()
+                {
+                    Positions = {
+                       new Point3D(-500, zPositionOffset + eff_height, 1 - p.width/2),
+                       new Point3D( 500, zPositionOffset + eff_height, 1 - p.width/2),
+                       new Point3D(-500, zPositionOffset + eff_height, -p.width/2),
+                       new Point3D( 500, zPositionOffset + eff_height, -p.width/2)
+                   },
+                    TriangleIndices = { 0, 1, 2, 2, 1, 3 }
+                },
+                Material = new DiffuseMaterial(Brushes.Gray)
+            };
+
+            RotateTransform3D rotateTransformX = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), 90));
+            lineX1.Transform = rotateTransformX;
+            lineX2.Transform = rotateTransformX;
+            lineX1Above.Transform = rotateTransformX;
+            lineX2Above.Transform = rotateTransformX;
+
+            var lineY1 = new GeometryModel3D()
+            {
+                Geometry = new MeshGeometry3D()
+                {
+                    Positions = {
+                       new Point3D(-500, zPositionOffset + p.height, 1 + p.length/2),
+                       new Point3D( 500, zPositionOffset + p.height, 1 + p.length/2),
+                       new Point3D(-500, zPositionOffset + p.height, p.length/2),
+                       new Point3D( 500, zPositionOffset + p.height, p.length/2)
+                   },
+                    TriangleIndices = { 0, 1, 2, 2, 1, 3 }
+                },
+                Material = new DiffuseMaterial(Brushes.Gray)
+            };
+            var lineY2 = new GeometryModel3D()
+            {
+                Geometry = new MeshGeometry3D()
+                {
+                    Positions = {
+                       new Point3D(-500, zPositionOffset + p.height, 1 - p.length/2),
+                       new Point3D( 500, zPositionOffset + p.height, 1 - p.length/2),
+                       new Point3D(-500, zPositionOffset + p.height, -p.length / 2),
+                       new Point3D( 500, zPositionOffset + p.height, -p.length / 2)
+                   },
+                    TriangleIndices = { 0, 1, 2, 2, 1, 3 }
+                },
+                Material = new DiffuseMaterial(Brushes.Gray)
+            };
+            var lineY1Above = new GeometryModel3D()
+            {
+                Geometry = new MeshGeometry3D()
+                {
+                    Positions = {
+                       new Point3D(-500, zPositionOffset + eff_height, 1 + p.length/2),
+                       new Point3D( 500, zPositionOffset + eff_height, 1 + p.length/2),
+                       new Point3D(-500, zPositionOffset + eff_height, p.length/2),
+                       new Point3D( 500, zPositionOffset + eff_height, p.length/2)
+                   },
+                    TriangleIndices = { 0, 1, 2, 2, 1, 3 }
+                },
+                Material = new DiffuseMaterial(Brushes.Gray)
+            };
+            var lineY2Above = new GeometryModel3D()
+            {
+                Geometry = new MeshGeometry3D()
+                {
+                    Positions = {
+                       new Point3D(-500, zPositionOffset + eff_height, 1 - p.length/2),
+                       new Point3D( 500, zPositionOffset + eff_height, 1 - p.length/2),
+                       new Point3D(-500, zPositionOffset + eff_height, -p.length / 2),
+                       new Point3D( 500, zPositionOffset + eff_height, -p.length / 2)
+                   },
+                    TriangleIndices = { 0, 1, 2, 2, 1, 3 }
+                },
+                Material = new DiffuseMaterial(Brushes.Gray)
+            };
+
+            var lineXMeasurement = new GeometryModel3D()
+            {
+                Geometry = new MeshGeometry3D()
+                {
+                    Positions = {
+                       new Point3D(-p.length/2, zPositionOffset + p.height, 50 + 2 + p.width/2),
+                       new Point3D( p.length/2, zPositionOffset + p.height, 50 + 2 + p.width/2),
+                       new Point3D(-p.length/2, zPositionOffset + p.height, 50 + p.width/2),
+                       new Point3D( p.length/2, zPositionOffset + p.height, 50 + p.width/2)
+                   },
+                    TriangleIndices = { 0, 1, 2, 2, 1, 3 }
+                },
+                Material = new DiffuseMaterial(Brushes.Blue)
+            };
+            lineXMeasurement.Transform = rotateTransformX;
+            var lineYMeasurement = new GeometryModel3D()
+            {
+                Geometry = new MeshGeometry3D()
+                {
+                    Positions = {
+                       new Point3D(-p.width/2, zPositionOffset + p.height, 50 + 2 + p.length/2),
+                       new Point3D( p.width/2, zPositionOffset + p.height, 50 + 2 + p.length/2),
+                       new Point3D(-p.width/2, zPositionOffset + p.height, 50 + p.length/2),
+                       new Point3D( p.width/2, zPositionOffset + p.height, 50 + p.length/2)
+                   },
+                    TriangleIndices = { 0, 1, 2, 2, 1, 3 }
+                },
+                Material = new DiffuseMaterial(Brushes.Blue)
+            };
+
+            foreach (object o in MainViewPort.Children)
+                if (o is ModelVisual3D)
+                {
+                    ModelVisual3D? mdv = o as ModelVisual3D;
+                    Model3DGroup? mdg = mdv.Content as Model3DGroup;
+                    if (mdv == null || mdg == null)
+                        continue;
+                    mdg.Children.Add(lineX1);
+                    mdg.Children.Add(lineX2);
+                    mdg.Children.Add(lineX1Above);
+                    mdg.Children.Add(lineX2Above);
+                    mdg.Children.Add(lineY1);
+                    mdg.Children.Add(lineY2);
+                    mdg.Children.Add(lineY1Above);
+                    mdg.Children.Add(lineY2Above);
+                    mdg.Children.Add(lineXMeasurement);
+                    mdg.Children.Add(lineYMeasurement);
+                    return;
+                }
         }
     }
 }
