@@ -1544,6 +1544,34 @@ namespace Stack_Solver_v3
                 Material = new DiffuseMaterial(Brushes.Blue)
             };
 
+            var cube = new GeometryModel3D();
+            var mat = new DiffuseMaterial();
+            var vb = new VisualBrush();
+            var st = new StackPanel();
+            st.Children.Add(new System.Windows.Controls.TextBlock(new Run("Length: " + p.length + " cm")));
+            vb.Visual = st;
+            mat.Brush = vb;
+            cube.Material = mat;
+            cube.Geometry=new MeshGeometry3D()
+            {
+                Positions = { 
+                    new Point3D(1, 1, 1),
+                    new Point3D(-1, 1, 1),
+                    new Point3D(-1, -1, 1),
+                    new Point3D(1, -1, 1),
+                },
+                TriangleIndices = { 
+                    0, 1, 2,
+                    0, 2, 3
+                },
+                TextureCoordinates = {
+                    new Point(1, 1),
+                    new Point(0, 1),
+                    new Point(0, 0),
+                    new Point(1, 0)
+                }
+            };
+
             foreach (object o in MainViewPort.Children)
                 if (o is ModelVisual3D)
                 {
@@ -1561,6 +1589,7 @@ namespace Stack_Solver_v3
                     mdg.Children.Add(lineY2Above);
                     mdg.Children.Add(lineXMeasurement);
                     mdg.Children.Add(lineYMeasurement);
+                    mdg.Children.Add(cube);
                     return;
                 }
         }
