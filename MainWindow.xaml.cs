@@ -1571,6 +1571,7 @@ namespace Stack_Solver_v3
                     new Point(1, 0)
                 }
             };
+            cube.Transform = new ScaleTransform3D(100, 100, 100);
 
             foreach (object o in MainViewPort.Children)
                 if (o is ModelVisual3D)
