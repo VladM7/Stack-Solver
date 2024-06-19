@@ -566,7 +566,7 @@ namespace Stack_Solver
                 statusInfoBar.Message = "Generation complete.";
                 statusInfoBar.IsOpen = true;
             }
-            ShowAxes();
+            //ShowAxes();
         }
 
         private double rotationAngleX = 0, rotationAngleY = 0;
