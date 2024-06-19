@@ -16,7 +16,6 @@ using System.Windows.Media.Media3D;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
-using OpenTK;
 using static System.Windows.Input.Key;
 using static System.Windows.Input.ModifierKeys;
 using Microsoft.Office.Interop.Excel;
@@ -1555,10 +1554,10 @@ namespace Stack_Solver_v3
             cube.Geometry=new MeshGeometry3D()
             {
                 Positions = { 
-                    new Point3D(1, 1, 1),
-                    new Point3D(-1, 1, 1),
-                    new Point3D(-1, -1, 1),
-                    new Point3D(1, -1, 1),
+                    new Point3D(10, 10, 10),
+                    new Point3D(-10, 10, 10),
+                    new Point3D(-10, -10, 10),
+                    new Point3D(10, -10, 10),
                 },
                 TriangleIndices = { 
                     0, 1, 2,
@@ -1571,7 +1570,7 @@ namespace Stack_Solver_v3
                     new Point(1, 0)
                 }
             };
-            cube.Transform = new ScaleTransform3D(100, 100, 100);
+            cube.Transform = new ScaleTransform3D(50, 50, 50);
 
             foreach (object o in MainViewPort.Children)
                 if (o is ModelVisual3D)

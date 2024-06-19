@@ -52,8 +52,9 @@
         <ui:Button x:Name="calculateBtn" Content="Generate" Margin="3,165,0,0" VerticalAlignment="Top" Height="54" Width="142" Click="calculateBtn_Click" Background="#FFE0E0E0" Icon="{ui:SymbolIcon ArrowTurnDownRight48}"/>
         <ui:Button x:Name="excelBtn" Content="Make Excel file" Margin="12,0,0,49" VerticalAlignment="Bottom" Background="White" Click="excelBtn_Click" Height="32" Width="275" Icon="{ui:SymbolIcon DocumentTable24}"/>
         <Label Content="All measurements are in cm / kg." HorizontalAlignment="Left" Margin="34,239,0,0" VerticalAlignment="Top" Width="250" Background="{x:Null}" Foreground="Black" Height="25" FontSize="14"/>
+        <TextBlock HorizontalAlignment="Left" Margin="34,264,0,0" TextWrapping="Wrap" Text="Disclaimer: The rendering may not accurately reflect reality." VerticalAlignment="Top" Height="41" Width="206" Background="{x:Null}"/>
         <Label Content="v1.0-beta.2" Margin="0,1,0,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="80"/>
-        <ui:DynamicScrollViewer Margin="2,264,0,86" HorizontalAlignment="Left" Width="290">
+        <ui:DynamicScrollViewer Margin="2,310,0,86" HorizontalAlignment="Left" Width="290">
             <ui:TextBlock x:Name="resultTextBox" Margin="0,0,0,0" TextWrapping="Wrap" Height="395" Width="264" FontSize="14">
                 <Run x:Name="resultRunTextBlock" Text="The info will be displayed here upon pressing the Generate button."/>
             </ui:TextBlock>
@@ -78,6 +79,7 @@
         </ui:CardExpander>
         <ui:InfoBar x:Name="statusInfoBar" Content="InfoBar" Margin="290,0,100,10" VerticalAlignment="Bottom" Height="50"/>
         <ui:SymbolIcon Symbol="Info24" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,239,0,0" Height="20" Width="20"/>
+        <ui:SymbolIcon Symbol="Warning24" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,264,0,0" Height="20" Width="20"/>
         <GroupBox Header="Pallet" HorizontalAlignment="Left" Width="475" Height="110" VerticalAlignment="Top" FontFamily="Segoe UI Semibold" Margin="2,50,0,0"/>
         <GroupBox Header="Boxes" Margin="482,50,0,0" Height="110" VerticalAlignment="Top" HorizontalAlignment="Left" Width="538" FontFamily="Segoe UI Semibold">
             <Rectangle HorizontalAlignment="Left" Height="81" Margin="276,0,0,0" Stroke="#FFD4D4D4" VerticalAlignment="Top" Width="1"/>
@@ -95,8 +97,8 @@
                 <MenuItem Header="_About Stack Solver" />
             </MenuItem>
         </Menu>
-        <ui:CardExpander Height="209" Header="Drawing Options" Margin="482,165,0,0" VerticalAlignment="Top" HorizontalAlignment="Left" Width="250">
-            <Grid Height="114" Margin="-12,0,-13,0">
+        <ui:CardExpander Height="214" Header="Rendering Options" Margin="482,165,0,0" HorizontalAlignment="Left" Width="250" VerticalAlignment="Top">
+            <Grid Height="119" Margin="-12,0,-13,0">
 
                 <Label Content="Drawing position (Z):" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Top"/>
                 <TextBox x:Name="ZPositionTextBox" HorizontalAlignment="Left" Margin="150,-6,0,0" TextWrapping="Wrap" Text="-80" VerticalAlignment="Top" Width="65" Height="35"/>

@@ -30,7 +30,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="OpenTK" Version="4.8.2" />
     <PackageReference Include="WPF-UI" Version="3.0.4" />
   </ItemGroup>
 
