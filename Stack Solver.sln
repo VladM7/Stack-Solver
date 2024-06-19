@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.33103.201
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stack Solver v3", "Stack Solver v3.csproj", "{E2EC2F7F-0B4F-4E84-BF9C-16ED904D1BDD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stack Solver", "Stack Solver.csproj", "{E2EC2F7F-0B4F-4E84-BF9C-16ED904D1BDD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

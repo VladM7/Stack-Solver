@@ -1,4 +1,4 @@
-﻿<Window x:Class="Stack_Solver_v3.MainWindow"
+﻿<Window x:Class="Stack_Solver.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -88,13 +88,9 @@
             <MenuItem Header="_File" Height="54" HorizontalAlignment="Center" VerticalAlignment="Center" Width="58">
                 <MenuItem x:Name="exitMenuItem" Header="_Exit" Click="exitMenuItem_Click" />
             </MenuItem>
-            <MenuItem Header="_Edit" Height="54" HorizontalAlignment="Center" VerticalAlignment="Center" Width="62">
-                <MenuItem Header="_3D Settings" />
-                <MenuItem Header="_Preferences" />
-            </MenuItem>
             <MenuItem  Header="_Help" Height="54" HorizontalAlignment="Center" VerticalAlignment="Center" Width="62">
                 <MenuItem x:Name="releasesMenuItem" Header="_Releases" Click="releasesMenuItem_Click"/>
-                <MenuItem Header="_About Stack Solver" />
+                <MenuItem x:Name="aboutMenuItem" Header="_About Stack Solver" Click="aboutMenuItem_Click"/>
             </MenuItem>
         </Menu>
         <ui:CardExpander Height="214" Header="Rendering Options" Margin="482,165,0,0" HorizontalAlignment="Left" Width="250" VerticalAlignment="Top">
