@@ -104,58 +104,6 @@ namespace Stack_Solver
 
         private Rendering render = new Rendering();
 
-        private void genTriangle(double posinit_x, double posinit_y, double posinit_z, double length, double width, double height, Model3DGroup triangle)
-        {
-            Point3D p0 = new Point3D(posinit_x + width, posinit_y + height, posinit_z + length);
-            Point3D p1 = new Point3D(posinit_x, posinit_y + height, posinit_z + length);
-            Point3D p2 = new Point3D(posinit_x, posinit_y, posinit_z + length);
-            Point3D p3 = new Point3D(posinit_x + width, posinit_y, posinit_z + length);
-            Point3D p4 = new Point3D(posinit_x + width, posinit_y + height, posinit_z);
-            Point3D p5 = new Point3D(posinit_x, posinit_y + height, posinit_z);
-            Point3D p6 = new Point3D(posinit_x, posinit_y, posinit_z);
-            Point3D p7 = new Point3D(posinit_x + width, posinit_y, posinit_z);
-
-            //front
-            triangle.Children.Add(render.geometryCreation(p0, p1, p2, brush));
-            triangle.Children.Add(render.geometryCreation(p0, p2, p3, brush));
-
-            //back
-            triangle.Children.Add(render.geometryCreation(p4, p7, p6, brush));
-            triangle.Children.Add(render.geometryCreation(p4, p6, p5, brush));
-
-            //right
-            triangle.Children.Add(render.geometryCreation(p4, p0, p3, brush));
-            triangle.Children.Add(render.geometryCreation(p4, p3, p7, brush));
-
-            //left
-            triangle.Children.Add(render.geometryCreation(p1, p5, p6, brush));
-            triangle.Children.Add(render.geometryCreation(p1, p6, p2, brush));
-
-            //top
-            triangle.Children.Add(render.geometryCreation(p1, p0, p4, brush));
-            triangle.Children.Add(render.geometryCreation(p1, p4, p5, brush));
-
-            //bottom
-            triangle.Children.Add(render.geometryCreation(p2, p6, p7, brush));
-            triangle.Children.Add(render.geometryCreation(p2, p7, p3, brush));
-        }
-
-        private void generateStack(double size_x, double size_y, double size_z, int nr_x, int nr_y, int nr_z, double offset_x, double offset_y, double offset_z, ref Model3DGroup triangle)
-        {
-            //MessageBox.Show(offset_x + "x, " + offset_y + "y");
-            for (int i = 0; i < nr_x; i++)
-                for (int j = 0; j < nr_y; j++)
-                    for (int k = 0; k < nr_z; k++)
-                        genTriangle(offset_y + j * (size_y + 0.5), offset_z + k * (size_z + 0.5), offset_x + i * (size_x + 0.5), size_x, size_y, size_z, triangle);
-
-            //genTriangle(0, 0, 0, Convert.ToDouble(lengthBox.Text), Convert.ToDouble(widthBox.Text), Convert.ToDouble(heightBox.Text), triangle);
-
-            //genTriangle(0, 0, 1.02, Convert.ToDouble(lengthBox.Text), Convert.ToDouble(widthBox.Text), Convert.ToDouble(heightBox.Text), triangle);//y
-            //genTriangle(1.02, 0, 0, Convert.ToDouble(lengthBox.Text), Convert.ToDouble(widthBox.Text), Convert.ToDouble(heightBox.Text), triangle);//x
-            //genTriangle(0, 1.02, 0, Convert.ToDouble(lengthBox.Text), Convert.ToDouble(widthBox.Text), Convert.ToDouble(heightBox.Text), triangle);//z
-            //genTriangle(0, 2.04, 0, Convert.ToDouble(lengthBox.Text), Convert.ToDouble(widthBox.Text), Convert.ToDouble(heightBox.Text), triangle);
-        }
-
         private void MainViewPort_MouseWheel(object sender, MouseWheelEventArgs e)
         {
             Camera camera;
@@ -336,28 +284,28 @@ namespace Stack_Solver
             pallet_width += 0.5 * (max_boxes_width1 + max_boxes_width2);
 
             brush = palletBrush;
-            generateStack(pallet_len, pallet_width, p.height / 4, 1, 1, 1, -pallet_len / 2, -pallet_width / 2, zPositionOffset + 0.75 * p.height, ref triangle);
+            render.generateStack(pallet_len, pallet_width, p.height / 4, 1, 1, 1, -pallet_len / 2, -pallet_width / 2, zPositionOffset + 0.75 * p.height, ref triangle, brush);
 
-            generateStack(pallet_len, 10, p.height / 4, 1, 1, 1, -pallet_len / 2, -pallet_width / 2, zPositionOffset, ref triangle);
-            generateStack(pallet_len, 10, p.height / 4, 1, 1, 1, -pallet_len / 2, -5, zPositionOffset, ref triangle);
-            generateStack(pallet_len, 10, p.height / 4, 1, 1, 1, -pallet_len / 2, pallet_width / 2 - 10, zPositionOffset, ref triangle);
+            render.generateStack(pallet_len, 10, p.height / 4, 1, 1, 1, -pallet_len / 2, -pallet_width / 2, zPositionOffset, ref triangle, brush);
+            render.generateStack(pallet_len, 10, p.height / 4, 1, 1, 1, -pallet_len / 2, -5, zPositionOffset, ref triangle, brush);
+            render.generateStack(pallet_len, 10, p.height / 4, 1, 1, 1, -pallet_len / 2, pallet_width / 2 - 10, zPositionOffset, ref triangle, brush);
 
             //front
-            generateStack(10, 10, p.height, 1, 1, 1, -pallet_len / 2, -pallet_width / 2, zPositionOffset, ref triangle);
-            generateStack(10, 10, p.height, 1, 1, 1, -pallet_len / 2, -5, zPositionOffset, ref triangle);
-            generateStack(10, 10, p.height, 1, 1, 1, -pallet_len / 2, pallet_width / 2 - 10, zPositionOffset, ref triangle);
+            render.generateStack(10, 10, p.height, 1, 1, 1, -pallet_len / 2, -pallet_width / 2, zPositionOffset, ref triangle, brush);
+            render.generateStack(10, 10, p.height, 1, 1, 1, -pallet_len / 2, -5, zPositionOffset, ref triangle, brush);
+            render.generateStack(10, 10, p.height, 1, 1, 1, -pallet_len / 2, pallet_width / 2 - 10, zPositionOffset, ref triangle, brush);
             //middle
-            generateStack(10, 10, p.height, 1, 1, 1, -5, -pallet_width / 2, zPositionOffset, ref triangle);
-            generateStack(10, 10, p.height, 1, 1, 1, -5, -5, zPositionOffset, ref triangle);
-            generateStack(10, 10, p.height, 1, 1, 1, -5, pallet_width / 2 - 10, zPositionOffset, ref triangle);
+            render.generateStack(10, 10, p.height, 1, 1, 1, -5, -pallet_width / 2, zPositionOffset, ref triangle, brush);
+            render.generateStack(10, 10, p.height, 1, 1, 1, -5, -5, zPositionOffset, ref triangle, brush);
+            render.generateStack(10, 10, p.height, 1, 1, 1, -5, pallet_width / 2 - 10, zPositionOffset, ref triangle, brush);
             //back
-            generateStack(10, 10, p.height, 1, 1, 1, pallet_len / 2 - 10, -pallet_width / 2, zPositionOffset, ref triangle);
-            generateStack(10, 10, p.height, 1, 1, 1, pallet_len / 2 - 10, -5, zPositionOffset, ref triangle);
-            generateStack(10, 10, p.height, 1, 1, 1, pallet_len / 2 - 10, pallet_width / 2 - 10, zPositionOffset, ref triangle);
+            render.generateStack(10, 10, p.height, 1, 1, 1, pallet_len / 2 - 10, -pallet_width / 2, zPositionOffset, ref triangle, brush);
+            render.generateStack(10, 10, p.height, 1, 1, 1, pallet_len / 2 - 10, -5, zPositionOffset, ref triangle, brush);
+            render.generateStack(10, 10, p.height, 1, 1, 1, pallet_len / 2 - 10, pallet_width / 2 - 10, zPositionOffset, ref triangle, brush);
 
             brush = boxBrush;
-            generateStack(c.length, c.width, c.height, nrboxes1, max_boxes_width2, levels, offset_x - pallet_len / 2, offset_y + inset1 - pallet_width / 2, p.height + zPositionOffset, ref triangle);
-            generateStack(c.width, c.length, c.height, nrboxes2, max_boxes_width1, levels, offset_x + xc - pallet_len / 2, offset_y + inset2 - pallet_width / 2, p.height + zPositionOffset, ref triangle);
+            render.generateStack(c.length, c.width, c.height, nrboxes1, max_boxes_width2, levels, offset_x - pallet_len / 2, offset_y + inset1 - pallet_width / 2, p.height + zPositionOffset, ref triangle, brush);
+            render.generateStack(c.width, c.length, c.height, nrboxes2, max_boxes_width1, levels, offset_x + xc - pallet_len / 2, offset_y + inset2 - pallet_width / 2, p.height + zPositionOffset, ref triangle, brush);
             //MessageBox.Show(c.length.ToString());
 
             ModelVisual3D Model = new ModelVisual3D();
@@ -521,6 +469,9 @@ namespace Stack_Solver
 
         private void calculateBtn_Click(object sender, RoutedEventArgs e)
         {
+            excelBtn.IsEnabled = true;
+            saveImageButton.IsEnabled = true;
+            sendToTruckConfigButton.IsEnabled = true;
             generationError = false;
             clearViewport();
             zPositionOffset = Convert.ToInt16(ZPositionTextBox.Text);
@@ -1347,7 +1298,13 @@ namespace Stack_Solver
             orthographicCamera.Position = new Point3D(0, 0, 60);
             orthographicCamera.LookDirection = vector3DLookDirection4;
             orthographicCamera.UpDirection = vector3DUpDirection4;
+        }
 
+        private void sendToTruckConfigButton_Click(object sender, RoutedEventArgs e)
+        {
+            TruckConfigurationWindow truckConfigurationWindow = new TruckConfigurationWindow(p.length, p.width, Math.Round(eff_height, 2), nr_levels * box_type_nr * c.weight + p.weight);
+            truckConfigurationWindow.Show();
+            this.Close();
         }
 
         private void ShowAxes()

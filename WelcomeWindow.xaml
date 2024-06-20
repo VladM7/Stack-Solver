@@ -1,0 +1,20 @@
+﻿<Window
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Stack_Solver"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" x:Class="Stack_Solver.WelcomeWindow"
+        mc:Ignorable="d"
+        Title="Stack Solver" Height="400" Width="600" WindowStartupLocation="CenterScreen">
+    <Grid>
+
+        <ui:TextBlock HorizontalAlignment="Left" Margin="50,67,0,0" TextWrapping="Wrap" Text="Welcome to" VerticalAlignment="Top" FontSize="36"/>
+        <ui:Button x:Name="palletConfigurationButton" Content="Pallet Configuration" Margin="95,192,0,0" VerticalAlignment="Top" Height="48" Width="180" Icon="{ui:SymbolIcon Box24}" Click="palletConfigurationButton_Click"/>
+        <ui:Button x:Name="truckConfigurationButton" Content="Truck Configuration" Margin="280,192,0,0" Height="48" Width="190" VerticalAlignment="Top" Icon="{ui:SymbolIcon VehicleTruckCube24}" Click="truckConfigurationButton_Click"/>
+        <ui:TextBlock HorizontalAlignment="Left" Margin="260,74,0,0" TextWrapping="Wrap" Text="Stack Solver" VerticalAlignment="Top" Height="45" Width="285" FontSize="36" FontFamily="Unispace"/>
+        <Label Content="v1.0-beta.3" VerticalAlignment="Top" HorizontalAlignment="Right" Width="80"/>
+        <ui:TextBlock HorizontalAlignment="Left" Margin="165,124,0,0" TextWrapping="Wrap" Text="Precision packing made easy." VerticalAlignment="Top" FontStyle="Italic" FontSize="18"/>
+
+    </Grid>
+</Window>

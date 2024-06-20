@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Stack_Solver_v3" xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         mc:Ignorable="d"
-        Title="Stack Solver" Height="625" Width="1045" Loaded="Window_Loaded">
-    <Grid Margin="0,0,0,0">
+        Title="Pallet Config - Stack Solver" Height="625" Width="1045" Loaded="Window_Loaded">
+    <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
@@ -50,11 +50,11 @@
         <Label Content="Weight" HorizontalAlignment="Left" Margin="307,79,0,0" Width="50" VerticalAlignment="Top" Height="23"/>
         <Label Content="Weight limit" HorizontalAlignment="Left" Margin="377,79,0,0" Width="85" VerticalAlignment="Top" Height="25"/>
         <ui:Button x:Name="calculateBtn" Content="Generate" Margin="3,165,0,0" VerticalAlignment="Top" Height="54" Width="142" Click="calculateBtn_Click" Background="#FFE0E0E0" Icon="{ui:SymbolIcon ArrowTurnDownRight48}"/>
-        <ui:Button x:Name="excelBtn" Content="Make Excel file" Margin="12,0,0,49" VerticalAlignment="Bottom" Background="White" Click="excelBtn_Click" Height="32" Width="275" Icon="{ui:SymbolIcon DocumentTable24}"/>
-        <Label Content="All measurements are in cm / kg." HorizontalAlignment="Left" Margin="34,239,0,0" VerticalAlignment="Top" Width="250" Background="{x:Null}" Foreground="Black" Height="25" FontSize="14"/>
+        <ui:Button x:Name="excelBtn" Content="Make Excel file" Margin="12,0,0,49" VerticalAlignment="Bottom" Background="White" Click="excelBtn_Click" Height="32" Width="275" Icon="{ui:SymbolIcon DocumentTable24}" IsEnabled="False"/>
+        <Label Content="All measurements are in cm / kg." HorizontalAlignment="Left" Margin="34,239,0,0" VerticalAlignment="Top" Width="253" Background="{x:Null}" Foreground="Black" Height="25" FontSize="14"/>
         <TextBlock HorizontalAlignment="Left" Margin="34,264,0,0" TextWrapping="Wrap" Text="Disclaimer: The rendering may not accurately reflect reality." VerticalAlignment="Top" Height="41" Width="206" Background="{x:Null}"/>
-        <Label Content="v1.0-beta.2" Margin="0,1,0,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="80"/>
-        <ui:DynamicScrollViewer Margin="2,310,0,86" HorizontalAlignment="Left" Width="290">
+        <Label Content="v1.0-beta.3" Margin="0,1,0,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="80"/>
+        <ui:DynamicScrollViewer Margin="2,310,0,120" HorizontalAlignment="Left" Width="290">
             <ui:TextBlock x:Name="resultTextBox" Margin="0,0,0,0" TextWrapping="Wrap" Height="395" Width="264" FontSize="14">
                 <Run x:Name="resultRunTextBlock" Text="The info will be displayed here upon pressing the Generate button."/>
             </ui:TextBlock>
@@ -118,7 +118,7 @@
         </ui:CardExpander>
         <ComboBox x:Name="boxSizeComboBox" HorizontalAlignment="Left" Margin="785,102,0,0" VerticalAlignment="Top" Width="210" SelectionChanged="boxSizeComboBox_SelectionChanged" IsEnabled="False"/>
         <Label x:Name="multipleSizesLabel" Content="Choose which box type to display:" HorizontalAlignment="Left" Margin="785,79,0,0" VerticalAlignment="Top"/>
-        <ui:Button x:Name="saveImageButton" Content="Save 3D model image" Margin="12,0,0,10" VerticalAlignment="Bottom" Width="275" Click="saveImageButton_Click" Height="32" Icon="{ui:SymbolIcon CircleImage28}"/>
+        <ui:Button x:Name="saveImageButton" Content="Save 3D model image" Margin="12,0,0,10" VerticalAlignment="Bottom" Width="275" Click="saveImageButton_Click" Height="32" Icon="{ui:SymbolIcon CircleImage28}" IsEnabled="False"/>
         <ui:CardExpander HorizontalAlignment="Left" Height="244" Header="View" Margin="737,165,0,0" VerticalAlignment="Top" Width="283">
             <Grid Height="154" Margin="0,0,-5,0">
                 <RadioButton x:Name="freeCameraRadioButton" Content="Free camera" Margin="10,-10,0,0" VerticalAlignment="Top" IsChecked="True" Checked="freeCameraRadioButton_Checked"/>
@@ -129,5 +129,6 @@
             </Grid>
         </ui:CardExpander>
         <Image HorizontalAlignment="Left" Height="25" Margin="3,10,0,0" VerticalAlignment="Top" Width="165" Source="/stacksolverlogo.png"/>
+        <ui:Button x:Name="sendToTruckConfigButton" Content="Send to Truck Config" Margin="12,0,0,86" VerticalAlignment="Bottom" Width="275" Icon="{ui:SymbolIcon ArrowExit20}" Height="32" IsEnabled="False" Click="sendToTruckConfigButton_Click"/>
     </Grid>
 </Window>
