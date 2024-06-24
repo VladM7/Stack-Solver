@@ -12,9 +12,9 @@
         <ui:TextBlock HorizontalAlignment="Left" Margin="50,67,0,0" TextWrapping="Wrap" Text="Welcome to" VerticalAlignment="Top" FontSize="36"/>
         <ui:Button x:Name="palletConfigurationButton" Content="Pallet Configuration" Margin="95,192,0,0" VerticalAlignment="Top" Height="48" Width="180" Icon="{ui:SymbolIcon Box24}" Click="palletConfigurationButton_Click"/>
         <ui:Button x:Name="truckConfigurationButton" Content="Truck Configuration" Margin="280,192,0,0" Height="48" Width="190" VerticalAlignment="Top" Icon="{ui:SymbolIcon VehicleTruckCube24}" Click="truckConfigurationButton_Click"/>
-        <ui:TextBlock HorizontalAlignment="Left" Margin="260,74,0,0" TextWrapping="Wrap" Text="Stack Solver" VerticalAlignment="Top" Height="45" Width="285" FontSize="36" FontFamily="Unispace"/>
         <Label Content="v1.0-beta.3" VerticalAlignment="Top" HorizontalAlignment="Right" Width="80"/>
         <ui:TextBlock HorizontalAlignment="Left" Margin="165,124,0,0" TextWrapping="Wrap" Text="Precision packing made easy." VerticalAlignment="Top" FontStyle="Italic" FontSize="18"/>
+        <Image HorizontalAlignment="Left" Height="48" Margin="248,75,0,0" VerticalAlignment="Top" Width="254" Source="/stacksolverlogo.png"/>
 
     </Grid>
 </Window>

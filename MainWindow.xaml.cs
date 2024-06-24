@@ -327,10 +327,16 @@ namespace Stack_Solver
             int boxesType2 = aria[nrb].nrb2;
             box_type_nr = boxesType1 + boxesType2;
 
+            string limit_reached = "Limit reached: weight";
+
             if (p.weight_limit == 0)
                 nr_levels = (int)((p.height_limit - p.height) / c.height);
             else
+            {
                 nr_levels = (int)min((int)((p.height_limit - p.height) / c.height), (int)((p.weight_limit - p.weight) / (box_type_nr * c.weight)));
+                if(nr_levels == (int)((p.height_limit - p.height) / c.height))
+                    limit_reached = "Limit reached: height";
+            }
             if (nr_levels == 0)
             {
                 resultTextBox.Text = "Error.";
@@ -406,7 +412,7 @@ namespace Stack_Solver
                 "_________________________________________\n\n" +
                 "Number of boxes / level: " + box_type_nr
                 + "\nNumber of levels: "
-                + nr_levels + "\nEffective height: " + Math.Round(eff_height, 2) + "cm\nLoad dimensions: " + Math.Round(length, 2) + "x" + Math.Round(width, 2) + "x"
+                + nr_levels + "\n" + limit_reached + "\nEffective height: " + Math.Round(eff_height, 2) + "cm\nLoad dimensions: " + Math.Round(length, 2) + "x" + Math.Round(width, 2) + "x"
                 + Math.Round((eff_height - p.height), 2)
                 + "cm³\nPallet dimensions: " + pallet_len + "x" + pallet_width + "x"
                 + Math.Round(eff_height, 2) + "cm³\nOffset (x, y): " + Math.Round(offset_length, 2) + "cm, " + Math.Round(offset_width, 2) +
@@ -467,6 +473,20 @@ namespace Stack_Solver
                 }
         }
 
+        private void checkValidity()
+        {
+            if(p.height<= 0 || p.length <= 0 || p.width <= 0 || p.weight <= 0 || p.weight_limit <= 0 || p.height_limit <= 0 || c.length <= 0 || c.width <= 0 || c.height <= 0 || c.weight <= 0)
+            {
+                statusInfoBar.Severity = InfoBarSeverity.Error;
+                statusInfoBar.Title = "Error";
+                statusInfoBar.Message = "All values must be positive.";
+                resultTextBox.Text = "Error: All values must be positive.";
+                statusInfoBar.IsOpen = true;
+                generationError = true;
+                return;
+            }
+        }
+
         private void calculateBtn_Click(object sender, RoutedEventArgs e)
         {
             excelBtn.IsEnabled = true;
@@ -491,6 +511,7 @@ namespace Stack_Solver
                 else
                 {
                     readPallets();
+                    checkValidity();
                     readExcelFile(1);
                 }
             }
@@ -499,11 +520,13 @@ namespace Stack_Solver
                 if (runAllCheckbox.IsChecked == true)
                 {
                     readBoxes();
+                    checkValidity();
                     run_all_tests();
                 }
                 else
                 {
                     readValues();
+                    checkValidity();
                     compare_results();
                 }
             }

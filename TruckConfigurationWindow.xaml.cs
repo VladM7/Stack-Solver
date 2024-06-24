@@ -23,8 +23,12 @@ namespace Stack_Solver
 
         struct palet
         {
-            public double length, width, height;
-            public double weight, weight_limit, height_limit;
+            public double id, length, width, height, weight, number;
+        }
+
+        struct palet2
+        {
+            public double ID, Length, Width, Height, Weight, Pieces;
         }
 
         struct cutie
@@ -43,6 +47,8 @@ namespace Stack_Solver
         cutie c;
         arii[] aria1 = new arii[105];
         arii[] aria2 = new arii[105];
+
+        List<palet2> pallets = new List<palet2>();
 
         public int max_boxes_length;
         public int max_boxes_width1;
@@ -102,35 +108,6 @@ namespace Stack_Solver
             transform.ScaleZ *= delta;
         }
 
-        private void readValues()
-        {
-            if (pL.Text == "" || pW.Text == "" || pH.Text == "" || pWghtlim.Text == "" ||
-                bL.Text == "" || bW.Text == "" || bH.Text == "" || bWght.Text == "")
-                return;
-            p.length = Convert.ToDouble(pL.Text);
-            p.width = Convert.ToDouble(pW.Text);
-            p.height = Convert.ToDouble(pH.Text);
-            p.weight_limit = Convert.ToDouble(pWghtlim.Text);
-
-            c.length = Convert.ToDouble(bL.Text);
-            c.width = Convert.ToDouble(bW.Text);
-            c.height = Convert.ToDouble(bH.Text);
-            c.weight = Convert.ToDouble(bWght.Text);
-        }
-
-        private void readBoxes()
-        {
-            if (bL.Text == "" || bW.Text == "" || bH.Text == "" || bWght.Text == "" || pWghtlim.Text == "")
-                return;
-
-            p.weight_limit = Convert.ToDouble(pWghtlim.Text);
-
-            c.length = Convert.ToDouble(bL.Text);
-            c.width = Convert.ToDouble(bW.Text);
-            c.height = Convert.ToDouble(bH.Text);
-            c.weight = Convert.ToDouble(bWght.Text);
-        }
-
         private void readPallets()
         {
             if (pL.Text == "" || pW.Text == "" || pH.Text == "" || pWghtlim.Text == "")
@@ -138,7 +115,7 @@ namespace Stack_Solver
             p.length = Convert.ToDouble(pL.Text);
             p.width = Convert.ToDouble(pW.Text);
             p.height = Convert.ToDouble(pH.Text);
-            p.weight_limit = Convert.ToDouble(pWghtlim.Text);
+            //p.weight_limit = Convert.ToDouble(pWghtlim.Text);
         }
 
         double max(double a, double b)
@@ -244,10 +221,10 @@ namespace Stack_Solver
             int boxesType2 = aria[nrb].nrb2;
             box_type_nr = boxesType1 + boxesType2;
 
-            if (p.weight_limit == 0)
-                nr_levels = (int)(p.height / c.height);
-            else
-                nr_levels = (int)min((int)(p.height / c.height), (int)(p.weight_limit / (box_type_nr * c.weight)));
+            //if (p.weight_limit == 0)
+            //  nr_levels = (int)(p.height / c.height);
+            //else
+            //nr_levels = (int)min((int)(p.height / c.height), (int)(p.weight_limit / (box_type_nr * c.weight)));
             if (nr_levels == 0)
             {
                 resultTextBox.Text = "Error.";
@@ -315,7 +292,7 @@ namespace Stack_Solver
             double inv_len = max(pallet_len, pallet_width);
             double inv_wid = min(pallet_len, pallet_width);
 
-            resultRunTextBlock.Text = "Area occupied: " + vmax + "cm³\nUnoccupied space: "
+            /*resultRunTextBlock.Text = "Area occupied: " + vmax + "cm³\nUnoccupied space: "
                 + (aria_palet - vmax)
                 + "cm²\nEfficiency: " + Math.Round((vmax / aria_palet * 100), 2, MidpointRounding.AwayFromZero) + "%\n\nPallet type: " +
                 inv_len + "x" + inv_wid +
@@ -333,6 +310,7 @@ namespace Stack_Solver
                 + (nr_levels * box_type_nr * c.weight + p.weight)
                 + "kg\nWeight / level: " + box_type_nr * c.weight +
                 "kg\nTotal number of boxes: " + (nr_levels * box_type_nr) + "\n\n";
+            */
             draw3D(aria, nrb, pallet_len, pallet_width, nr_levels, inset, inset_type, offset_length, offset_width);
         }
 
@@ -428,11 +406,6 @@ namespace Stack_Solver
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            bL.Text = p.length.ToString();
-            bW.Text = p.width.ToString();
-            bH.Text = p.height.ToString();
-            bWght.Text = p.weight.ToString();
-
             if (MainViewPort.Camera.GetType() == typeof(PerspectiveCamera))
             {
                 // Get the scale transform from the Viewport3D's camera
@@ -511,7 +484,7 @@ namespace Stack_Solver
             saveImageButton.IsEnabled = true;
             generationError = false;
             clearViewport();
-            readValues();
+            //readValues();
             compare_results();
             excelBtn.IsEnabled = true;
             //readValues();
@@ -716,6 +689,45 @@ namespace Stack_Solver
                 palletBrush = Brushes.Black;
             else if (palletColorComboBox.SelectedIndex == 4)
                 palletBrush = Brushes.White;
+        }
+
+        private void addPalletButton_Click(object sender, RoutedEventArgs e)
+        {
+            AddPalletDialog addPalletDialog = new AddPalletDialog();
+            addPalletDialog.ShowDialog();
+            if(addPalletDialog.successLabel.Content.ToString() == "no")
+            {
+                return;
+            }
+            pallets.Add(new palet2
+            {
+                ID = pallets.Count + 1,
+                Length = Convert.ToDouble(new TextRange(addPalletDialog.palletLenRTB.Document.ContentStart, addPalletDialog.palletLenRTB.Document.ContentEnd).Text),
+                Width = Convert.ToDouble(new TextRange(addPalletDialog.palletWidRTB.Document.ContentStart, addPalletDialog.palletWidRTB.Document.ContentEnd).Text),
+                Height = Convert.ToDouble(new TextRange(addPalletDialog.palletHgtRTB.Document.ContentStart, addPalletDialog.palletHgtRTB.Document.ContentEnd).Text),
+                Weight = Convert.ToDouble(new TextRange(addPalletDialog.palletWgtRTB.Document.ContentStart, addPalletDialog.palletWgtRTB.Document.ContentEnd).Text),
+                Pieces = Convert.ToDouble(new TextRange(addPalletDialog.palletNumRTB.Document.ContentStart, addPalletDialog.palletNumRTB.Document.ContentEnd).Text),
+            });
+            //palletsDataGrid.ItemsSource = pallets;
+            palletsDataGrid.Items.Add(new
+            {
+                ID = (pallets.Count).ToString(),
+                Length = Convert.ToString(new TextRange(addPalletDialog.palletLenRTB.Document.ContentStart, addPalletDialog.palletLenRTB.Document.ContentEnd).Text),
+                Width = Convert.ToString(new TextRange(addPalletDialog.palletWidRTB.Document.ContentStart, addPalletDialog.palletWidRTB.Document.ContentEnd).Text),
+                Height = Convert.ToString(new TextRange(addPalletDialog.palletHgtRTB.Document.ContentStart, addPalletDialog.palletHgtRTB.Document.ContentEnd).Text),
+                Pieces = Convert.ToString(new TextRange(addPalletDialog.palletNumRTB.Document.ContentStart, addPalletDialog.palletNumRTB.Document.ContentEnd).Text),
+                Weight = Convert.ToString(new TextRange(addPalletDialog.palletWgtRTB.Document.ContentStart, addPalletDialog.palletWgtRTB.Document.ContentEnd).Text)
+            });
+        }
+
+        private void removePalletButton_Click(object sender, RoutedEventArgs e)
+        {
+            if(pallets.Count == 0)
+            {
+                return;
+            }
+            palletsDataGrid.Items.RemoveAt(pallets.Count-1);
+            pallets.RemoveAt(pallets.Count - 1);
         }
 
         private void boxColorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

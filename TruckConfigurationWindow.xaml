@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         Title="Truck Config - Stack Solver" Height="625" Width="1045" Loaded="Window_Loaded">
     <Grid>
-        <Viewport3D Name="MainViewPort" ClipToBounds="True" Margin="290,181,18,-11" MouseWheel="MainViewPort_MouseWheel" MouseLeftButtonDown="MainViewPort_MouseLeftButtonDown" MouseLeftButtonUp="MainViewPort_MouseLeftButtonUp" MouseMove="MainViewPort_MouseMove">
+        <Viewport3D Name="MainViewPort" ClipToBounds="True" Margin="614,59,18,10" MouseWheel="MainViewPort_MouseWheel" MouseLeftButtonDown="MainViewPort_MouseLeftButtonDown" MouseLeftButtonUp="MainViewPort_MouseLeftButtonUp" MouseMove="MainViewPort_MouseMove">
             <Viewport3D.Camera>
                 <PerspectiveCamera x:Name="threedCamera"
 FarPlaneDistance="100"
@@ -39,38 +39,29 @@ FieldOfView="75" />
         </Menu>
         <Image HorizontalAlignment="Left" Height="25" Margin="3,10,0,0" VerticalAlignment="Top" Width="165" Source="/stacksolverlogo.png"/>
         <TextBox x:Name="pL" HorizontalAlignment="Left" Margin="12,104,0,0" TextWrapping="Wrap" Text="1360" VerticalAlignment="Top" Width="70" GotKeyboardFocus="pL_GotKeyboardFocus" Height="35"/>
-        <TextBox x:Name="pW" HorizontalAlignment="Left" Margin="82,104,0,0" TextWrapping="Wrap" Text="242" VerticalAlignment="Top" Width="70" GotKeyboardFocus="pW_GotKeyboardFocus" Height="35"/>
-        <TextBox x:Name="pH" HorizontalAlignment="Left" Margin="152,104,0,0" TextWrapping="Wrap" Text="260" VerticalAlignment="Top" Width="70" GotKeyboardFocus="pH_GotKeyboardFocus" Height="35"/>
-        <TextBox x:Name="pWghtlim" HorizontalAlignment="Left" Margin="227,103,0,0" TextWrapping="Wrap" Text="2300" VerticalAlignment="Top" Width="70" GotKeyboardFocus="pWghtlim_GotKeyboardFocus" Height="35"/>
-        <TextBox x:Name="bL" HorizontalAlignment="Left" Margin="327,103,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="70" GotKeyboardFocus="bL_GotKeyboardFocus"/>
-        <TextBox x:Name="bW" HorizontalAlignment="Left" Margin="397,103,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="70" GotKeyboardFocus="bW_GotKeyboardFocus"/>
-        <TextBox x:Name="bH" HorizontalAlignment="Left" Margin="467,103,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="70" GotKeyboardFocus="bH_GotKeyboardFocus"/>
-        <TextBox x:Name="bWght" HorizontalAlignment="Left" Margin="537,103,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" GotKeyboardFocus="bWght_GotKeyboardFocus" Width="70"/>
-        <Label Content="Length" HorizontalAlignment="Left" Margin="327,79,0,0" VerticalAlignment="Top" Height="24" Width="46"/>
+        <TextBox x:Name="pW" HorizontalAlignment="Left" Margin="82,104,0,0" TextWrapping="Wrap" Text="240" VerticalAlignment="Top" Width="70" GotKeyboardFocus="pW_GotKeyboardFocus" Height="35"/>
+        <TextBox x:Name="pH" HorizontalAlignment="Left" Margin="152,104,0,0" TextWrapping="Wrap" Text="270" VerticalAlignment="Top" Width="70" GotKeyboardFocus="pH_GotKeyboardFocus" Height="35"/>
+        <TextBox x:Name="pWghtlim" HorizontalAlignment="Left" Margin="227,103,0,0" TextWrapping="Wrap" Text="22000" VerticalAlignment="Top" Width="70" GotKeyboardFocus="pWghtlim_GotKeyboardFocus" Height="35"/>
         <Label Content="Length" HorizontalAlignment="Left" Margin="12,79,0,0" Height="25" Width="45" VerticalAlignment="Top" />
-        <Label Content="Width" HorizontalAlignment="Left" Margin="397,79,0,0" VerticalAlignment="Top" Height="24" Width="46"/>
         <Label Content="Width" Margin="82,79,0,0" Width="40" Height="25" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" HorizontalAlignment="Left" VerticalAlignment="Top"/>
-        <Label Content="Height" HorizontalAlignment="Left" Margin="467,79,0,0" VerticalAlignment="Top" Height="24" Width="46"/>
         <Label Content="Height" HorizontalAlignment="Left" Margin="152,79,0,0" VerticalAlignment="Top" Height="25" Width="50"/>
-        <Label Content="Weight" HorizontalAlignment="Left" Margin="537,79,0,0" VerticalAlignment="Top" Height="24" Width="50"/>
         <Label Content="Weight limit" HorizontalAlignment="Left" Margin="227,79,0,0" Width="85" VerticalAlignment="Top" Height="25"/>
-        <GroupBox Header="Truck" HorizontalAlignment="Left" Width="310" Height="110" VerticalAlignment="Top" FontFamily="Segoe UI Semibold" Margin="2,50,0,0"/>
-        <GroupBox Header="Pallets" Margin="317,50,0,0" Height="110" VerticalAlignment="Top" HorizontalAlignment="Left" Width="278" FontFamily="Segoe UI Semibold"/>
-        <ui:Button x:Name="calculateBtn" Content="Generate" Margin="3,165,0,0" VerticalAlignment="Top" Height="54" Width="142" Background="#FFDEE2F1" Icon="{ui:SymbolIcon ArrowTurnDownRight48}" Click="calculateBtn_Click"/>
-        <ui:Button x:Name="excelBtn" Content="Make Excel file" Margin="12,0,0,49" VerticalAlignment="Bottom" Background="White" Height="32" Width="275" Icon="{ui:SymbolIcon DocumentTable24}"/>
-        <Label Content="All measurements are in cm / kg." HorizontalAlignment="Left" Margin="34,239,0,0" VerticalAlignment="Top" Width="250" Background="{x:Null}" Foreground="Black" Height="25" FontSize="14"/>
-        <TextBlock HorizontalAlignment="Left" Margin="34,264,0,0" TextWrapping="Wrap" Text="Disclaimer: The rendering may not accurately reflect reality." VerticalAlignment="Top" Height="41" Width="206" Background="{x:Null}"/>
-        <ui:DynamicScrollViewer Margin="2,310,0,86" HorizontalAlignment="Left" Width="290">
+        <GroupBox Header="Truck" HorizontalAlignment="Left" Width="310" Height="124" VerticalAlignment="Top" FontFamily="Segoe UI Semibold" Margin="2,50,0,0"/>
+        <ui:Button x:Name="calculateBtn" Content="Generate" Margin="3,0,0,7" VerticalAlignment="Bottom" Width="309" Background="#FFDEE2F1" Icon="{ui:SymbolIcon ArrowTurnDownRight48}" Click="calculateBtn_Click" Height="43"/>
+        <ui:Button x:Name="excelBtn" Content="Make Excel file" Margin="317,0,0,44" VerticalAlignment="Bottom" Background="White" Height="32" Width="276" Icon="{ui:SymbolIcon DocumentTable24}"/>
+        <Label Content="All measurements are in cm / kg." HorizontalAlignment="Left" Margin="355,190,0,0" VerticalAlignment="Top" Width="224" Background="{x:Null}" Foreground="Black" Height="26" FontSize="14"/>
+        <TextBlock HorizontalAlignment="Left" Margin="355,220,0,0" TextWrapping="Wrap" Text="Disclaimer: The rendering may not accurately reflect reality." VerticalAlignment="Top" Height="41" Width="206" Background="{x:Null}"/>
+        <ui:DynamicScrollViewer Margin="316,269,0,88" HorizontalAlignment="Left" Width="290">
             <ui:TextBlock x:Name="resultTextBox" Margin="0,0,0,0" TextWrapping="Wrap" Height="395" Width="264" FontSize="14">
                 <Run x:Name="resultRunTextBlock" Text="The info will be displayed here upon pressing the Generate button."/>
             </ui:TextBlock>
         </ui:DynamicScrollViewer>
-        <ui:Button x:Name="saveImageButton" Content="Save 3D model image" Margin="12,0,0,10" VerticalAlignment="Bottom" Width="275" Height="32" Icon="{ui:SymbolIcon CircleImage28}"/>
-        <ui:SymbolIcon Symbol="Info24" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,239,0,0" Height="20" Width="20"/>
-        <ui:SymbolIcon Symbol="Warning24" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,264,0,0" Height="20" Width="20"/>
-        <ui:InfoBar x:Name="statusInfoBar" Content="InfoBar" Margin="290,0,100,10" VerticalAlignment="Bottom" Height="50"/>
-        <ui:CardExpander HorizontalAlignment="Left" Height="244" Header="View" Margin="378,165,0,0" VerticalAlignment="Top" Width="262">
-            <Grid Height="154" Margin="-10,0,-13,0">
+        <ui:Button x:Name="saveImageButton" Content="Save 3D model image" Margin="317,0,0,7" VerticalAlignment="Bottom" Width="276" Height="32" Icon="{ui:SymbolIcon CircleImage28}"/>
+        <ui:SymbolIcon Symbol="Info24" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="330,190,0,0" Height="20" Width="20"/>
+        <ui:SymbolIcon Symbol="Warning24" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="330,220,0,0" Height="20" Width="20"/>
+        <ui:InfoBar x:Name="statusInfoBar" Content="InfoBar" Margin="623,0,18,10" VerticalAlignment="Bottom" Height="50"/>
+        <ui:CardExpander HorizontalAlignment="Left" Height="244" Header="View" Margin="317,119,0,0" VerticalAlignment="Top" Width="262">
+            <Grid Height="154" Margin="-10,0,-13,0" Background="White">
                 <RadioButton x:Name="freeCameraRadioButton" Content="Free camera" Margin="10,-10,0,0" VerticalAlignment="Top" IsChecked="True" Checked="freeCameraRadioButton_Checked"/>
                 <RadioButton x:Name="topDownViewRadioButton" Content="Top-Down view" Margin="10,20,0,0" VerticalAlignment="Top" Checked="topDownViewRadioButton_Checked"/>
                 <RadioButton x:Name="sideViewXRadioButton" Content="Side view (X)" Margin="10,50,0,0" VerticalAlignment="Top" Checked="sideViewXRadioButton_Checked"/>
@@ -78,9 +69,8 @@ FieldOfView="75" />
                 <ui:Button x:Name="switchCameraButton" Content="Switch to orthographic camera" Margin="5,115,0,0" VerticalAlignment="Top" Height="34" Click="switchCameraButton_Click" Icon="{ui:SymbolIcon Camera28}" Width="238"/>
             </Grid>
         </ui:CardExpander>
-        <ui:CardExpander Height="214" Header="Rendering Options" Margin="150,165,0,0" HorizontalAlignment="Left" Width="223" VerticalAlignment="Top">
-            <Grid Height="119" Margin="-10,0,-13,0" Background="White">
-
+        <ui:CardExpander Height="205" Header="Rendering Options" Margin="317,59,0,0" HorizontalAlignment="Left" Width="262" VerticalAlignment="Top">
+            <Grid Height="124" Margin="-10,0,-13,0" Background="White">
                 <Label Content="Drawing position (Z):" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Top"/>
                 <TextBox x:Name="ZPositionTextBox" HorizontalAlignment="Left" Margin="150,-6,0,0" TextWrapping="Wrap" Text="-80" VerticalAlignment="Top" Width="65" Height="35"/>
                 <Label Content="Pallet color:" HorizontalAlignment="Left" Margin="10,42,0,0" VerticalAlignment="Top"/>
@@ -101,5 +91,18 @@ FieldOfView="75" />
                 </ComboBox>
             </Grid>
         </ui:CardExpander>
+        <DataGrid x:Name="palletsDataGrid" Margin="12,199,0,0" AutoGenerateColumns="False" ColumnWidth="Auto" HorizontalAlignment="Left" Width="285" Height="218" VerticalAlignment="Top">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID" Binding="{Binding ID}"/>
+                <DataGridTextColumn Header="Pieces" Binding="{Binding Pieces}"/>
+                <DataGridTextColumn Header="Length" Binding="{Binding Length}"/>
+                <DataGridTextColumn Header="Width" Binding="{Binding Width}"/>
+                <DataGridTextColumn Header="Height" Binding="{Binding Height}"/>
+                <DataGridTextColumn Header="Weight" Binding="{Binding Weight}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+        <GroupBox Header="Pallets" Margin="3,174,0,55" FontFamily="Segoe UI Semibold" HorizontalAlignment="Left" Width="309"/>
+        <ui:Button x:Name="addPalletButton" Content="Add new pallet type" Margin="12,422,0,0" VerticalAlignment="Top" Width="285" Icon="{ui:SymbolIcon Add24}" Click="addPalletButton_Click"/>
+        <ui:Button x:Name="removePalletButton" Content="Remove last pallet type" Margin="12,459,0,0" VerticalAlignment="Top" Width="285" Icon="{ui:SymbolIcon Subtract24}" Click="removePalletButton_Click"/>
     </Grid>
 </Window>
