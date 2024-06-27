@@ -334,7 +334,7 @@ namespace Stack_Solver
             else
             {
                 nr_levels = (int)min((int)((p.height_limit - p.height) / c.height), (int)((p.weight_limit - p.weight) / (box_type_nr * c.weight)));
-                if(nr_levels == (int)((p.height_limit - p.height) / c.height))
+                if (nr_levels == (int)((p.height_limit - p.height) / c.height))
                     limit_reached = "Limit reached: height";
             }
             if (nr_levels == 0)
@@ -475,7 +475,7 @@ namespace Stack_Solver
 
         private void checkValidity()
         {
-            if(p.height<= 0 || p.length <= 0 || p.width <= 0 || p.weight <= 0 || p.weight_limit <= 0 || p.height_limit <= 0 || c.length <= 0 || c.width <= 0 || c.height <= 0 || c.weight <= 0)
+            if (p.height <= 0 || p.length <= 0 || p.width <= 0 || p.weight <= 0 || p.weight_limit <= 0 || p.height_limit <= 0 || c.length <= 0 || c.width <= 0 || c.height <= 0 || c.weight <= 0)
             {
                 statusInfoBar.Severity = InfoBarSeverity.Error;
                 statusInfoBar.Title = "Error";
@@ -540,7 +540,8 @@ namespace Stack_Solver
                 statusInfoBar.Message = "Generation complete.";
                 statusInfoBar.IsOpen = true;
             }
-            //ShowAxes();
+            if (drawAxesCheckbox.IsChecked == true)
+                ShowAxes();
         }
 
         private double rotationAngleX = 0, rotationAngleY = 0;
@@ -1145,6 +1146,7 @@ namespace Stack_Solver
                 palletBrush = Brushes.Black;
             else if (palletColorComboBox.SelectedIndex == 4)
                 palletBrush = Brushes.White;
+            //renderingSettingsAlert();
         }
 
         private void boxColorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -1159,6 +1161,15 @@ namespace Stack_Solver
                 boxBrush = Brushes.Black;
             else if (boxColorComboBox.SelectedIndex == 4)
                 boxBrush = Brushes.White;
+            //renderingSettingsAlert();
+        }
+
+        private void renderingSettingsAlert()
+        {
+            statusInfoBar.Severity = InfoBarSeverity.Warning;
+            statusInfoBar.Title = "Warning";
+            statusInfoBar.Message = "Rendering settings have been changed. The changes will take effect at the next generation.";
+            statusInfoBar.IsOpen = true;
         }
 
         private void switchCameraButton_Click(object sender, RoutedEventArgs e)
@@ -1330,6 +1341,11 @@ namespace Stack_Solver
             this.Close();
         }
 
+        private void drawAxesCheckbox_Click(object sender, RoutedEventArgs e)
+        {
+            renderingSettingsAlert();
+        }
+
         private void ShowAxes()
         {
             var lineX1 = new GeometryModel3D()
@@ -1482,34 +1498,34 @@ namespace Stack_Solver
                 Material = new DiffuseMaterial(Brushes.Blue)
             };
 
-            var cube = new GeometryModel3D();
+            var lengthText = new GeometryModel3D();
             var mat = new DiffuseMaterial();
             var vb = new VisualBrush();
             var st = new StackPanel();
-            st.Children.Add(new System.Windows.Controls.TextBlock(new Run("Length: " + p.length + " cm")));
+            st.Children.Add(new System.Windows.Controls.TextBlock(new Run(p.length + " cm")));
             vb.Visual = st;
             mat.Brush = vb;
-            cube.Material = mat;
-            cube.Geometry=new MeshGeometry3D()
+            lengthText.Material = mat;
+            lengthText.Geometry = new MeshGeometry3D()
             {
-                Positions = { 
-                    new Point3D(10, 10, 10),
-                    new Point3D(-10, 10, 10),
-                    new Point3D(-10, -10, 10),
-                    new Point3D(10, -10, 10),
+                Positions = {
+                    new Point3D(-5, 0, -10),
+                    new Point3D(5, 0, -10),
+                    new Point3D(-5, 0, -15),
+                    new Point3D(5, 0, -15),
                 },
-                TriangleIndices = { 
+                TriangleIndices = {
                     0, 1, 2,
-                    0, 2, 3
+                    2, 1, 3
                 },
                 TextureCoordinates = {
-                    new Point(1, 1),
                     new Point(0, 1),
+                    new Point(1, 1),
                     new Point(0, 0),
                     new Point(1, 0)
                 }
             };
-            cube.Transform = new ScaleTransform3D(50, 50, 50);
+            lengthText.Transform = new ScaleTransform3D(20, 20, 20);
 
             foreach (object o in MainViewPort.Children)
                 if (o is ModelVisual3D)
@@ -1528,7 +1544,7 @@ namespace Stack_Solver
                     mdg.Children.Add(lineY2Above);
                     mdg.Children.Add(lineXMeasurement);
                     mdg.Children.Add(lineYMeasurement);
-                    mdg.Children.Add(cube);
+                    mdg.Children.Add(lengthText);
                     return;
                 }
         }

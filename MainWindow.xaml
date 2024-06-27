@@ -77,7 +77,7 @@
                 <Label x:Name="excelFileLabel" Content="No file chosen" Margin="10,135,0,0" Height="22" Background="White" FontStyle="Italic" VerticalAlignment="Top" FontFamily="Calibri"/>
             </Grid>
         </ui:CardExpander>
-        <ui:InfoBar x:Name="statusInfoBar" Content="InfoBar" Margin="290,0,25,10" VerticalAlignment="Bottom" Height="50"/>
+        <ui:InfoBar x:Name="statusInfoBar" Content="InfoBar" Margin="290,0,25,10" VerticalAlignment="Bottom"/>
         <ui:SymbolIcon Symbol="Info24" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,239,0,0" Height="20" Width="20"/>
         <ui:SymbolIcon Symbol="Warning24" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,264,0,0" Height="20" Width="20"/>
         <GroupBox Header="Pallet" HorizontalAlignment="Left" Width="475" Height="110" VerticalAlignment="Top" FontFamily="Segoe UI Semibold" Margin="2,50,0,0"/>
@@ -93,8 +93,8 @@
                 <MenuItem x:Name="aboutMenuItem" Header="_About Stack Solver" Click="aboutMenuItem_Click"/>
             </MenuItem>
         </Menu>
-        <ui:CardExpander Height="214" Header="Rendering Options" Margin="482,165,0,0" HorizontalAlignment="Left" Width="250" VerticalAlignment="Top">
-            <Grid Height="119" Margin="-12,0,-13,0">
+        <ui:CardExpander Height="229" Header="Rendering Options" Margin="482,165,0,0" HorizontalAlignment="Left" Width="250" VerticalAlignment="Top">
+            <Grid Height="139" Margin="-12,0,-13,0">
 
                 <Label Content="Drawing position (Z):" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Top"/>
                 <TextBox x:Name="ZPositionTextBox" HorizontalAlignment="Left" Margin="150,-6,0,0" TextWrapping="Wrap" Text="-80" VerticalAlignment="Top" Width="65" Height="35"/>
@@ -114,6 +114,7 @@
                     <ComboBoxItem Content="Black"/>
                     <ComboBoxItem Content="White"/>
                 </ComboBox>
+                <CheckBox x:Name="drawAxesCheckbox" Content="Draw guides and axes" Margin="10,117,0,0" VerticalAlignment="Top" IsChecked="True" Click="drawAxesCheckbox_Click"/>
             </Grid>
         </ui:CardExpander>
         <ComboBox x:Name="boxSizeComboBox" HorizontalAlignment="Left" Margin="785,102,0,0" VerticalAlignment="Top" Width="210" SelectionChanged="boxSizeComboBox_SelectionChanged" IsEnabled="False"/>
