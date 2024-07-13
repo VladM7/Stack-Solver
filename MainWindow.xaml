@@ -29,16 +29,16 @@
                 </ModelVisual3D.Content>
             </ModelVisual3D>
         </Viewport3D>
-        <TextBox x:Name="pL" HorizontalAlignment="Left" Margin="12,104,0,0" TextWrapping="Wrap" Text="120" VerticalAlignment="Top" Width="70" GotKeyboardFocus="pL_GotKeyboardFocus" Height="35"/>
-        <TextBox x:Name="pW" HorizontalAlignment="Left" Margin="82,104,0,0" TextWrapping="Wrap" Text="80" VerticalAlignment="Top" Width="70" GotKeyboardFocus="pW_GotKeyboardFocus" Height="35"/>
-        <TextBox x:Name="pH" HorizontalAlignment="Left" Margin="152,104,0,0" TextWrapping="Wrap" Text="14.4" VerticalAlignment="Top" Width="70" GotKeyboardFocus="pH_GotKeyboardFocus" Height="35"/>
-        <TextBox x:Name="pHlim" HorizontalAlignment="Left" Margin="222,103,0,0" TextWrapping="Wrap" Text="180" VerticalAlignment="Top" Width="70" GotKeyboardFocus="pHlim_GotKeyboardFocus" Height="35"/>
-        <TextBox x:Name="pWght" HorizontalAlignment="Left" Margin="307,103,0,0" TextWrapping="Wrap" Text="33" VerticalAlignment="Top" Width="70" GotKeyboardFocus="pWght_GotKeyboardFocus" Height="35"/>
-        <TextBox x:Name="pWghtlim" HorizontalAlignment="Left" Margin="377,103,0,0" TextWrapping="Wrap" Text="950" VerticalAlignment="Top" Width="70" GotKeyboardFocus="pWghtlim_GotKeyboardFocus" Height="35"/>
-        <TextBox x:Name="bL" HorizontalAlignment="Left" Margin="492,103,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="70" GotKeyboardFocus="bL_GotKeyboardFocus"/>
-        <TextBox x:Name="bW" HorizontalAlignment="Left" Margin="562,103,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="70" GotKeyboardFocus="bW_GotKeyboardFocus"/>
-        <TextBox x:Name="bH" HorizontalAlignment="Left" Margin="632,103,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="70" GotKeyboardFocus="bH_GotKeyboardFocus"/>
-        <TextBox x:Name="bWght" HorizontalAlignment="Left" Margin="702,103,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" GotKeyboardFocus="bWght_GotKeyboardFocus" Width="70"/>
+        <TextBox x:Name="pL" HorizontalAlignment="Left" Margin="12,104,0,0" TextWrapping="Wrap" Text="120" VerticalAlignment="Top" Width="70" GotKeyboardFocus="keyboardFocusSelectAll" Height="35"/>
+        <TextBox x:Name="pW" HorizontalAlignment="Left" Margin="82,104,0,0" TextWrapping="Wrap" Text="80" VerticalAlignment="Top" Width="70" GotKeyboardFocus="keyboardFocusSelectAll" Height="35"/>
+        <TextBox x:Name="pH" HorizontalAlignment="Left" Margin="152,104,0,0" TextWrapping="Wrap" Text="14.4" VerticalAlignment="Top" Width="70" GotKeyboardFocus="keyboardFocusSelectAll" Height="35"/>
+        <TextBox x:Name="pHlim" HorizontalAlignment="Left" Margin="222,103,0,0" TextWrapping="Wrap" Text="180" VerticalAlignment="Top" Width="70" GotKeyboardFocus="keyboardFocusSelectAll" Height="35"/>
+        <TextBox x:Name="pWght" HorizontalAlignment="Left" Margin="307,103,0,0" TextWrapping="Wrap" Text="33" VerticalAlignment="Top" Width="70" GotKeyboardFocus="keyboardFocusSelectAll" Height="35"/>
+        <TextBox x:Name="pWghtlim" HorizontalAlignment="Left" Margin="377,103,0,0" TextWrapping="Wrap" Text="950" VerticalAlignment="Top" Width="70" GotKeyboardFocus="keyboardFocusSelectAll" Height="35"/>
+        <TextBox x:Name="bL" HorizontalAlignment="Left" Margin="492,103,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="70" GotKeyboardFocus="keyboardFocusSelectAll"/>
+        <TextBox x:Name="bW" HorizontalAlignment="Left" Margin="562,103,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="70" GotKeyboardFocus="keyboardFocusSelectAll"/>
+        <TextBox x:Name="bH" HorizontalAlignment="Left" Margin="632,103,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="70" GotKeyboardFocus="keyboardFocusSelectAll"/>
+        <TextBox x:Name="bWght" HorizontalAlignment="Left" Margin="702,103,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" GotKeyboardFocus="keyboardFocusSelectAll" Width="70"/>
         <Label Content="Length" HorizontalAlignment="Left" Margin="492,79,0,0" VerticalAlignment="Top" Height="24" Width="46"/>
         <Label Content="Length" HorizontalAlignment="Left" Margin="12,79,0,0" Height="25" Width="45" VerticalAlignment="Top" />
         <Label Content="Width" HorizontalAlignment="Left" Margin="562,79,0,0" VerticalAlignment="Top" Height="24" Width="46"/>
@@ -50,10 +50,10 @@
         <Label Content="Weight" HorizontalAlignment="Left" Margin="307,79,0,0" Width="50" VerticalAlignment="Top" Height="23"/>
         <Label Content="Weight limit" HorizontalAlignment="Left" Margin="377,79,0,0" Width="85" VerticalAlignment="Top" Height="25"/>
         <ui:Button x:Name="calculateBtn" Content="Generate" Margin="3,165,0,0" VerticalAlignment="Top" Height="54" Width="142" Click="calculateBtn_Click" Background="#FFE0E0E0" Icon="{ui:SymbolIcon ArrowTurnDownRight48}"/>
-        <ui:Button x:Name="excelBtn" Content="Make Excel file" Margin="12,0,0,49" VerticalAlignment="Bottom" Background="White" Click="excelBtn_Click" Height="32" Width="275" Icon="{ui:SymbolIcon DocumentTable24}"/>
+        <ui:Button x:Name="excelBtn" Content="Make Excel file" Margin="12,0,0,49" VerticalAlignment="Bottom" Background="White" Click="excelBtn_Click" Height="32" Width="275" Icon="{ui:SymbolIcon DocumentTable24}" IsEnabled="False"/>
         <Label Content="All measurements are in cm / kg." HorizontalAlignment="Left" Margin="34,239,0,0" VerticalAlignment="Top" Width="250" Background="{x:Null}" Foreground="Black" Height="25" FontSize="14"/>
         <TextBlock HorizontalAlignment="Left" Margin="34,264,0,0" TextWrapping="Wrap" Text="Disclaimer: The rendering may not accurately reflect reality." VerticalAlignment="Top" Height="41" Width="206" Background="{x:Null}"/>
-        <Label Content="v1.0-beta.2" Margin="0,1,0,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="80"/>
+        <Label Content="v1.0-beta.3" Margin="0,1,0,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="80"/>
         <ui:DynamicScrollViewer Margin="2,310,0,86" HorizontalAlignment="Left" Width="290">
             <ui:TextBlock x:Name="resultTextBox" Margin="0,0,0,0" TextWrapping="Wrap" Height="395" Width="264" FontSize="14">
                 <Run x:Name="resultRunTextBlock" Text="The info will be displayed here upon pressing the Generate button."/>
@@ -72,7 +72,7 @@
                 <CheckBox x:Name="pickMultipleBoxSizes" Content="Pick multiple box sizes from excel file" Margin="10,70,0,0" VerticalAlignment="Top" Click="CheckBox_Click" Checked="pickMultipleBoxSizes_Checked" Height="23" Unchecked="pickMultipleBoxSizes_Unchecked"/>
                 <Button x:Name="chooseExcelFileButton" Content="Choose file" Margin="10,100,0,0" VerticalAlignment="Top" Click="chooseExcelFileButton_Click" IsEnabled="False"/>
                 <Button x:Name="downloadSampleButton" Content="Download sample" Margin="110,100,0,0" VerticalAlignment="Top" Click="downloadSampleButton_Click" IsEnabled="False"/>
-                <CheckBox x:Name="runAllCheckbox" Content="Run all standard pallet sizes" Margin="10,0,0,0" VerticalAlignment="Top" Click="runAllCheckbox_Click" Checked="runAllCheckbox_Checked"/>
+                <CheckBox x:Name="runAllCheckbox" Content="Run all standard pallet sizes" Margin="10,0,0,0" VerticalAlignment="Top" Click="runAllCheckbox_Click"/>
                 <CheckBox x:Name="bestEffSolutionCheckbox" Content="Pick the solution with the best efficiency" Margin="10,30,0,0" VerticalAlignment="Top" IsEnabled="False"/>
                 <Label x:Name="excelFileLabel" Content="No file chosen" Margin="10,135,0,0" Height="22" Background="White" FontStyle="Italic" VerticalAlignment="Top" FontFamily="Calibri"/>
             </Grid>
@@ -93,21 +93,23 @@
                 <MenuItem x:Name="aboutMenuItem" Header="_About Stack Solver" Click="aboutMenuItem_Click"/>
             </MenuItem>
         </Menu>
-        <ui:CardExpander Height="214" Header="Rendering Options" Margin="482,165,0,0" HorizontalAlignment="Left" Width="250" VerticalAlignment="Top">
-            <Grid Height="119" Margin="-12,0,-13,0">
+        <ui:CardExpander Height="259" Header="Rendering Options" Margin="482,165,0,0" HorizontalAlignment="Left" Width="250" VerticalAlignment="Top">
+            <Grid Height="169" Margin="-12,0,-13,0">
 
                 <Label Content="Drawing position (Z):" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Top"/>
                 <TextBox x:Name="ZPositionTextBox" HorizontalAlignment="Left" Margin="150,-6,0,0" TextWrapping="Wrap" Text="-80" VerticalAlignment="Top" Width="65" Height="35"/>
-                <Label Content="Box color:" HorizontalAlignment="Left" Margin="10,42,0,0" VerticalAlignment="Top"/>
-                <ComboBox x:Name="boxColorComboBox" HorizontalAlignment="Left" Margin="90,35,0,0" VerticalAlignment="Top" Width="132" Height="35" SelectedIndex="0" SelectionChanged="boxColorComboBox_SelectionChanged">
+                <ui:SymbolIcon Symbol="Info24" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,30,0,0" Height="20" Width="20"/>
+                <TextBlock HorizontalAlignment="Left" Margin="34,30,0,0" TextWrapping="Wrap" Text="Change this value to get a better view. Especially useful for taller setups." VerticalAlignment="Top" Height="62" Width="181" Background="{x:Null}"/>
+                <Label Content="Box color:" HorizontalAlignment="Left" Margin="10,99,0,0" VerticalAlignment="Top"/>
+                <ComboBox x:Name="boxColorComboBox" HorizontalAlignment="Left" Margin="90,91,0,0" VerticalAlignment="Top" Width="132" Height="35" SelectedIndex="0" SelectionChanged="boxColorComboBox_SelectionChanged">
                     <ComboBoxItem Content="Light Brown"/>
                     <ComboBoxItem Content="Brown"/>
                     <ComboBoxItem Content="Dark Brown"/>
                     <ComboBoxItem Content="Black"/>
                     <ComboBoxItem Content="White"/>
                 </ComboBox>
-                <Label Content="Pallet color:" HorizontalAlignment="Left" Margin="10,84,0,0" VerticalAlignment="Top"/>
-                <ComboBox x:Name="palletColorComboBox" HorizontalAlignment="Left" Margin="90,77,0,0" VerticalAlignment="Top" Width="132" Height="35" SelectedIndex="0" SelectionChanged="palletColorComboBox_SelectionChanged">
+                <Label Content="Pallet color:" HorizontalAlignment="Left" Margin="10,139,0,0" VerticalAlignment="Top"/>
+                <ComboBox x:Name="palletColorComboBox" HorizontalAlignment="Left" Margin="90,131,0,0" VerticalAlignment="Top" Width="132" Height="35" SelectedIndex="0" SelectionChanged="palletColorComboBox_SelectionChanged">
                     <ComboBoxItem Content="Brown"/>
                     <ComboBoxItem Content="Dark Brown"/>
                     <ComboBoxItem Content="Yellow"/>
@@ -118,7 +120,7 @@
         </ui:CardExpander>
         <ComboBox x:Name="boxSizeComboBox" HorizontalAlignment="Left" Margin="785,102,0,0" VerticalAlignment="Top" Width="210" SelectionChanged="boxSizeComboBox_SelectionChanged" IsEnabled="False"/>
         <Label x:Name="multipleSizesLabel" Content="Choose which box type to display:" HorizontalAlignment="Left" Margin="785,79,0,0" VerticalAlignment="Top"/>
-        <ui:Button x:Name="saveImageButton" Content="Save 3D model image" Margin="12,0,0,10" VerticalAlignment="Bottom" Width="275" Click="saveImageButton_Click" Height="32" Icon="{ui:SymbolIcon CircleImage28}"/>
+        <ui:Button x:Name="saveImageButton" Content="Save 3D model image" Margin="12,0,0,10" VerticalAlignment="Bottom" Width="275" Click="saveImageButton_Click" Height="32" Icon="{ui:SymbolIcon CircleImage28}" IsEnabled="False"/>
         <ui:CardExpander HorizontalAlignment="Left" Height="244" Header="View" Margin="737,165,0,0" VerticalAlignment="Top" Width="283">
             <Grid Height="154" Margin="0,0,-5,0">
                 <RadioButton x:Name="freeCameraRadioButton" Content="Free camera" Margin="10,-10,0,0" VerticalAlignment="Top" IsChecked="True" Checked="freeCameraRadioButton_Checked"/>
