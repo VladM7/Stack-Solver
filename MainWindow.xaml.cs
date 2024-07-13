@@ -24,6 +24,7 @@ using MessageBox = System.Windows.MessageBox;
 using System.IO;
 using rendering;
 using Stack_Solver_v3;
+using System.Threading;
 
 namespace Stack_Solver
 {
@@ -100,21 +101,42 @@ namespace Stack_Solver
             transform.ScaleZ *= delta;
         }
 
-        private void readValues()
+        private int verifPalletValidity()
         {
             if (pL.Text == "" || pW.Text == "" || pH.Text == "" || pHlim.Text == ""
-                || pWght.Text == "" || pWghtlim.Text == "" ||
-                bL.Text == "" || bW.Text == "" || bH.Text == "" || bWght.Text == "")
+                || pWght.Text == "" || pWghtlim.Text == "")
             {
-                statusInfoBar.Visibility = Visibility.Visible;
-                statusInfoBar.Severity = InfoBarSeverity.Error;
-                statusInfoBar.Title = "Error";
-                statusInfoBar.Message = "Please fill in all the fields.";
-                statusInfoBar.IsOpen = true;
-                generationError = true;
-                return;
+                infoBarMessage(true, "Please fill in all the fields.", "Error", InfoBarSeverity.Error);
+                return 0;
             }
+            if (Convert.ToDouble(pL.Text) <= 0 || Convert.ToDouble(pW.Text) <= 0 || Convert.ToDouble(pH.Text) <= 0 || Convert.ToDouble(pHlim.Text) <= 0
+                || Convert.ToDouble(pWght.Text) <= 0 || Convert.ToDouble(pWghtlim.Text) <= 0)
+            {
+                infoBarMessage(true, "All fields must contain positive values.", "Error", InfoBarSeverity.Error);
+                return 0;
+            }
+            return 1;
+        }
 
+        private int verifBoxValidity()
+        {
+            if (bL.Text == "" || bW.Text == "" || bH.Text == "" || bWght.Text == "" || pWghtlim.Text == "")
+            {
+                infoBarMessage(true, "Please fill in all the fields.", "Error", InfoBarSeverity.Error);
+                return 0;
+            }
+            if (Convert.ToDouble(bL.Text) <= 0 || Convert.ToDouble(bW.Text) <= 0 || Convert.ToDouble(bH.Text) <= 0 || Convert.ToDouble(bWght.Text) <= 0 || Convert.ToDouble(pWghtlim.Text) <= 0)
+            {
+                infoBarMessage(true, "All fields must contain positive values.", "Error", InfoBarSeverity.Error);
+                return 0;
+            }
+            return 1;
+        }
+
+        private void readValues()
+        {
+            if (verifPalletValidity() == 0 || verifBoxValidity() == 0)
+                return;
             pallet.Length = Convert.ToDouble(pL.Text);
             pallet.Width = Convert.ToDouble(pW.Text);
             pallet.Height = Convert.ToDouble(pH.Text);
@@ -130,19 +152,9 @@ namespace Stack_Solver
 
         private void readBoxes()
         {
-            if (bL.Text == "" || bW.Text == "" || bH.Text == "" || bWght.Text == "" || pWghtlim.Text == "")
-            {
-                statusInfoBar.Visibility = Visibility.Visible;
-                statusInfoBar.Severity = InfoBarSeverity.Error;
-                statusInfoBar.Title = "Error";
-                statusInfoBar.Message = "Please fill in all the fields.";
-                statusInfoBar.IsOpen = true;
-                generationError = true;
+            if (verifBoxValidity() == 0)
                 return;
-            }
-
             pallet.MaxWeight = Convert.ToDouble(pWghtlim.Text);
-
             box.Length = Convert.ToDouble(bL.Text);
             box.Width = Convert.ToDouble(bW.Text);
             box.Height = Convert.ToDouble(bH.Text);
@@ -151,17 +163,8 @@ namespace Stack_Solver
 
         private void readPallets()
         {
-            if (pL.Text == "" || pW.Text == "" || pH.Text == "" || pHlim.Text == ""
-                || pWght.Text == "" || pWghtlim.Text == "")
-            {
-                statusInfoBar.Visibility = Visibility.Visible;
-                statusInfoBar.Severity = InfoBarSeverity.Error;
-                statusInfoBar.Title = "Error";
-                statusInfoBar.Message = "Please fill in all the fields.";
-                statusInfoBar.IsOpen = true;
-                generationError = true;
+            if (verifPalletValidity() == 0)
                 return;
-            }
             pallet.Length = Convert.ToDouble(pL.Text);
             pallet.Width = Convert.ToDouble(pW.Text);
             pallet.Height = Convert.ToDouble(pH.Text);
@@ -314,7 +317,7 @@ namespace Stack_Solver
         {
             if (error)
             {
-                resultTextBox.Text = infoBarText;
+                resultRunTextBlock.Text = "Generation failed: " + infoBarText;
                 generationError = true;
             }
             statusInfoBar.Severity = infoBarSeverity;
@@ -384,11 +387,14 @@ namespace Stack_Solver
                 else
                 {
                     readPallets();
-                    boxSizeComboBox.Items.Clear();
-                    boxSizeComboBox.Items.Add("None");
-                    boxSizeComboBox.SelectedIndex = 0;
-                    excelOps.readExcelFile(1, ref boxSizeComboBox, pallet, box, nrLevels, totalHeight, palletArea, maxCargoAreaOccupied, nrBoxesPerLevel, cargoLength, cargoWidth);
-                    resultRunTextBlock.Text = "Select box type to display.";
+                    if (generationError == false)
+                    {
+                        boxSizeComboBox.Items.Clear();
+                        boxSizeComboBox.Items.Add("None");
+                        boxSizeComboBox.SelectedIndex = 0;
+                        excelOps.readExcelFile(1, ref boxSizeComboBox, pallet, box, nrLevels, totalHeight, palletArea, maxCargoAreaOccupied, nrBoxesPerLevel, cargoLength, cargoWidth);
+                        resultRunTextBlock.Text = "Select box type to display.";
+                    }
                 }
             }
             else
@@ -396,12 +402,14 @@ namespace Stack_Solver
                 if (runAllCheckbox.IsChecked == true)
                 {
                     readBoxes();
-                    run_all_tests();
+                    if (generationError == false)
+                        run_all_tests();
                 }
                 else
                 {
                     readValues();
-                    compare_results();
+                    if (generationError == false)
+                        compare_results();
                 }
             }
             excelBtn.IsEnabled = true;
@@ -410,6 +418,13 @@ namespace Stack_Solver
             if (generationError == false)
             {
                 infoBarMessage(false, "Generation complete.", "Success", InfoBarSeverity.Success);
+                saveImageButton.IsEnabled = true;
+                excelBtn.IsEnabled = true;
+            }
+            else
+            {
+                saveImageButton.IsEnabled = false;
+                excelBtn.IsEnabled = false;
             }
             //ShowAxes();
         }
