@@ -22,7 +22,6 @@ using MessageBoxButton = System.Windows.MessageBoxButton;
 using MessageBoxResult = System.Windows.MessageBoxResult;
 using MessageBox = System.Windows.MessageBox;
 using System.IO;
-using rendering;
 using Stack_Solver_v3;
 using System.Threading;
 

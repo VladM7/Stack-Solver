@@ -30,7 +30,7 @@ namespace Stack_Solver
         private Vector3D vector3DLookDirection4 = new Vector3D(0, 0, -1);
         private Vector3D vector3DUpDirection4 = new Vector3D(0, 1, 0);
 
-        rendering.Rendering render = new rendering.Rendering();
+        Rendering render = new Rendering();
 
         public void TopDownView(OrthographicCamera orthographicCamera, PerspectiveCamera threedCamera)
         {

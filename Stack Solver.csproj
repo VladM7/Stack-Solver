@@ -37,4 +37,8 @@
     <Resource Include="stacksolverlogo.png" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="render\" />
+  </ItemGroup>
+
 </Project>

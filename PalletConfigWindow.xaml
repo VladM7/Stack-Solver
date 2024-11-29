@@ -1,0 +1,47 @@
+﻿<Window
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Stack_Solver"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" x:Class="Stack_Solver.PalletConfigWindow"
+        mc:Ignorable="d"
+        Title="PalletConfigWindow" Height="200" Width="350"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="NoResize"
+        BorderBrush="CornflowerBlue"
+        BorderThickness="2"
+        WindowStartupLocation="CenterScreen">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome GlassFrameThickness="0" CornerRadius="10" CaptionHeight="0"/>
+    </WindowChrome.WindowChrome>
+
+    <Grid>
+        <Button x:Name="cancelButton" Content="Cancel" Margin="180,158,0,0" VerticalAlignment="Top" Width="160" Click="cancelButton_Click"/>
+        <Button x:Name="enterButton" Content="Enter" Margin="10,158,0,0" VerticalAlignment="Top" Width="165" Background="#B3C0C6FF">
+            <Button.BorderBrush>
+                <LinearGradientBrush EndPoint="0,3" MappingMode="Absolute">
+                    <LinearGradientBrush.RelativeTransform>
+                        <ScaleTransform CenterY="0.5" ScaleY="-1"/>
+                    </LinearGradientBrush.RelativeTransform>
+                    <GradientStop Color="#29000000" Offset="0.33"/>
+                    <GradientStop Color="#0F9EB9FF" Offset="1"/>
+                </LinearGradientBrush>
+            </Button.BorderBrush>
+        </Button>
+        <Label Content="Height:" HorizontalAlignment="Left" Margin="10,78,0,0" VerticalAlignment="Top"/>
+        <Label Content="Weight:" HorizontalAlignment="Left" Margin="10,120,0,0" VerticalAlignment="Top"/>
+        <Label Content="Pieces:" HorizontalAlignment="Left" Margin="184,78,0,0" VerticalAlignment="Top"/>
+        <ui:TextBox HorizontalAlignment="Left" Margin="94,72,0,0" TextWrapping="NoWrap" Text="120" VerticalAlignment="Top" Width="89"/>
+        <ui:TextBox HorizontalAlignment="Left" Margin="94,113,0,0" TextWrapping="NoWrap" Text="120" VerticalAlignment="Top" Width="89"/>
+        <ui:TextBox HorizontalAlignment="Left" Margin="245,72,0,0" TextWrapping="NoWrap" Text="120" VerticalAlignment="Top" Width="80"/>
+        <Label Content="Pallet type:" HorizontalAlignment="Left" Margin="10,37,0,0" VerticalAlignment="Top"/>
+        <ComboBox HorizontalAlignment="Left" Margin="94,30,0,0" VerticalAlignment="Top" Width="246" SelectedIndex="0">
+            <ComboBoxItem Content="EUR-pallet (EPAL) - 120x80cm"/>
+            <ComboBoxItem Content="Industrial pallet - 120x100cm"/>
+        </ComboBox>
+
+    </Grid>
+</Window>
