@@ -91,10 +91,10 @@
             <MenuItem Header="Edit">
                 <MenuItem Header="Pallet Type" IsEnabled="False" FontWeight="Bold"/>
                 <Separator/>
-                <MenuItem Header="EPAL"/>
-                <MenuItem Header="Industrial Pallet"/>
-                <MenuItem Header="Asia Pallet"/>
-                <MenuItem Header="Custom Size"/>
+                <MenuItem x:Name="epalMenuItem" Header="EUR-Pallet (EPAL)" Click="epalMenuItem_Click"/>
+                <MenuItem x:Name="industrialMenuItem" Header="Industrial Pallet" Click="industrialMenuItem_Click"/>
+                <MenuItem x:Name="asiaMenuItem" Header="Asia Pallet" Click="asiaMenuItem_Click"/>
+                <MenuItem x:Name="customSizeMenuItem" Header="Custom Size" Click="customSizeMenuItem_Click"/>
             </MenuItem>
             <MenuItem  Header="_Help" Height="54" HorizontalAlignment="Center" VerticalAlignment="Center" Width="62">
                 <MenuItem x:Name="releasesMenuItem" Header="_Releases" Click="releasesMenuItem_Click"/>

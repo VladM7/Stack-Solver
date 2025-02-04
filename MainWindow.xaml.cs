@@ -226,14 +226,11 @@ namespace Stack_Solver
                 nrLevels = (int)((pallet.MaxHeight - pallet.Height) / box.Height);
             else
                 nrLevels = (int)min((int)((pallet.MaxHeight - pallet.Height) / box.Height), (int)((pallet.MaxWeight - pallet.Weight) / (nrBoxesPerLevel * box.Weight)));
+            
             if (nrLevels == 0)
             {
+                infoBarMessage(true, "No levels can be placed on the pallet.", "Error", InfoBarSeverity.Error);
                 resultTextBox.Text = "Error.";
-                statusInfoBar.Severity = InfoBarSeverity.Error;
-                statusInfoBar.Title = "Error";
-                statusInfoBar.Message = "No levels can be placed on the pallet.";
-                statusInfoBar.IsOpen = true;
-                generationError = true;
                 return;
             }
 
@@ -873,6 +870,46 @@ namespace Stack_Solver
         {
             resetRotation();
             viewClass.SideViewY(FindName("threedOrthoCamera") as OrthographicCamera, threedCamera);
+        }
+
+        private void epalMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            pL.Text = "120";
+            pW.Text = "80";
+            pH.Text = "14.4";
+            pHlim.Text = "180";
+            pWght.Text = "33";
+            pWghtlim.Text = "950";
+        }
+
+        private void industrialMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            pL.Text = "120";
+            pW.Text = "100";
+            pH.Text = "14.4";
+            pHlim.Text = "180";
+            pWght.Text = "33";
+            pWghtlim.Text = "950";
+        }
+
+        private void asiaMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            pL.Text = "110";
+            pW.Text = "110";
+            pH.Text = "14.4";
+            pHlim.Text = "180";
+            pWght.Text = "33";
+            pWghtlim.Text = "950";
+        }
+
+        private void customSizeMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            pL.Text = "0";
+            pW.Text = "0";
+            pH.Text = "0";
+            pHlim.Text = "0";
+            pWght.Text = "0";
+            pWghtlim.Text = "0";
         }
 
         private void ShowAxes()
