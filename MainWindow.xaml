@@ -54,7 +54,7 @@
         <Label Content="All measurements are in cm / kg." HorizontalAlignment="Left" Margin="34,239,0,0" VerticalAlignment="Top" Width="250" Background="{x:Null}" Foreground="Black" Height="25" FontSize="14"/>
         <TextBlock HorizontalAlignment="Left" Margin="34,264,0,0" TextWrapping="Wrap" Text="Disclaimer: The rendering may not accurately reflect reality." VerticalAlignment="Top" Height="41" Width="206" Background="{x:Null}"/>
         <Label Content="v1.0-beta.3" Margin="0,1,0,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="80"/>
-        <ui:DynamicScrollViewer Margin="2,310,0,86" HorizontalAlignment="Left" Width="290">
+        <ui:DynamicScrollViewer Margin="2,349,0,86" HorizontalAlignment="Left" Width="290">
             <ui:TextBlock x:Name="resultTextBox" Margin="0,0,0,0" TextWrapping="Wrap" Height="395" Width="264" FontSize="14">
                 <Run x:Name="resultRunTextBlock" Text="The info will be displayed here upon pressing the Generate button."/>
             </ui:TextBlock>
@@ -80,6 +80,7 @@
         <ui:InfoBar x:Name="statusInfoBar" Content="InfoBar" Margin="290,0,100,10" VerticalAlignment="Bottom" Height="50"/>
         <ui:SymbolIcon Symbol="Info24" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,239,0,0" Height="20" Width="20"/>
         <ui:SymbolIcon Symbol="Warning24" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,264,0,0" Height="20" Width="20"/>
+        <ui:SymbolIcon Symbol="TetrisApp24" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,314,0,0" Height="20" Width="20"/>
         <GroupBox Header="Pallet" HorizontalAlignment="Left" Width="475" Height="110" VerticalAlignment="Top" FontFamily="Segoe UI Semibold" Margin="2,50,0,0"/>
         <GroupBox Header="Boxes" Margin="482,50,0,0" Height="110" VerticalAlignment="Top" HorizontalAlignment="Left" Width="538" FontFamily="Segoe UI Semibold">
             <Rectangle HorizontalAlignment="Left" Height="81" Margin="276,0,0,0" Stroke="#FFD4D4D4" VerticalAlignment="Top" Width="1"/>
@@ -131,5 +132,9 @@
             </Grid>
         </ui:CardExpander>
         <Image HorizontalAlignment="Left" Height="25" Margin="3,10,0,0" VerticalAlignment="Top" Width="165" Source="/stacksolverlogo.png"/>
+        <Label Content="Layout:" HorizontalAlignment="Left" Margin="34,314,0,0" VerticalAlignment="Top" Foreground="Black" Width="83"/>
+        <ComboBox HorizontalAlignment="Left" Margin="95,305,0,0" VerticalAlignment="Top" Width="145" SelectedIndex="0" MinWidth="145" Panel.ZIndex="-10">
+            <ComboBoxItem Content="(none)"/>
+        </ComboBox>
     </Grid>
 </Window>
