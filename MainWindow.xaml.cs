@@ -112,7 +112,7 @@ namespace Stack_Solver
             if (Convert.ToDouble(pL.Text) <= 0 || Convert.ToDouble(pW.Text) <= 0 || Convert.ToDouble(pH.Text) <= 0 || Convert.ToDouble(pHlim.Text) <= 0
                 || Convert.ToDouble(pWght.Text) <= 0 || Convert.ToDouble(pWghtlim.Text) <= 0)
             {
-                infoBarMessage(true, "All fields must contain positive values.", "Error", InfoBarSeverity.Error);
+                infoBarMessage(true, "All fields must contain positive, non-zero values.", "Error", InfoBarSeverity.Error);
                 return 0;
             }
             return 1;
@@ -127,7 +127,7 @@ namespace Stack_Solver
             }
             if (Convert.ToDouble(bL.Text) <= 0 || Convert.ToDouble(bW.Text) <= 0 || Convert.ToDouble(bH.Text) <= 0 || Convert.ToDouble(bWght.Text) <= 0 || Convert.ToDouble(pWghtlim.Text) <= 0)
             {
-                infoBarMessage(true, "All fields must contain positive values.", "Error", InfoBarSeverity.Error);
+                infoBarMessage(true, "All fields must contain positive, non-zero values.", "Error", InfoBarSeverity.Error);
                 return 0;
             }
             return 1;
@@ -221,6 +221,9 @@ namespace Stack_Solver
             maxBoxesWidth1 = (int)(pallet_width / box.Length);
             maxBoxesWidth2 = (int)(pallet_width / box.Width);
 
+            if (aria[nrb] == null)
+                return;
+
             nrBoxesPerLevel = aria[nrb].nrBoxesOrientation1 + aria[nrb].nrBoxesOrientation2;
 
             if (pallet.MaxWeight == 0)
@@ -311,6 +314,12 @@ namespace Stack_Solver
                 "kg\nTotal number of boxes: " + (nrLevels * nrBoxesPerLevel) + "\n\n";
             resultRunTextBlock.Text = generationResult;
             render.draw3D(ref MainViewPort, pallet, box, aria, nrb, pallet_len, pallet_width, nrLevels, inset, insetType, offsetX, offsetY, maxBoxesWidth1, maxBoxesWidth2);
+
+            //layoutComboBox.Items.Clear();
+            //ComboBoxItem defaultLayout = new ComboBoxItem();
+            //defaultLayout.Content = nrBoxesPerLevel + "A";
+            //layoutComboBox.Items.Add(defaultLayout);
+            //layoutComboBox.SelectedIndex = 0;
         }
 
         private void infoBarMessage(bool error, string infoBarText, string infoBarTitle, InfoBarSeverity infoBarSeverity)
@@ -324,6 +333,11 @@ namespace Stack_Solver
             statusInfoBar.Title = infoBarTitle;
             statusInfoBar.Message = infoBarText;
             statusInfoBar.IsOpen = true;
+        }
+
+        public void alternateLayout()
+        {
+
         }
 
         public void compare_results()
@@ -342,10 +356,34 @@ namespace Stack_Solver
             int areaMaxPos1 = 0, areaMaxPos2 = 0;
             calcul_arie(pallet.Length, pallet.Width, 1, ref areaMax1, ref areaMaxPos1, ref area1);
             calcul_arie(pallet.Width, pallet.Length, 2, ref areaMax2, ref areaMaxPos2, ref area2);
+            int nrBoxesPerLevel1 = area1[areaMaxPos1].nrBoxesOrientation1 + area1[areaMaxPos1].nrBoxesOrientation2;
+            int nrBoxesPerLevel2 = area2[areaMaxPos2].nrBoxesOrientation1 + area2[areaMaxPos2].nrBoxesOrientation2;
+
+            layoutComboBox.Items.Clear();
+
+            ComboBoxItem defaultLayout = new ComboBoxItem();
+            defaultLayout.Content = nrBoxesPerLevel1 + "A";
+            defaultLayout.Name = "defaultLayoutComboBoxItem";
+            layoutComboBox.Items.Add(defaultLayout);
+
+            if (nrBoxesPerLevel1 != nrBoxesPerLevel2)
+            {
+                ComboBoxItem alternativeLayout1 = new ComboBoxItem();
+                alternativeLayout1.Content = nrBoxesPerLevel2 + ((nrBoxesPerLevel1 == nrBoxesPerLevel2) ? "B" : "A");
+                alternativeLayout1.Name = "alternativeLayout1ComboBoxItem";
+                layoutComboBox.Items.Add(alternativeLayout1);
+            }
+
             if (areaMax1 >= areaMax2)
+            {
                 generateDrawing(pallet.Length, pallet.Width, 1, (int)areaMax1, areaMaxPos1, area1);
+                layoutComboBox.SelectedIndex = 0;
+            }
             else
+            {
                 generateDrawing(pallet.Width, pallet.Length, 2, (int)areaMax2, areaMaxPos2, area2);
+                layoutComboBox.SelectedIndex = 1;
+            }
         }
 
         public void clearViewport()
@@ -874,6 +912,25 @@ namespace Stack_Solver
         {
             resetRotation();
             viewClass.SideViewY(FindName("threedOrthoCamera") as OrthographicCamera, threedCamera);
+        }
+
+        private void layoutComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            clearViewport();
+            if (layoutComboBox.SelectedIndex == 0)
+            {
+                double areaMax1 = 0;
+                int areaMaxPos1 = 0;
+                calcul_arie(pallet.Length, pallet.Width, 1, ref areaMax1, ref areaMaxPos1, ref area1);
+                generateDrawing(pallet.Length, pallet.Width, 1, (int)areaMax1, areaMaxPos1, area1);
+            }
+            else if (layoutComboBox.SelectedIndex == 1)
+            {
+                double areaMax2 = 0;
+                int areaMaxPos2 = 0;
+                calcul_arie(pallet.Width, pallet.Length, 2, ref areaMax2, ref areaMaxPos2, ref area2);
+                generateDrawing(pallet.Width, pallet.Length, 2, (int)areaMax2, areaMaxPos2, area2);
+            }
         }
 
         private void ShowAxes()

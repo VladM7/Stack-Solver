@@ -35,7 +35,7 @@
         <TextBox x:Name="pHlim" HorizontalAlignment="Left" Margin="222,103,0,0" TextWrapping="Wrap" Text="180" VerticalAlignment="Top" Width="70" GotKeyboardFocus="keyboardFocusSelectAll" Height="35"/>
         <TextBox x:Name="pWght" HorizontalAlignment="Left" Margin="307,103,0,0" TextWrapping="Wrap" Text="33" VerticalAlignment="Top" Width="70" GotKeyboardFocus="keyboardFocusSelectAll" Height="35"/>
         <TextBox x:Name="pWghtlim" HorizontalAlignment="Left" Margin="377,103,0,0" TextWrapping="Wrap" Text="950" VerticalAlignment="Top" Width="70" GotKeyboardFocus="keyboardFocusSelectAll" Height="35"/>
-        <TextBox x:Name="bL" HorizontalAlignment="Left" Margin="492,103,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="70" GotKeyboardFocus="keyboardFocusSelectAll"/>
+        <TextBox x:Name="bL" HorizontalAlignment="Left" Margin="492,103,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="46" GotKeyboardFocus="keyboardFocusSelectAll"/>
         <TextBox x:Name="bW" HorizontalAlignment="Left" Margin="562,103,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="70" GotKeyboardFocus="keyboardFocusSelectAll"/>
         <TextBox x:Name="bH" HorizontalAlignment="Left" Margin="632,103,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="70" GotKeyboardFocus="keyboardFocusSelectAll"/>
         <TextBox x:Name="bWght" HorizontalAlignment="Left" Margin="702,103,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" GotKeyboardFocus="keyboardFocusSelectAll" Width="70"/>
@@ -133,7 +133,7 @@
         </ui:CardExpander>
         <Image HorizontalAlignment="Left" Height="25" Margin="3,10,0,0" VerticalAlignment="Top" Width="165" Source="/stacksolverlogo.png"/>
         <Label Content="Layout:" HorizontalAlignment="Left" Margin="34,314,0,0" VerticalAlignment="Top" Foreground="Black" Width="83"/>
-        <ComboBox HorizontalAlignment="Left" Margin="95,305,0,0" VerticalAlignment="Top" Width="145" SelectedIndex="0" MinWidth="145" Panel.ZIndex="-10">
+        <ComboBox x:Name="layoutComboBox" HorizontalAlignment="Left" Margin="95,305,0,0" VerticalAlignment="Top" Width="145" SelectedIndex="0" MinWidth="145" Panel.ZIndex="-10" SelectionChanged="layoutComboBox_SelectionChanged">
             <ComboBoxItem Content="(none)"/>
         </ComboBox>
     </Grid>
