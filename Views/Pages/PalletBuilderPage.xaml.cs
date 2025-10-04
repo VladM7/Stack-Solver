@@ -1,4 +1,6 @@
-﻿using Stack_Solver.ViewModels.Pages;
+﻿using Stack_Solver.Models;
+using Stack_Solver.ViewModels.Pages;
+using System.Windows.Controls;
 using Wpf.Ui.Abstractions.Controls;
 
 namespace Stack_Solver.Views.Pages
@@ -13,6 +15,28 @@ namespace Stack_Solver.Views.Pages
             DataContext = this;
 
             InitializeComponent();
+        }
+
+        private async void SkuSelectionGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        {
+            if (e.EditAction != DataGridEditAction.Commit)
+                return;
+
+            if (e.Row.Item is SKU sku)
+            {
+                if (e.EditingElement is TextBox tb && tb.GetBindingExpression(TextBox.TextProperty) is { } be)
+                {
+                    be.UpdateSource();
+                }
+
+                try
+                {
+                    await ViewModel.UpdateSkuAsync(sku);
+                }
+                catch
+                {
+                }
+            }
         }
     }
 }

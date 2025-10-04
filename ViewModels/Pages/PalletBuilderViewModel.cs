@@ -1,32 +1,42 @@
-﻿using Stack_Solver.Models;
+﻿using Stack_Solver.Data.Repositories;
+using Stack_Solver.Models;
 using System.Collections.ObjectModel;
 
 namespace Stack_Solver.ViewModels.Pages
 {
     public partial class PalletBuilderViewModel : ObservableObject
     {
+        private readonly ISkuRepository _skuRepository;
         private bool _isInitialized = false;
 
         [ObservableProperty]
-        private ObservableCollection<SKU> _skus = [
-            new SKU { Name = "SKU 1", Length = 10, Width = 5, Height = 2, Weight = 1.5 },
-            new SKU { Name = "SKU 2", Length = 15, Width = 10, Height = 5, Weight = 3.0 },
-            new SKU { Name = "SKU 3", Length = 20, Width = 15, Height = 10, Weight = 5.0 }
-            ];
+        private ObservableCollection<SKU> _skus = [];
 
-        public Task OnNavigatedToAsync()
+        public PalletBuilderViewModel(ISkuRepository skuRepository)
+        {
+            _skuRepository = skuRepository;
+            _ = InitializeAsync();
+        }
+
+        public async Task OnNavigatedToAsync()
         {
             if (!_isInitialized)
-                InitializeViewModel();
-
-            return Task.CompletedTask;
+                await InitializeAsync();
         }
 
         public Task OnNavigatedFromAsync() => Task.CompletedTask;
 
-        private void InitializeViewModel()
+        private async Task InitializeAsync()
         {
+            var list = await _skuRepository.GetAllAsync();
+            Skus = new ObservableCollection<SKU>(list);
             _isInitialized = true;
+        }
+
+        public async Task UpdateSkuAsync(SKU sku, CancellationToken ct = default)
+        {
+            if (sku == null) return;
+            await _skuRepository.UpdateAsync(sku, ct);
         }
     }
 }

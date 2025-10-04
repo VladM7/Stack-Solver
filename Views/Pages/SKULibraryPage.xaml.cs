@@ -1,7 +1,7 @@
-﻿using Stack_Solver.ViewModels.Pages;
+﻿using Stack_Solver.Models;
+using Stack_Solver.ViewModels.Pages;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Threading;
 using Wpf.Ui.Abstractions.Controls;
 
 namespace Stack_Solver.Views.Pages
@@ -18,29 +18,49 @@ namespace Stack_Solver.Views.Pages
             InitializeComponent();
         }
 
-        private void skuDataGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
-        {
-            if (e.EditAction == DataGridEditAction.Commit)
-            {
-                Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    if (DataContext is SKULibraryViewModel vm)
-                        vm.SaveSkus();
-                }), DispatcherPriority.Background);
-            }
-        }
-
         private void skuDataGrid_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
         {
-            // Ensure generated columns write back immediately and TwoWay
+            // Cancel generation of hidden columns
+            if (e.PropertyName == nameof(SKU.SkuId) || e.PropertyName == nameof(SKU.Quantity))
+            {
+                e.Cancel = true;
+                return;
+            }
+
             if (e.Column is DataGridBoundColumn boundColumn)
             {
                 if (boundColumn.Binding is Binding binding)
                 {
                     binding.Mode = BindingMode.TwoWay;
                     binding.UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged;
-                    // reassign binding to column
                     boundColumn.Binding = binding;
+                }
+            }
+        }
+
+        private void SkuDataGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        {
+            if (e.EditAction != DataGridEditAction.Commit)
+                return;
+
+            if (e.Row.Item is SKU sku)
+            {
+                if (e.EditingElement is FrameworkElement fe && fe.DataContext == sku)
+                {
+                    if (fe is TextBox tb && tb.GetBindingExpression(TextBox.TextProperty) is { } be)
+                        be.UpdateSource();
+                    else if (fe is CheckBox cb && cb.GetBindingExpression(CheckBox.IsCheckedProperty) is { } be2)
+                        be2.UpdateSource();
+                }
+
+                try
+                {
+                    if (ViewModel.SaveSkuCommand is IRelayCommand cmd && cmd.CanExecute(sku))
+                        cmd.Execute(sku);
+                }
+                catch
+                {
+
                 }
             }
         }

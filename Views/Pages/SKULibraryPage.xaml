@@ -28,17 +28,18 @@
         <StackPanel Orientation="Horizontal" Grid.Row="0">
             <ui:Button Content="Add SKU" Margin="0,0,8,0" VerticalAlignment="Top" Icon="{ui:SymbolIcon Add24}" Appearance="Primary" Command="{Binding ViewModel.AddSkuCommand, Mode=OneWay}"/>
             <ui:Button Content="Import" Margin="0,0,8,0" VerticalAlignment="Top" Icon="{ui:SymbolIcon ArrowDownload24}" IsEnabled="False"/>
-            <ui:Button Content="Export" VerticalAlignment="Top" Icon="{ui:SymbolIcon ArrowExportUp24}" IsEnabled="False"/>
+            <ui:Button Content="Export" Margin="0,0,8,0" VerticalAlignment="Top" Icon="{ui:SymbolIcon ArrowExportUp24}" IsEnabled="False"/>
+            <ui:Button Icon="{ui:SymbolIcon Question24}" Content="Help"/>
         </StackPanel>
-
-        <ui:Button Icon="{ui:SymbolIcon Question24}" Height="30" HorizontalAlignment="Right"/>
 
         <ui:DataGrid x:Name="skuDataGrid" 
             Grid.Row="1"
             ItemsSource="{Binding ViewModel.Skus, Mode=TwoWay}"
             AutoGenerateColumns="True"
             CanUserAddRows="False"
-            Margin="0,20,0,0" CellEditEnding="skuDataGrid_CellEditEnding" AutoGeneratingColumn="skuDataGrid_AutoGeneratingColumn"/>
+            Margin="0,20,0,0" 
+            AutoGeneratingColumn="skuDataGrid_AutoGeneratingColumn"
+            CellEditEnding="SkuDataGrid_CellEditEnding"/>
 
         <StackPanel Orientation="Horizontal" Height="60" VerticalAlignment="Center" Grid.Row="2">
             <ui:SymbolIcon Symbol="Info24" Width="30" Height="30" VerticalAlignment="Top"/>

@@ -1,6 +1,9 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Stack_Solver.Data;
+using Stack_Solver.Data.Repositories;
 using Stack_Solver.Services;
 using Stack_Solver.ViewModels.Pages;
 using Stack_Solver.ViewModels.Windows;
@@ -47,8 +50,6 @@ namespace Stack_Solver
 
                 services.AddSingleton<DashboardPage>();
                 services.AddSingleton<DashboardViewModel>();
-                services.AddSingleton<DataPage>();
-                services.AddSingleton<DataViewModel>();
                 services.AddSingleton<SettingsPage>();
                 services.AddSingleton<SettingsViewModel>();
                 services.AddSingleton<SKULibraryPage>();
@@ -59,6 +60,17 @@ namespace Stack_Solver
                 services.AddSingleton<TruckLoadingViewModel>();
                 services.AddSingleton<JobManagerPage>();
                 services.AddSingleton<JobManagerViewModel>();
+
+                services.AddDbContextFactory<ApplicationDbContext>(options =>
+                {
+                    options.UseSqlite($"Data Source={AppPaths.DatabaseFile}");
+                });
+
+                // Repositories
+                services.AddSingleton<ISkuRepository, SkuRepository>();
+
+                // Initializer
+                services.AddSingleton<DatabaseInitializer>();
             }).Build();
 
         /// <summary>
@@ -75,6 +87,10 @@ namespace Stack_Solver
         private async void OnStartup(object sender, StartupEventArgs e)
         {
             await _host.StartAsync();
+
+            // Initialize database
+            var dbInit = Services.GetRequiredService<DatabaseInitializer>();
+            await dbInit.InitializeAsync();
         }
 
         /// <summary>

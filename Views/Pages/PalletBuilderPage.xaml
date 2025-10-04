@@ -55,15 +55,52 @@
                 </ui:CardExpander>
                 <ui:CardExpander Header="SKU selection">
                     <ui:DataGrid
+                        x:Name="SkuSelectionGrid"
                         ItemsSource="{Binding ViewModel.Skus, Mode=TwoWay}"
                         CanUserAddRows="False"
                         CanUserDeleteRows="False"
-                        AutoGenerateColumns="False">
+                        AutoGenerateColumns="False"
+                        CellEditEnding="SkuSelectionGrid_CellEditEnding">
+                        <ui:DataGrid.Columns>
+                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="Auto"/>
+                            <DataGridTemplateColumn Header="Dimensions (cm)" Width="150" IsReadOnly="True">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock>
+                                            <TextBlock.Text>
+                                                <MultiBinding StringFormat="{}{0} x {1} x {2}">
+                                                    <Binding Path="Length"/>
+                                                    <Binding Path="Width"/>
+                                                    <Binding Path="Height"/>
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Weight" Binding="{Binding Weight}" IsReadOnly="True" Width="Auto"/>
+                            <DataGridTextColumn Header="Qty" Binding="{Binding Quantity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="Auto"/>
+                        </ui:DataGrid.Columns>
                     </ui:DataGrid>
                 </ui:CardExpander>
                 <ui:CardExpander Header="Layer generation options">
                 </ui:CardExpander>
                 <ui:CardExpander Header="Layer stacking options">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Label>Height Limit</Label>
+                        <ui:TextBox HorizontalAlignment="Left" Width="80" Grid.Row="1">180</ui:TextBox>
+                        <Label Grid.Column="1">Weight Limit</Label>
+                        <ui:TextBox HorizontalAlignment="Left" Width="80" Grid.Row="1" Grid.Column="1">950</ui:TextBox>
+                    </Grid>
                 </ui:CardExpander>
             </StackPanel>
         </ScrollViewer>
