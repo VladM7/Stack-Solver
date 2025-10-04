@@ -1,0 +1,58 @@
+﻿<Page
+    x:Class="Stack_Solver.Views.Pages.DashboardPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:Stack_Solver.Views.Pages"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="DashboardPage"
+    d:DataContext="{d:DesignInstance local:DashboardPage,
+                                     IsDesignTimeCreatable=False}"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+    ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+    mc:Ignorable="d">
+
+    <Grid VerticalAlignment="Top">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <StackPanel Orientation="Vertical">
+            <StackPanel Orientation="Horizontal">
+                <ui:SymbolIcon Symbol="New24" VerticalAlignment="Top" Width="30"/>
+                <ui:TextBlock Text="What's new in version 2.0" FontTypography="Subtitle"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="30,5,0,0">
+                <ui:ListView IsEnabled="False">
+                    <ui:ListViewItem>
+                        <TextBlock Text="→ Improved UI and UX (no longer a single page, dark mode)" TextWrapping="Wrap" Width="700"/>
+                    </ui:ListViewItem>
+                    <ui:ListViewItem>
+                        <TextBlock Text="→ Now using MVVM architectural pattern" TextWrapping="Wrap" Width="700"/>
+                    </ui:ListViewItem>
+                    <ui:ListViewItem>
+                        <TextBlock Text="→ Improved SKU management" TextWrapping="Wrap" Width="700"/>
+                    </ui:ListViewItem>
+                </ui:ListView>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                <ui:SymbolIcon Symbol="Clock24" Width="30"/>
+                <ui:TextBlock Text="Features coming soon" FontTypography="Subtitle"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="30,5,0,0">
+                <ui:ListView IsEnabled="False">
+                    <ui:ListViewItem>
+                        <TextBlock Text="→ Truck loading optimization" TextWrapping="Wrap" Width="700"/>
+                    </ui:ListViewItem>
+                    <ui:ListViewItem>
+                        <TextBlock Text="→ A new way to manage jobs (for example, for re-generating with the same parameters)" TextWrapping="Wrap" Width="700"/>
+                    </ui:ListViewItem>
+                </ui:ListView>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Page>
