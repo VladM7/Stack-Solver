@@ -5,6 +5,6 @@ namespace Stack_Solver.Services
     public interface ILayerGenerationStrategy
     {
         string Name { get; }
-        List<Layer> Generate(List<SKU> skus, GenerationOptions options);
+        List<Layer> Generate(List<SKU> skus, SupportSurface supportSurface, GenerationOptions options);
     }
 }

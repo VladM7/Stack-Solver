@@ -1,18 +1,10 @@
 ﻿namespace Stack_Solver.Models
 {
-    public class PositionedItem
+    public class PositionedItem(SKU skuType, int x, int y, bool rotated)
     {
-        private SKU SkuType { get; set; }
-        private int X { get; set; }
-        private int Y { get; set; }
-        private bool Rotated { get; set; }
-
-        public PositionedItem(SKU skuType, int x, int y, bool rotated)
-        {
-            SkuType = skuType;
-            X = x;
-            Y = y;
-            Rotated = rotated;
-        }
+        public SKU SkuType { get; set; } = skuType;
+        public int X { get; set; } = x;
+        public int Y { get; set; } = y;
+        public bool Rotated { get; set; } = rotated;
     }
 }

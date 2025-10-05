@@ -9,11 +9,6 @@ Stack Solver is a powerful and intuitive application designed to optimize the pr
 - User-friendly Interface: Intuitive and modern design that makes it easy for users to input data, adjust parameters, and view results.
 - Export and Share: Generate detailed reports and visual guides that can be easily shared with team members.
 
-## Screenshots
-
-![App Screenshot](img/screenshot1.png)
-![App Screenshot](img/screenshot2.png)
-
 ## Installation 
 
 Install the app by running ```setup.exe``` contained in the zip archive in the releases page.
