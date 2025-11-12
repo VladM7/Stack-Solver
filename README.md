@@ -2,6 +2,9 @@
 
 Stack Solver is a powerful and intuitive application designed to optimize the process of loading cargo. This app provides an efficient solution for logistics and warehouse management by determining the most effective way to load boxes of various sizes onto pallets.
 
+> [!IMPORTANT]  
+> A major rewrite is ongoing and should be finished around March if everything goes well. The new version will have additional features such as mixed-SKU pallets, improved algorithms and additional stacking parameters that are considered (e.g, fragile boxes, center of weight, etc.), along a completely new multi-page UI. The (very experimental and unfinished) code is available under the `overhaul` branch. Once completed, I will also aim to make the app available on Microsoft Store for easier installation and updating.
+
 ## Features
 
 - Pallet Optimization: Calculates the optimal arrangement of boxes on a pallet to maximize space utilization and stability.
@@ -28,6 +31,7 @@ Coming soon™
 
 - Truck loading optimization
 - Multiple box types on same pallet
+- also see the message above
 
 ## Authors
 
