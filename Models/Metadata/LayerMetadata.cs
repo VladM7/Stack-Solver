@@ -1,4 +1,4 @@
-﻿namespace Stack_Solver.Models
+﻿namespace Stack_Solver.Models.Metadata
 {
     public class LayerMetadata(double utilization, int height, string description)
     {

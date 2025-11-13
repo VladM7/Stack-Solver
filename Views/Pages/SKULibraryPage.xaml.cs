@@ -2,6 +2,7 @@
 using Stack_Solver.ViewModels.Pages;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using Wpf.Ui.Abstractions.Controls;
 
 namespace Stack_Solver.Views.Pages
@@ -27,14 +28,11 @@ namespace Stack_Solver.Views.Pages
                 return;
             }
 
-            if (e.Column is DataGridBoundColumn boundColumn)
+            if (e.Column is DataGridBoundColumn boundColumn && boundColumn.Binding is Binding binding)
             {
-                if (boundColumn.Binding is Binding binding)
-                {
-                    binding.Mode = BindingMode.TwoWay;
-                    binding.UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged;
-                    boundColumn.Binding = binding;
-                }
+                binding.Mode = BindingMode.TwoWay;
+                binding.UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged;
+                boundColumn.Binding = binding;
             }
         }
 
@@ -61,6 +59,18 @@ namespace Stack_Solver.Views.Pages
                 catch
                 {
 
+                }
+            }
+        }
+
+        private void SkuDataGrid_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Delete && sender is DataGrid dg && dg.SelectedItem is SKU sku)
+            {
+                if (ViewModel.DeleteSkuCommand is IRelayCommand cmd && cmd.CanExecute(sku))
+                {
+                    cmd.Execute(sku);
+                    e.Handled = true;
                 }
             }
         }

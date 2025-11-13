@@ -5,6 +5,10 @@ namespace Stack_Solver.Data.Repositories
 {
     public class SkuRepository(IDbContextFactory<ApplicationDbContext> factory) : ISkuRepository
     {
+        public event EventHandler<SKU>? SkuAdded;
+        public event EventHandler<SKU>? SkuUpdated;
+        public event EventHandler<string>? SkuDeleted;
+
         public async Task<IList<SKU>> GetAllAsync(CancellationToken ct = default)
         {
             using var db = await factory.CreateDbContextAsync(ct);
@@ -22,6 +26,7 @@ namespace Stack_Solver.Data.Repositories
             using var db = await factory.CreateDbContextAsync(ct);
             db.Skus.Add(sku);
             await db.SaveChangesAsync(ct);
+            SkuAdded?.Invoke(this, sku);
         }
 
         public async Task UpdateAsync(SKU sku, CancellationToken ct = default)
@@ -29,6 +34,7 @@ namespace Stack_Solver.Data.Repositories
             using var db = await factory.CreateDbContextAsync(ct);
             db.Skus.Update(sku);
             await db.SaveChangesAsync(ct);
+            SkuUpdated?.Invoke(this, sku);
         }
 
         public async Task DeleteAsync(string skuId, CancellationToken ct = default)
@@ -39,6 +45,7 @@ namespace Stack_Solver.Data.Repositories
             {
                 db.Skus.Remove(entity);
                 await db.SaveChangesAsync(ct);
+                SkuDeleted?.Invoke(this, skuId);
             }
         }
 

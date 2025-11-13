@@ -18,168 +18,225 @@
 
     <Page.Resources>
         <conv:BooleanNegationConverter x:Key="BooleanNegationConverter" />
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
     </Page.Resources>
 
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition/>
         </Grid.RowDefinitions>
-
-        <GridSplitter Grid.Column="1" Grid.Row="1" HorizontalAlignment="Left" Height="150" VerticalAlignment="Center" Width="2"/>
 
         <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.Row="0">
             <ui:Button x:Name="generateButton" Content="Generate" Command="{Binding ViewModel.GenerateCommand}" IsEnabled="{Binding ViewModel.IsGenerating, Converter={StaticResource BooleanNegationConverter}}" Grid.Column="0" Grid.Row="0" VerticalAlignment="Top" Appearance="Primary" Icon="{ui:SymbolIcon ArrowTurnDownRight48}"/>
             <ui:Button Content="Cancel" Command="{Binding ViewModel.CancelCommand}" Icon="{ui:SymbolIcon DismissCircle24}" Margin="8,0,0,0" VerticalAlignment="Top" IsEnabled="{Binding ViewModel.IsGenerating}"/>
             <ui:Button Content="Help" Icon="{ui:SymbolIcon Question24}" Margin="8,0,0,0" VerticalAlignment="Top"/>
         </StackPanel>
+        <ProgressBar Grid.Row ="1" Height="5" Margin="0,4,0,0" IsIndeterminate="True" Visibility="{Binding ViewModel.IsGenerating, Converter={StaticResource BoolToVisibilityConverter}}"/>
+        <TabControl Grid.Row="2" Grid.Column="1" Margin="0,8,0,0">
+            <TabItem Header="Settings" HorizontalAlignment="Left">
+                <Grid>
+                    <ScrollViewer x:Name="SettingsScrollViewer" Grid.Column="0" Grid.Row="1" Margin="0,8,0,0" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Orientation="Vertical">
+                            <ui:CardExpander Header="Pallet dimensions">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Label>Length</Label>
+                                    <ui:TextBox x:Name="palletLengthTextBox" Text="{Binding ViewModel.PalletLength, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left" Width="80" Grid.Row="1"/>
+                                    <Label Grid.Column="1">Width</Label>
+                                    <ui:TextBox x:Name="palletWidthTextBox" Text="{Binding ViewModel.PalletWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left" Width="80" Grid.Row="1" Grid.Column="1"/>
+                                    <Label Grid.Column="2">Height</Label>
+                                    <ui:TextBox x:Name="palletHeightTextBox" Text="{Binding ViewModel.PalletHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left" Width="80" Grid.Row="1" Grid.Column="2"/>
 
-        <ScrollViewer Grid.Column="0" Grid.Row="1" Margin="0,8,10,0" VerticalScrollBarVisibility="Auto">
-            <StackPanel Orientation="Vertical" Margin="0,0,15,0">
-                <ui:CardExpander Header="Pallet dimensions">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <Label>Length</Label>
-                        <ui:TextBox x:Name="palletLengthTextBox" Text="{Binding ViewModel.PalletLength, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left" Width="80" Grid.Row="1"/>
-                        <Label Grid.Column="1">Width</Label>
-                        <ui:TextBox x:Name="palletWidthTextBox" Text="{Binding ViewModel.PalletWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left" Width="80" Grid.Row="1" Grid.Column="1"/>
-                        <Label Grid.Column="2">Height</Label>
-                        <ui:TextBox x:Name="palletHeightTextBox" Text="{Binding ViewModel.PalletHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left" Width="80" Grid.Row="1" Grid.Column="2"/>
-
-                        <ui:DataGrid Grid.Row="2" Grid.ColumnSpan="3"
-                                     ItemsSource="{Binding ViewModel.CommonPalletsInternational}"
-                                     CanUserAddRows="False"
-                                     CanUserDeleteRows="False"
-                                     AutoGenerateColumns="False"
-                                     IsReadOnly="True"
-                                     Margin="0,10,0,0"
-                                     HeadersVisibility="Column">
-                            <ui:DataGrid.Columns>
-                                <DataGridTextColumn Header="EUR/Intl. Pallets" Binding="{Binding Name}" Width="Auto"/>
-                                <DataGridTextColumn Header="Length (cm)" Binding="{Binding Length}" Width="Auto"/>
-                                <DataGridTextColumn Header="Width (cm)" Binding="{Binding Width}" Width="Auto"/>
-                                <DataGridTemplateColumn Header="" Width="Auto">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <ui:Button Content="Select"
-                                                       Command="{Binding DataContext.ViewModel.SelectPalletCommand, RelativeSource={RelativeSource AncestorType=Page}}"
-                                                       CommandParameter="{Binding}"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </ui:DataGrid.Columns>
-                        </ui:DataGrid>
-                        <ui:DataGrid Grid.Row="3" Grid.ColumnSpan="3"
-                             ItemsSource="{Binding ViewModel.CommonPalletsAmerica}"
+                                    <ui:DataGrid Grid.Row="2" Grid.ColumnSpan="3"
+                             ItemsSource="{Binding ViewModel.CommonPalletsInternational}"
+                             SelectedItem="{Binding ViewModel.SelectedInternationalPallet, Mode=TwoWay}"
                              CanUserAddRows="False"
                              CanUserDeleteRows="False"
                              AutoGenerateColumns="False"
                              IsReadOnly="True"
                              Margin="0,10,0,0"
                              HeadersVisibility="Column">
-                            <ui:DataGrid.Columns>
-                                <DataGridTextColumn Header="American Pallets" Binding="{Binding Name}" Width="Auto"/>
-                                <DataGridTextColumn Header="Length (inch)" Binding="{Binding Length}" Width="Auto"/>
-                                <DataGridTextColumn Header="Width (inch)" Binding="{Binding Width}" Width="Auto"/>
-                                <DataGridTemplateColumn Header="" Width="Auto">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <ui:Button Content="Select"
-                               Command="{Binding DataContext.ViewModel.SelectPalletCommand, RelativeSource={RelativeSource AncestorType=Page}}"
-                               CommandParameter="{Binding}"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </ui:DataGrid.Columns>
-                        </ui:DataGrid>
-                    </Grid>
-                </ui:CardExpander>
-                <ui:CardExpander Header="SKU selection">
-                    <ui:DataGrid
-                        x:Name="SkuSelectionGrid"
-                        ItemsSource="{Binding ViewModel.Skus, Mode=TwoWay}"
-                        CanUserAddRows="False"
-                        CanUserDeleteRows="False"
-                        AutoGenerateColumns="False"
-                        CellEditEnding="SkuSelectionGrid_CellEditEnding">
-                        <ui:DataGrid.Columns>
-                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="Auto"/>
-                            <DataGridTemplateColumn Header="Dimensions (cm)" Width="150" IsReadOnly="True">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock>
-                                            <TextBlock.Text>
-                                                <MultiBinding StringFormat="{}{0} x {1} x {2}">
-                                                    <Binding Path="Length"/>
-                                                    <Binding Path="Width"/>
-                                                    <Binding Path="Height"/>
-                                                </MultiBinding>
-                                            </TextBlock.Text>
-                                        </TextBlock>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Weight" Binding="{Binding Weight}" IsReadOnly="True" Width="Auto"/>
-                            <DataGridTextColumn Header="Qty" Binding="{Binding Quantity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="Auto"/>
-                        </ui:DataGrid.Columns>
-                    </ui:DataGrid>
-                </ui:CardExpander>
-                <ui:CardExpander Header="Layer generation options">
-                    <ui:CardControl Header="Use CP-SAT layer generation" IsEnabled="False">
-                        <ui:ToggleSwitch/>
-                    </ui:CardControl>
-                </ui:CardExpander>
-                <ui:CardExpander Header="Layer stacking options">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <Label>Height Limit</Label>
-                        <ui:TextBox HorizontalAlignment="Left" Width="80" Grid.Row="1">180</ui:TextBox>
-                        <Label Grid.Column="1">Weight Limit</Label>
-                        <ui:TextBox HorizontalAlignment="Left" Width="80" Grid.Row="1" Grid.Column="1">950</ui:TextBox>
-                    </Grid>
-                </ui:CardExpander>
-            </StackPanel>
-        </ScrollViewer>
-
-        <TabControl Grid.Row="1" Grid.Column="1" Margin="20,8,0,0">
-            <TabItem Header="Layer View" HorizontalAlignment="Left">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="40"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="200"/>
-                    </Grid.RowDefinitions>
-                    <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,5,0,0">
-                        <ui:Button Content="Save Report" Icon="{ui:SymbolIcon Save24}" Height="35" IsEnabled="False" />
-                        <ComboBox x:Name="layersComboBox" Width="200" Margin="10,0,0,0" VerticalAlignment="Bottom" ItemsSource="{Binding ViewModel.Layers}" SelectedItem="{Binding ViewModel.SelectedLayer, Mode=TwoWay}" DisplayMemberPath="Name" IsEnabled="{Binding ViewModel.HasLayers}" Height="35"/>
-                    </StackPanel>
-                    <Viewport3D Grid.Row="1"/>
-                    <TextBox Grid.Row="2" Margin="0,10,0,10" Text="{Binding ViewModel.OutputText}" FontFamily="Cascadia Code" FontSize="14" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" BorderThickness="0" Background="Transparent"/>
+                                        <ui:DataGrid.Columns>
+                                            <DataGridTextColumn Header="EUR/Intl. Pallets" Binding="{Binding Name}" Width="Auto"/>
+                                            <DataGridTextColumn Header="Length (cm)" Binding="{Binding Length}" Width="Auto"/>
+                                            <DataGridTextColumn Header="Width (cm)" Binding="{Binding Width}" Width="Auto"/>
+                                        </ui:DataGrid.Columns>
+                                    </ui:DataGrid>
+                                    <ui:DataGrid Grid.Row="3" Grid.ColumnSpan="3"
+                     ItemsSource="{Binding ViewModel.CommonPalletsAmerica}"
+                     SelectedItem="{Binding ViewModel.SelectedAmericanPallet, Mode=TwoWay}"
+                     CanUserAddRows="False"
+                     CanUserDeleteRows="False"
+                     AutoGenerateColumns="False"
+                     IsReadOnly="True"
+                     Margin="0,10,0,0"
+                     HeadersVisibility="Column">
+                                        <ui:DataGrid.Columns>
+                                            <DataGridTextColumn Header="American Pallets" Binding="{Binding Name}" Width="Auto"/>
+                                            <DataGridTextColumn Header="Length (inch)" Binding="{Binding Length}" Width="Auto"/>
+                                            <DataGridTextColumn Header="Width (inch)" Binding="{Binding Width}" Width="Auto"/>
+                                        </ui:DataGrid.Columns>
+                                    </ui:DataGrid>
+                                </Grid>
+                            </ui:CardExpander>
+                            <ui:CardExpander Header="SKU selection">
+                                <StackPanel Orientation="Vertical" Margin="0,0,0,0">
+                                    <ui:TextBlock Text="Select the SKUs to include in the pallet by adjusting the quantity." Margin="0,0,0,5"/>
+                                    <ui:DataGrid
+                x:Name="SkuSelectionGrid"
+                ItemsSource="{Binding ViewModel.Skus, Mode=TwoWay}"
+                CanUserAddRows="False"
+                CanUserDeleteRows="False"
+                AutoGenerateColumns="False"
+                CellEditEnding="SkuSelectionGrid_CellEditEnding">
+                                        <ui:DataGrid.Columns>
+                                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="Auto"/>
+                                            <DataGridTemplateColumn Header="Dimensions (cm)" Width="150" IsReadOnly="True">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock>
+                                                            <TextBlock.Text>
+                                                                <MultiBinding StringFormat="{}{0} x {1} x {2}">
+                                                                    <Binding Path="Length"/>
+                                                                    <Binding Path="Width"/>
+                                                                    <Binding Path="Height"/>
+                                                                </MultiBinding>
+                                                            </TextBlock.Text>
+                                                        </TextBlock>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTextColumn Header="Weight" Binding="{Binding Weight}" IsReadOnly="True" Width="Auto"/>
+                                            <DataGridTextColumn Header="Qty" Binding="{Binding Quantity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="Auto"/>
+                                        </ui:DataGrid.Columns>
+                                    </ui:DataGrid>
+                                </StackPanel>
+                            </ui:CardExpander>
+                            <ui:CardExpander Header="Layer generation options">
+                                <StackPanel Orientation="Vertical">
+                                    <ui:CardControl Header="Use CP-SAT layer generation">
+                                        <ui:ToggleSwitch x:Name="cpsatToggleSwitch" IsChecked="{Binding ViewModel.UseCpsat, Mode=TwoWay}"/>
+                                    </ui:CardControl>
+                                    <ui:CardControl Header="Maximum CP-SAT candidate placements">
+                                        <ui:NumberBox x:Name="maxCpsatCandidatesNumberBox" Value="{Binding ViewModel.MaxCpsatCandidates, Mode=TwoWay}" Minimum="1" IsEnabled="{Binding ViewModel.UseCpsat}"/>
+                                    </ui:CardControl>
+                                    <ui:CardControl Header="CP-SAT solver time limit (seconds)">
+                                        <ui:NumberBox x:Name="solverTimeLimitNumberBox" Value="{Binding ViewModel.SolverTimeLimit, Mode=TwoWay}" Minimum="1" IsEnabled="{Binding ViewModel.UseCpsat}"/>
+                                    </ui:CardControl>
+                                </StackPanel>
+                            </ui:CardExpander>
+                            <ui:CardExpander Header="Layer stacking options">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Label>Height Limit</Label>
+                                    <ui:TextBox HorizontalAlignment="Left" Width="80" Grid.Row="1" Margin="0,0,40,0">180</ui:TextBox>
+                                    <Label Grid.Column="1">Weight Limit</Label>
+                                    <ui:TextBox HorizontalAlignment="Left" Width="80" Grid.Row="1" Grid.Column="1">950</ui:TextBox>
+                                </Grid>
+                            </ui:CardExpander>
+                        </StackPanel>
+                    </ScrollViewer>
                 </Grid>
             </TabItem>
-            <TabItem Header="Pallet View" HorizontalAlignment="Left">The cake was a lie.</TabItem>
+            <TabItem Header="➜  Layer Analyzer" HorizontalAlignment="Left">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="2*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" Margin="0,5,0,5" Grid.ColumnSpan="2">
+                        <ui:SymbolIcon Symbol="Info24" VerticalAlignment="Center"/>
+                        <ui:TextBlock Text="{Binding ViewModel.LayerGenStats}" Margin="5,0,0,0"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,5,0,0">
+                        <ui:Button Content="Save Report" Icon="{ui:SymbolIcon Save24}" Height="38" IsEnabled="False" />
+                        <ComboBox x:Name="layersComboBox" Margin="10,0,0,0" VerticalAlignment="Bottom" ItemsSource="{Binding ViewModel.Layers}" SelectedItem="{Binding ViewModel.SelectedLayer, Mode=TwoWay}" DisplayMemberPath="Name" IsEnabled="{Binding ViewModel.HasLayers}"/>
+                        <ui:TextBlock Margin="10,0,0,0" Text="{Binding ViewModel.SelectedItemInfo}" VerticalAlignment="Center" FontFamily="Cascadia Code"/>
+                    </StackPanel>
+                    <Viewport3D x:Name="MainViewPort" Grid.Row="2" Grid.Column="1"
+                        xmlns:behaviors="clr-namespace:Stack_Solver.Helpers.Rendering"
+                        behaviors:ViewportBehaviors.ZoomCommand="{Binding ViewModel.ZoomCommand}"
+                        behaviors:ViewportBehaviors.BeginPanCommand="{Binding ViewModel.BeginPanCommand}"
+                        behaviors:ViewportBehaviors.PanCommand="{Binding ViewModel.PanCommand}">
+                        <Viewport3D.Camera>
+                            <PerspectiveCamera x:Name="MainPerspectiveCamera" LookDirection="-1,-1,-1" UpDirection="0,1,0" Position="150,150,150" FieldOfView="60"/>
+                        </Viewport3D.Camera>
+                        <ModelVisual3D x:Name="MainLight">
+                            <ModelVisual3D.Content>
+                                <DirectionalLight Color="White" Direction="-2,-3,-1"/>
+                            </ModelVisual3D.Content>
+                        </ModelVisual3D>
+                        <ModelVisual3D Content="{Binding ViewModel.Scene}" />
+                    </Viewport3D>
+                    <GridSplitter Grid.Row="2" Grid.Column="0" Width="3" HorizontalAlignment="Right" Height="200"/>
+                    <Border Grid.Row="2" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,7,10,7">
+                        <StackPanel>
+                            <TextBlock Text="Layer Details" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                            <ui:TextBlock Text="{Binding ViewModel.OutputText}" FontFamily="Cascadia Code" FontSize="14" TextWrapping="Wrap" Margin="0,10,0,10"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+            <TabItem Header="➜  Pallet Analyzer" HorizontalAlignment="Left">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="2*"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="2*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.ColumnSpan="2" Margin="0,5,0,0">
+                        <ui:Button Content="Save Report" Icon="{ui:SymbolIcon Save24}" Height="38" IsEnabled="False" />
+                    </StackPanel>
+                    <ui:TextBlock Grid.Column="0" Grid.Row="1" Text="{Binding ViewModel.OutputText}" FontFamily="Cascadia Code" FontSize="14" TextWrapping="Wrap" Margin="0,10,10,10"/>
+                    <GridSplitter Grid.Row="1" Grid.Column="0" Width="3" HorizontalAlignment="Right" Height="200"/>
+                    <StackPanel Orientation="Vertical" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
+                        <ui:DataGrid AutoGenerateColumns="False" FontSize="12">
+                            <ui:DataGrid.Columns>
+                                <DataGridTextColumn Header="#" />
+                                <DataGridTextColumn Header="Area Eff" />
+                                <DataGridTextColumn Header="Cubic Eff" />
+                                <DataGridTextColumn Header="L" />
+                                <DataGridTextColumn Header="W" />
+                                <DataGridTextColumn Header="H" />
+                                <DataGridTextColumn Header="Wght" />
+                                <DataGridTextColumn Header="Items/Layer" />
+                                <DataGridTextColumn Header="# Layers" />
+                            </ui:DataGrid.Columns>
+                        </ui:DataGrid>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
         </TabControl>
     </Grid>
 </Page>

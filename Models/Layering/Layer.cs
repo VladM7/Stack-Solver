@@ -1,22 +1,16 @@
-﻿namespace Stack_Solver.Models
+﻿using Stack_Solver.Models.Metadata;
+
+namespace Stack_Solver.Models.Layering
 {
-    public class Layer
+    public class Layer(string name, List<PositionedItem> items, LayerMetadata metadata)
     {
-        public int Id { get; set; }
-        public string Name { get; set; }
-        public List<PositionedItem> Items { get; set; }
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Name { get; set; } = name;
+        public List<PositionedItem> Items { get; set; } = items;
 
-        public LayerMetadata Metadata { get; set; }
+        public LayerMetadata Metadata { get; set; } = metadata;
 
-        public Layer(int id, string name, List<PositionedItem> items, LayerMetadata metadata)
-        {
-            Id = id;
-            Name = name;
-            Items = items;
-            Metadata = metadata;
-        }
-
-        public Layer() { }
+        public LayerGeometry? Geometry { get; set; } = null;
 
         public override string ToString()
         {

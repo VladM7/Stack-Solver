@@ -1,6 +1,9 @@
 ﻿using Stack_Solver.Models;
+using Stack_Solver.Models.Layering;
+using Stack_Solver.Models.Metadata;
+using Stack_Solver.Models.Supports;
 
-namespace Stack_Solver.Services.Strategies
+namespace Stack_Solver.Services.Layering
 {
     public class BLFGenerationStrategy : ILayerGenerationStrategy
     {
@@ -11,7 +14,7 @@ namespace Stack_Solver.Services.Strategies
             var px = supportSurface.Length;
             var py = supportSurface.Width;
             int attempts = 200; // to be replaced with a value from generation options
-            int seed = 0; // same with this
+            int seed = Environment.TickCount;
 
             var rand = new Random(seed);
 
@@ -46,18 +49,18 @@ namespace Stack_Solver.Services.Strategies
                     while (true)
                     {
                         bool placedAny = false;
-                        foreach (var v in order)
+                        foreach (var (skuId, w, h, Rotated, refSku) in order)
                         {
-                            if (v.h <= rowH && v.w <= px - x)
+                            if (h <= rowH && w <= px - x)
                             {
-                                var skuObj = skus.First(s => s.SkuId == v.skuId);
-                                if (counts[v.skuId] + 1 > skuObj.Quantity)
+                                var skuObj = skus.First(s => s.SkuId == skuId);
+                                if (counts[skuId] + 1 > skuObj.Quantity)
                                     continue;
 
-                                placements.Add(new PositionedItem(v.refSku, x, y, v.Rotated));
+                                placements.Add(new PositionedItem(refSku, x, y, Rotated));
 
-                                counts[v.skuId]++;
-                                x += v.w;
+                                counts[skuId]++;
+                                x += w;
                                 placedAny = true;
                                 break;
                             }
@@ -77,7 +80,7 @@ namespace Stack_Solver.Services.Strategies
                 double usedArea = placements.Sum(p => p.SkuType.Length * p.SkuType.Width);
                 double util = usedArea / area;
                 var usedSkus = skus.Where(s => counts[s.SkuId] > 0).ToList();
-                int layerHeight = usedSkus.Any() ? usedSkus.Max(s => s.Height) : 0;
+                int layerHeight = usedSkus.Count != 0 ? usedSkus.Max(s => s.Height) : 0;
 
                 var key = string.Join(",", counts.Where(kv => kv.Value > 0)
                                                  .OrderBy(kv => kv.Key)
@@ -85,12 +88,8 @@ namespace Stack_Solver.Services.Strategies
 
                 if (!foundLayers.TryGetValue(key, out Layer? value) || value.Metadata.Utilization < util)
                 {
-                    value = new Layer
-                    {
-                        Name = $"BLF_Attempt_{attempt}",
-                        Metadata = new LayerMetadata(util, layerHeight, $"BLF attempt {attempt}, boxes={boxes}, util={util:F3}"),
-                        Items = placements
-                    };
+                    value = new Layer($"blf_attempt_{attempt}", placements, new LayerMetadata(util, layerHeight, $"BLF attempt {attempt}, boxes={boxes}, util={util:F3}"));
+                    value.Geometry = LayerGeometryBuilder.Build(value, supportSurface);
                     foundLayers[key] = value;
                 }
             }

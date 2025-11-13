@@ -8,13 +8,23 @@
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Stack_Solver</RootNamespace>
+	<EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Controls\**" />
+    <EmbeddedResource Remove="Controls\**" />
+    <None Remove="Controls\**" />
+    <Page Remove="Controls\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <Content Include="Box.ico" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Google.OrTools" Version="9.14.6206" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.9" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.9" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.9" />
@@ -40,7 +50,11 @@
 
   <ItemGroup>
     <Folder Include="Assets\Images\" />
-    <Folder Include="Controls\" />
+    <Folder Include="Services\Stacking\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include=".github\workflows\stack-sover-ci.yml" />
   </ItemGroup>
 
 </Project>

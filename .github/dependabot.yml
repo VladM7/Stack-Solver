@@ -1,0 +1,35 @@
+# Dependabot configuration file
+# Docs: https://docs.github.com/code-security/dependabot/working-with-dependabot/availability-of-dependabot-features
+version: 2
+updates:
+  # NuGet packages
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    target-branch: "overhaul"
+    rebase-strategy: "auto"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+      major:
+        update-types: ["major"]
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:30"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    target-branch: "overhaul"
+    rebase-strategy: "auto"
+    groups:
+      actions:
+        patterns: ["*"]

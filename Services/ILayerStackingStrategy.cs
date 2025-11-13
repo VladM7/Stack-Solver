@@ -4,9 +4,9 @@ using Stack_Solver.Models.Supports;
 
 namespace Stack_Solver.Services
 {
-    public interface ILayerGenerationStrategy
+    public interface ILayerStackingStrategy
     {
         string Name { get; }
-        List<Layer> Generate(List<SKU> skus, SupportSurface supportSurface, GenerationOptions options);
+        SupportSurface Build(SupportSurface pallet, List<Layer> layers, GenerationOptions options);
     }
 }

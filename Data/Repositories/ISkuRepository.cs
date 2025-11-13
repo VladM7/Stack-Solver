@@ -10,5 +10,8 @@ namespace Stack_Solver.Data.Repositories
         Task UpdateAsync(SKU sku, CancellationToken ct = default);
         Task DeleteAsync(string skuId, CancellationToken ct = default);
         Task<int> SaveChangesAsync(CancellationToken ct = default);
+        event EventHandler<SKU>? SkuAdded;
+        event EventHandler<SKU>? SkuUpdated;
+        event EventHandler<string>? SkuDeleted;
     }
 }

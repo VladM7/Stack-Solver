@@ -1,0 +1,58 @@
+﻿name: Dotnet Build and Test
+
+on:
+  push:
+    branches: [ main, overhaul ]
+  pull_request:
+    branches: [ main, overhaul ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build and test
+    runs-on: windows-latest
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 9 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+          cache: true
+          cache-dependency-path: |
+            **/*.sln
+            **/*.csproj
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore /p:ContinuousIntegrationBuild=true
+
+      - name: Test
+        if: ${{ hashFiles('**/*Tests.csproj') != '' || hashFiles('**/*Test.csproj') != '' }}
+        run: >-
+          dotnet test --configuration Release --no-build --verbosity normal
+          --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test_results.trx"
+
+      - name: Upload test results
+        if: ${{ always() && (hashFiles('**/*Tests.csproj') != '' || hashFiles('**/*Test.csproj') != '' ) }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            **/TestResults/*.trx
+            **/TestResults/**/coverage.cobertura.xml
+          if-no-files-found: ignore

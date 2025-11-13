@@ -37,9 +37,11 @@
             ItemsSource="{Binding ViewModel.Skus, Mode=TwoWay}"
             AutoGenerateColumns="True"
             CanUserAddRows="False"
+            CanUserDeleteRows="False"
             Margin="0,20,0,0" 
             AutoGeneratingColumn="skuDataGrid_AutoGeneratingColumn"
-            CellEditEnding="SkuDataGrid_CellEditEnding"/>
+            CellEditEnding="SkuDataGrid_CellEditEnding"
+            PreviewKeyDown="SkuDataGrid_PreviewKeyDown"/>
 
         <StackPanel Orientation="Horizontal" Height="60" VerticalAlignment="Center" Grid.Row="2">
             <ui:SymbolIcon Symbol="Info24" Width="30" Height="30" VerticalAlignment="Top"/>
