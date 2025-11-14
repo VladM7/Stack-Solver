@@ -1,4 +1,4 @@
 <Solution>
-  <Project Path="../Stack-Solver-Tests/Stack-Solver-Tests.csproj" Id="39597fc4-81df-463b-8581-9fa36df424e3" />
   <Project Path="Stack-Solver.csproj" />
+  <Project Path="Tests/Stack-Solver.Tests/Stack-Solver.Tests.csproj" Id="f381e69c-0b5f-4653-856f-a6e51e51e45b" />
 </Solution>

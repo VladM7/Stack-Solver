@@ -103,7 +103,7 @@ namespace Stack_Solver.Services.Layering
 
                     double util = usedArea / area;
                     string desc = $"rows={nrows} seq=" + string.Join(",", seq.Select(v => $"{v.sref.Name}:{v.w}x{v.h}"));
-                    string lid = $"strip_r{nrows}_" + string.Join("_", seq.Select(v => $"{v.sref.Name.Replace(' ', '_')}{v.w}x{v.h}"));
+                    string lid = $"strip_r{nrows}";
 
                     int layerHeight = seq.Count != 0 ? seq.Max(v => v.sref.Height) : 0;
                     var metadata = new LayerMetadata(util, layerHeight, desc);

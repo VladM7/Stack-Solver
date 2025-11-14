@@ -26,26 +26,44 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup .NET 9 SDK
+      - name: Setup .NET 10 SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 9.0.x
+          dotnet-version: 10.0.x
           cache: true
           cache-dependency-path: |
             **/*.sln
+            **/*.slnx
             **/*.csproj
 
-      - name: Restore
-        run: dotnet restore
+      - name: Restore (each csproj)
+        shell: pwsh
+        run: |
+          $projects = Get-ChildItem -Recurse -Filter *.csproj -File
+          if (-not $projects) { Write-Host "No csproj files found"; exit 1 }
+          foreach ($p in $projects) {
+            echo "Restoring $($p.FullName)"
+            dotnet restore --nologo "$($p.FullName)"
+          }
 
-      - name: Build
-        run: dotnet build --configuration Release --no-restore /p:ContinuousIntegrationBuild=true
+      - name: Build (Release)
+        shell: pwsh
+        run: |
+          $projects = Get-ChildItem -Recurse -Filter *.csproj -File | ForEach-Object { $_.FullName }
+          foreach ($p in $projects) {
+            echo "Building $p"
+            dotnet build "$p" --configuration Release --no-restore /p:ContinuousIntegrationBuild=true
+          }
 
       - name: Test
         if: ${{ hashFiles('**/*Tests.csproj') != '' || hashFiles('**/*Test.csproj') != '' }}
-        run: >-
-          dotnet test --configuration Release --no-build --verbosity normal
-          --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test_results.trx"
+        shell: pwsh
+        run: |
+          $testProjects = Get-ChildItem -Recurse -Include *Tests.csproj,*Test.csproj -File | ForEach-Object { $_.FullName }
+          foreach ($tp in $testProjects) {
+            echo "Testing $tp"
+            dotnet test "$tp" --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test_results.trx"
+          }
 
       - name: Upload test results
         if: ${{ always() && (hashFiles('**/*Tests.csproj') != '' || hashFiles('**/*Test.csproj') != '' ) }}
