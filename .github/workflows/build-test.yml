@@ -36,20 +36,23 @@ jobs:
             **/*.slnx
             **/*.csproj
 
-      - name: Restore (csproj in repo only)
+      - name: Restore (each csproj)
         shell: pwsh
         run: |
-          $projects = Get-ChildItem -Recurse -Filter *.csproj | ForEach-Object { $_.FullName }
+          $projects = Get-ChildItem -Recurse -Filter *.csproj -File
           if (-not $projects) { Write-Host "No csproj files found"; exit 1 }
-          dotnet restore $projects
+          foreach ($p in $projects) {
+            echo "Restoring $($p.FullName)"
+            dotnet restore --nologo "$($p.FullName)"
+          }
 
       - name: Build (Release)
         shell: pwsh
         run: |
-          $projects = Get-ChildItem -Recurse -Filter *.csproj | ForEach-Object { $_.FullName }
+          $projects = Get-ChildItem -Recurse -Filter *.csproj -File | ForEach-Object { $_.FullName }
           foreach ($p in $projects) {
             echo "Building $p"
-            dotnet build $p --configuration Release --no-restore /p:ContinuousIntegrationBuild=true
+            dotnet build "$p" --configuration Release --no-restore /p:ContinuousIntegrationBuild=true
           }
 
       - name: Test
@@ -59,7 +62,7 @@ jobs:
           $testProjects = Get-ChildItem -Recurse -Include *Tests.csproj,*Test.csproj -File | ForEach-Object { $_.FullName }
           foreach ($tp in $testProjects) {
             echo "Testing $tp"
-            dotnet test $tp --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test_results.trx"
+            dotnet test "$tp" --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test_results.trx"
           }
 
       - name: Upload test results
