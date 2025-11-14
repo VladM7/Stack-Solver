@@ -29,10 +29,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET 9 SDK
+      - name: Setup .NET 10 SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 9.0.x
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            **/*.sln
+            **/*.slnx
+            **/*.csproj
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
@@ -44,9 +49,18 @@ jobs:
 
       - name: Manual build fallback
         if: failure()
+        shell: pwsh
         run: |
-          dotnet restore
-          dotnet build --configuration Release --no-restore
+          $projects = Get-ChildItem -Recurse -Filter *.csproj -File
+          if (-not $projects) { Write-Host "No csproj files found"; exit 1 }
+          foreach ($p in $projects) {
+            echo "Restoring $($p.FullName)"
+            dotnet restore --nologo "$($p.FullName)"
+          }
+          foreach ($p in $projects) {
+            echo "Building $($p.FullName)"
+            dotnet build "$($p.FullName)" --configuration Release --no-restore /p:ContinuousIntegrationBuild=true
+          }
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
