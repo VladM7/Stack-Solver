@@ -7,8 +7,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="SKU Library Page"
-    d:DataContext="{d:DesignInstance local:SKULibraryPage,
-                                     IsDesignTimeCreatable=False}"
+    d:DataContext="{d:DesignInstance local:DashboardPage, IsDesignTimeCreatable=False}"
     d:DesignHeight="450"
     d:DesignWidth="800"
     ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
@@ -22,8 +21,6 @@
             <RowDefinition/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-        </Grid.ColumnDefinitions>
 
         <StackPanel Orientation="Horizontal" Grid.Row="0">
             <ui:Button Content="Add SKU" Margin="0,0,8,0" VerticalAlignment="Top" Icon="{ui:SymbolIcon Add24}" Appearance="Primary" Command="{Binding ViewModel.AddSkuCommand, Mode=OneWay}"/>
