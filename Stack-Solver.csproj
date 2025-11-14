@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net9.0-windows10.0.26100.1</TargetFramework>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Box.ico</ApplicationIcon>
     <UseWPF>true</UseWPF>
@@ -54,7 +54,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include=".github\workflows\stack-sover-ci.yml" />
+    <None Include=".github\dependabot.yml" />
+    <None Include=".github\workflows\codeql.yml" />
+    <None Include=".github\workflows\dependency-review.yml" />
+    <None Include=".github\workflows\build-test.yml" />
+    <None Include=".github\workflows\vulnerability-audit.yml" />
   </ItemGroup>
 
 </Project>
