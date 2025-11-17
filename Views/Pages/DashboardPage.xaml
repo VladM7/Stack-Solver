@@ -28,10 +28,13 @@
             <StackPanel Orientation="Horizontal" Margin="30,5,0,0">
                 <ui:ListView IsEnabled="False">
                     <ui:ListViewItem>
-                        <TextBlock Text="→ Improved UI and UX (no longer a single page, dark mode)" TextWrapping="Wrap" Width="700"/>
+                        <TextBlock Text="→ Improved UI and 3D rendering" TextWrapping="Wrap" Width="700"/>
                     </ui:ListViewItem>
                     <ui:ListViewItem>
-                        <TextBlock Text="→ Now using MVVM architectural pattern" TextWrapping="Wrap" Width="700"/>
+                        <TextBlock Text="→ Mixed SKU pallets" TextWrapping="Wrap" Width="700"/>
+                    </ui:ListViewItem>
+                    <ui:ListViewItem>
+                        <TextBlock Text="→ Multiple constraints, such as stability, weight distribution, etc." TextWrapping="Wrap" Width="700"/>
                     </ui:ListViewItem>
                     <ui:ListViewItem>
                         <TextBlock Text="→ Improved SKU management" TextWrapping="Wrap" Width="700"/>
@@ -52,6 +55,16 @@
                         <TextBlock Text="→ A new way to manage jobs (for example, for re-generating with the same parameters)" TextWrapping="Wrap" Width="700"/>
                     </ui:ListViewItem>
                 </ui:ListView>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                <ui:TextBlock VerticalAlignment="Center">For more details, check the </ui:TextBlock>
+                <ui:HyperlinkButton Padding="5,5,5,6" NavigateUri="https://github.com/VladM7/Stack-Solver" Height="28" Margin="2,0,2,0">
+                    <WrapPanel>
+                        <ui:TextBlock>GitHub</ui:TextBlock>
+                        <ui:SymbolIcon Symbol="ArrowUpRight16" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                    </WrapPanel>
+                </ui:HyperlinkButton>
+                <ui:TextBlock VerticalAlignment="Center">page.</ui:TextBlock>
             </StackPanel>
         </StackPanel>
     </Grid>
