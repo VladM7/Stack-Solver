@@ -22,11 +22,24 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Orientation="Horizontal" Grid.Row="0">
+        <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Left" VerticalAlignment="Top">
             <ui:Button Content="Add SKU" Margin="0,0,8,0" VerticalAlignment="Top" Icon="{ui:SymbolIcon Add24}" Appearance="Primary" Command="{Binding ViewModel.AddSkuCommand, Mode=OneWay}"/>
             <ui:Button Content="Import" Margin="0,0,8,0" VerticalAlignment="Top" Icon="{ui:SymbolIcon ArrowDownload24}" IsEnabled="False"/>
             <ui:Button Content="Export" Margin="0,0,8,0" VerticalAlignment="Top" Icon="{ui:SymbolIcon ArrowExportUp24}" IsEnabled="False"/>
-            <ui:Button Icon="{ui:SymbolIcon Question24}" Content="Help"/>
+            <ui:Button x:Name="helpButton" Icon="{ui:SymbolIcon Question24}" Click="HelpButton_Click" Cursor="Help">
+                <WrapPanel>
+                    <ui:TextBlock Text="Help"/>
+                    <ui:Flyout x:Name="helpFlyout" Placement="Mouse" Width="0" Height="0" MinWidth="0" MinHeight="0" VerticalAlignment="Top">
+                        <ui:TextBlock>
+                            Here you can add different types of SKUs.
+                            <LineBreak/>
+                            You can adjust the specific quantities in the generation page.
+                            <LineBreak/>
+                            See the tip at the bottom of the page for details.
+                        </ui:TextBlock>
+                    </ui:Flyout>
+                </WrapPanel>
+            </ui:Button>
         </StackPanel>
 
         <ui:DataGrid x:Name="skuDataGrid" 

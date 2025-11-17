@@ -34,7 +34,29 @@
         <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.Row="0">
             <ui:Button x:Name="generateButton" Content="Generate" Command="{Binding ViewModel.GenerateCommand}" IsEnabled="{Binding ViewModel.IsGenerating, Converter={StaticResource BooleanNegationConverter}}" Grid.Column="0" Grid.Row="0" VerticalAlignment="Top" Appearance="Primary" Icon="{ui:SymbolIcon ArrowTurnDownRight48}"/>
             <ui:Button Content="Cancel" Command="{Binding ViewModel.CancelCommand}" Icon="{ui:SymbolIcon DismissCircle24}" Margin="8,0,0,0" VerticalAlignment="Top" IsEnabled="{Binding ViewModel.IsGenerating}"/>
-            <ui:Button Content="Help" Icon="{ui:SymbolIcon Question24}" Margin="8,0,0,0" VerticalAlignment="Top"/>
+            <ui:Button x:Name="topHelpButton" Icon="{ui:SymbolIcon Question24}" Margin="8,0,0,0" VerticalAlignment="Top" Click="TopHelpButton_Click" Cursor="Help">
+                <WrapPanel>
+                    <ui:TextBlock Text="Help"/>
+                    <ui:Flyout x:Name="helpFlyout" Placement="Mouse" Width="0" Height="0" MinWidth="0" MinHeight="0" VerticalAlignment="Top">
+                        <ui:TextBlock>
+                            Here you can adjust different parameters and see the results.
+                            <LineBreak/>
+                            <LineBreak/>
+                            1. Set the pallet dimensions manually or by selecting a pallet type.
+                            <LineBreak/>
+                            2. Adjust the quantity for each SKU type.
+                            <LineBreak/>
+                            (or set it to 0 to ignore that specific SKU)
+                            <LineBreak/>
+                            You can add more SKU types (or edit them) in the Library page.
+                            <LineBreak/>
+                            3. Change the layer generation and stacking options.
+                            <LineBreak/>
+                            4. Click Generate and see the results in the analyzer pages.
+                        </ui:TextBlock>
+                    </ui:Flyout>
+                </WrapPanel>
+            </ui:Button>
         </StackPanel>
         <ProgressBar Grid.Row ="1" Height="5" Margin="0,4,0,0" IsIndeterminate="True" Visibility="{Binding ViewModel.IsGenerating, Converter={StaticResource BoolToVisibilityConverter}}"/>
         <TabControl Grid.Row="2" Grid.Column="1" Margin="0,8,0,0">

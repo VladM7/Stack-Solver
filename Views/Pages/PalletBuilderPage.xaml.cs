@@ -82,5 +82,10 @@ namespace Stack_Solver.Views.Pages
                 }
             }
         }
+
+        private void TopHelpButton_Click(object sender, RoutedEventArgs e)
+        {
+            helpFlyout.IsOpen = !helpFlyout.IsOpen;
+        }
     }
 }
