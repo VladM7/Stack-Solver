@@ -43,14 +43,10 @@ namespace Stack_Solver.Views.Pages
                 {
                     if (rayResult.ModelHit is GeometryModel3D geo)
                     {
-                        var builderField = typeof(LayerAnalyzerViewModel).GetField("_sceneBuilder", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                        if (builderField?.GetValue(ViewModel.LayerAnalyzer) is LayerSceneBuilder builder)
+                        if (ViewModel.LayerAnalyzer.TryGetItemFromGeometry(geo, out var item))
                         {
-                            if (builder.TryGetItemForGeometry(geo, out var item))
-                            {
-                                selected = item;
-                                return HitTestResultBehavior.Stop;
-                            }
+                            selected = item;
+                            return HitTestResultBehavior.Stop;
                         }
                     }
                 }

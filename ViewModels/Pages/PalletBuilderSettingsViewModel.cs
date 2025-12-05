@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using Stack_Solver.Data.Repositories;
 using Stack_Solver.Infrastructure;
 using Stack_Solver.Models;
@@ -10,6 +11,8 @@ namespace Stack_Solver.ViewModels.Pages
     {
         private readonly ISkuRepository _skuRepository;
         private readonly IEventAggregator _events;
+        private readonly GenerationOptions _defaults;
+        private readonly PalletDefaultsOptions _palletDefaults;
         private bool _isInitialized;
 
         [ObservableProperty]
@@ -32,6 +35,12 @@ namespace Stack_Solver.ViewModels.Pages
 
         [ObservableProperty]
         private int _solverTimeLimit = 60;
+
+        [ObservableProperty]
+        private int _maxStackHeight;
+
+        [ObservableProperty]
+        private int _maxStackWeight;
 
         public ObservableCollection<Pallet> CommonPalletsInternational { get; } = [];
         public ObservableCollection<Pallet> CommonPalletsAmerica { get; } = [];
@@ -62,13 +71,25 @@ namespace Stack_Solver.ViewModels.Pages
             }
         }
 
-        public PalletBuilderSettingsViewModel(ISkuRepository skuRepository, IEventAggregator events)
+        public PalletBuilderSettingsViewModel(ISkuRepository skuRepository, IEventAggregator events, IOptions<GenerationOptions> genOptions, IOptions<PalletDefaultsOptions> palletDefaults)
         {
             _skuRepository = skuRepository;
             _events = events;
+            _defaults = GenerationOptions.From(genOptions.Value);
+            _palletDefaults = palletDefaults.Value ?? new PalletDefaultsOptions();
             _skuRepository.SkuAdded += OnSkuAdded;
             _skuRepository.SkuUpdated += OnSkuUpdated;
             _skuRepository.SkuDeleted += OnSkuDeleted;
+
+            SolverTimeLimit = _defaults.MaxSolverTime;
+            MaxCpsatCandidates = _defaults.MaxCandidates;
+
+            PalletLength = _palletDefaults.PalletLength;
+            PalletWidth = _palletDefaults.PalletWidth;
+            PalletHeight = _palletDefaults.PalletHeight;
+
+            MaxStackHeight = _palletDefaults.MaxStackHeight;
+            MaxStackWeight = _palletDefaults.MaxStackWeight;
         }
 
         public async Task InitializeAsync()
@@ -88,6 +109,23 @@ namespace Stack_Solver.ViewModels.Pages
                 foreach (var p in PalletCatalog.America)
                     CommonPalletsAmerica.Add(p);
             }
+
+            // If a specific catalog/name is set, select it
+            if (!string.IsNullOrWhiteSpace(_palletDefaults.DefaultPalletName))
+            {
+                if (string.Equals(_palletDefaults.DefaultCatalog, "America", StringComparison.OrdinalIgnoreCase))
+                {
+                    SelectedAmericanPallet = CommonPalletsAmerica.FirstOrDefault(p => string.Equals(p.Name, _palletDefaults.DefaultPalletName, StringComparison.OrdinalIgnoreCase));
+                }
+                else
+                {
+                    SelectedInternationalPallet = CommonPalletsInternational.FirstOrDefault(p => string.Equals(p.Name, _palletDefaults.DefaultPalletName, StringComparison.OrdinalIgnoreCase));
+                }
+            }
+
+            // initialize defaults for solver inputs
+            SolverTimeLimit = _defaults.MaxSolverTime;
+            MaxCpsatCandidates = _defaults.MaxCandidates;
 
             _isInitialized = true;
             PublishSettingsChanged();
@@ -115,12 +153,16 @@ namespace Stack_Solver.ViewModels.Pages
         partial void OnUseCpsatChanged(bool value) => PublishSettingsChanged();
         partial void OnMaxCpsatCandidatesChanged(int value) => PublishSettingsChanged();
         partial void OnSolverTimeLimitChanged(int value) => PublishSettingsChanged();
+        partial void OnMaxStackHeightChanged(int value) => PublishSettingsChanged();
+        partial void OnMaxStackWeightChanged(int value) => PublishSettingsChanged();
 
         private void PublishSettingsChanged()
         {
             _events.Publish(new SettingsChangedMessage(
                 PalletLength, PalletWidth, PalletHeight,
-                UseCpsat, MaxCpsatCandidates, SolverTimeLimit, [.. Skus]));
+                UseCpsat, MaxCpsatCandidates, SolverTimeLimit,
+                MaxStackHeight, MaxStackWeight,
+                [.. Skus]));
         }
 
         private void OnSkuAdded(object? sender, SKU sku)
@@ -209,5 +251,7 @@ namespace Stack_Solver.ViewModels.Pages
         bool UseCpsat,
         int MaxCpsatCandidates,
         int SolverTimeLimit,
+        int MaxStackHeight,
+        int MaxStackWeight,
         List<SKU> Skus);
 }

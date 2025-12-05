@@ -2,8 +2,8 @@
 {
     public class GenerationOptions
     {
-        public int MaxSolverTime { get; set; } = 60;
-        public int MaxCandidates { get; set; } = 2000;
+        public int MaxSolverTime { get; set; }
+        public int MaxCandidates { get; set; }
 
         public GenerationOptions() { }
 
@@ -11,6 +11,12 @@
         {
             MaxSolverTime = maxSolverTime;
             MaxCandidates = maxCandidates;
+        }
+
+        public static GenerationOptions From(GenerationOptions? source)
+        {
+            if (source == null) return new GenerationOptions();
+            return new GenerationOptions(source.MaxSolverTime, source.MaxCandidates);
         }
     }
 }

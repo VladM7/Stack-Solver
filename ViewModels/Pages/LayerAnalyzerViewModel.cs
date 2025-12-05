@@ -1,3 +1,5 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Stack_Solver.Helpers.Rendering;
 using Stack_Solver.Infrastructure;
 using Stack_Solver.Models;
@@ -7,6 +9,7 @@ using Stack_Solver.Services;
 using Stack_Solver.Services.Layering;
 using System.Collections.ObjectModel;
 using System.Text;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
@@ -17,6 +20,7 @@ namespace Stack_Solver.ViewModels.Pages
     {
         private readonly IEventAggregator _events;
         private readonly LayerSceneBuilder _sceneBuilder = new();
+        private readonly ILayerVisualizationService _viz;
         private CancellationTokenSource? _sceneBuildCts;
         private CancellationTokenSource? _generationCts;
 
@@ -64,14 +68,17 @@ namespace Stack_Solver.ViewModels.Pages
         private Layer? _optimizedViewLayer;
         private static List<Layer>? _allLayers = [];
 
-        public LayerAnalyzerViewModel(IEventAggregator events)
+        public LayerAnalyzerViewModel(IEventAggregator events, ILayerVisualizationService viz)
         {
             _events = events;
+            _viz = viz;
             _events.Subscribe<SettingsChangedMessage>(OnSettingsChanged);
             ZoomCommand = new RelayCommand<double>(Zoom);
             BeginPanCommand = new RelayCommand<Point>(BeginPan);
             PanCommand = new RelayCommand<Point>(Pan);
         }
+
+        public bool TryGetItemFromGeometry(GeometryModel3D geo, out PositionedItem item) => _sceneBuilder.TryGetItemForGeometry(geo, out item);
 
         private int _palletLength;
         private int _palletWidth;
@@ -79,6 +86,8 @@ namespace Stack_Solver.ViewModels.Pages
         private bool _useCpsat;
         private int _maxCpsatCandidates;
         private int _solverTimeLimit;
+        private int _maxStackHeight;
+        private int _maxStackWeight;
         private List<SKU> _selectedSkus = new();
 
         private void OnSettingsChanged(SettingsChangedMessage msg)
@@ -89,6 +98,8 @@ namespace Stack_Solver.ViewModels.Pages
             _useCpsat = msg.UseCpsat;
             _maxCpsatCandidates = msg.MaxCpsatCandidates;
             _solverTimeLimit = msg.SolverTimeLimit;
+            _maxStackHeight = msg.MaxStackHeight;
+            _maxStackWeight = msg.MaxStackWeight;
             _selectedSkus = [.. msg.Skus.Where(s => s.Quantity > 0)];
             RecenterCameraTarget();
             if (SelectedLayer != null)
@@ -102,9 +113,9 @@ namespace Stack_Solver.ViewModels.Pages
         public ICommand BeginPanCommand { get; }
         public ICommand PanCommand { get; }
 
-        private void Zoom(double delta) => ViewportController?.Zoom(delta);
-        private void BeginPan(Point p) => ViewportController?.BeginPan(p);
-        private void Pan(Point p) => ViewportController?.Pan(p);
+        private void Zoom(double delta) => _viewportController?.Zoom(delta);
+        private void BeginPan(Point p) => _viewportController?.BeginPan(p);
+        private void Pan(Point p) => _viewportController?.Pan(p);
 
         public void AttachCamera(PerspectiveCamera camera)
         {
@@ -330,7 +341,8 @@ namespace Stack_Solver.ViewModels.Pages
             return sb.ToString();
         }
 
-        private Model3DGroup? _selectionHighlight;
+        [ObservableProperty]
+        private string _selectedItemInfo = string.Empty;
 
         public void UpdateSelectedItem(PositionedItem? item)
         {
@@ -338,36 +350,13 @@ namespace Stack_Solver.ViewModels.Pages
             {
                 var sku = item.SkuType;
                 SelectedItemInfo = $" > {sku.Name} ({sku.Length}x{sku.Width}x{sku.Height}) positioned at {item.X}, {item.Y}";
-                HighlightItem(item);
+                _viz.HighlightItem(Scene, item, _palletHeight);
             }
             else
             {
                 SelectedItemInfo = string.Empty;
-                HighlightItem(null);
+                _viz.HighlightItem(Scene, null, _palletHeight);
             }
-        }
-
-        [ObservableProperty]
-        private string _selectedItemInfo = string.Empty;
-
-        private void HighlightItem(PositionedItem? item)
-        {
-            if (_selectionHighlight != null)
-            {
-                Scene.Children.Remove(_selectionHighlight);
-                _selectionHighlight = null;
-            }
-            if (item == null) return;
-            var sku = item.SkuType;
-            double boxLength = item.Rotated ? sku.Width : sku.Length;
-            double boxWidth = item.Rotated ? sku.Length : sku.Width;
-            double boxHeight = sku.Height;
-            double inflate = 0.6;
-            var origin = new Point3D(item.X - inflate / 2.0, _palletHeight + 0.01, item.Y - inflate / 2.0);
-            var fillBrush = new SolidColorBrush(Color.FromArgb(40, 255, 255, 0));
-            var edgeColor = Colors.Yellow;
-            _selectionHighlight = GeometryCreator.CreateBoxWithEdges(origin, boxLength + inflate, boxHeight + inflate, boxWidth + inflate, fillBrush, edgeColor, 0.6);
-            Scene.Children.Add(_selectionHighlight);
         }
 
         private void Update2DPreview()
@@ -377,21 +366,8 @@ namespace Stack_Solver.ViewModels.Pages
                 LayerRectangles.Clear();
                 return;
             }
-
-            var layer = SelectedLayer;
             var pallet = new Pallet("Pallet", _palletLength, _palletWidth, (int)Math.Round(_palletHeight));
-            LayerGeometryBuilder.Build(layer, pallet, 1);
-
-            LayerRectangles.Clear();
-            if (layer.Geometry?.ItemRectangles != null)
-            {
-                double canvasHeight = _palletWidth;
-                foreach (var r in layer.Geometry.ItemRectangles)
-                {
-                    var display = new Rect(r.X, canvasHeight - (r.Y + r.Height), r.Width, r.Height);
-                    LayerRectangles.Add(display);
-                }
-            }
+            _viz.Build2DRectangles(SelectedLayer, pallet, 1, LayerRectangles);
         }
     }
 

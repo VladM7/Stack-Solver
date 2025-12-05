@@ -155,10 +155,16 @@
                                         <ui:ToggleSwitch x:Name="cpsatToggleSwitch" IsChecked="{Binding ViewModel.Settings.UseCpsat, Mode=TwoWay}"/>
                                     </ui:CardControl>
                                     <ui:CardControl Header="Maximum CP-SAT candidate placements">
-                                        <ui:NumberBox x:Name="maxCpsatCandidatesNumberBox" Value="{Binding ViewModel.Settings.MaxCpsatCandidates, Mode=TwoWay}" Minimum="1" IsEnabled="{Binding ViewModel.Settings.UseCpsat}"/>
+                                        <ui:NumberBox x:Name="maxCpsatCandidatesNumberBox"
+                                                      Value="{Binding ViewModel.Settings.MaxCpsatCandidates, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      Minimum="1"
+                                                      IsEnabled="{Binding ViewModel.Settings.UseCpsat}"/>
                                     </ui:CardControl>
                                     <ui:CardControl Header="CP-SAT solver time limit (seconds)">
-                                        <ui:NumberBox x:Name="solverTimeLimitNumberBox" Value="{Binding ViewModel.Settings.SolverTimeLimit, Mode=TwoWay}" Minimum="1" IsEnabled="{Binding ViewModel.Settings.UseCpsat}"/>
+                                        <ui:NumberBox x:Name="solverTimeLimitNumberBox"
+                                                      Value="{Binding ViewModel.Settings.SolverTimeLimit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      Minimum="1"
+                                                      IsEnabled="{Binding ViewModel.Settings.UseCpsat}" />
                                     </ui:CardControl>
                                 </StackPanel>
                             </ui:CardExpander>
@@ -173,9 +179,11 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <Label>Height Limit</Label>
-                                    <ui:TextBox HorizontalAlignment="Left" Width="80" Grid.Row="1" Margin="0,0,40,0">180</ui:TextBox>
+                                    <ui:NumberBox HorizontalAlignment="Left" Grid.Row="1" Margin="0,0,40,0"
+                                                  Value="{Binding ViewModel.Settings.MaxStackHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1" />
                                     <Label Grid.Column="1">Weight Limit</Label>
-                                    <ui:TextBox HorizontalAlignment="Left" Width="80" Grid.Row="1" Grid.Column="1">950</ui:TextBox>
+                                    <ui:NumberBox HorizontalAlignment="Left" Grid.Row="1" Grid.Column="1"
+                                                  Value="{Binding ViewModel.Settings.MaxStackWeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1" />
                                 </Grid>
                             </ui:CardExpander>
                         </StackPanel>
