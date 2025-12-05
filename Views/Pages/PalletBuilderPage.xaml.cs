@@ -22,11 +22,12 @@ namespace Stack_Solver.Views.Pages
             MainViewPort.MouseLeftButtonDown += MainViewPort_MouseLeftButtonDown;
         }
 
-        private void OnLoaded(object? sender, RoutedEventArgs e)
+        private async void OnLoaded(object? sender, RoutedEventArgs e)
         {
-            if (ViewModel.ViewportController == null && MainPerspectiveCamera is PerspectiveCamera cam)
+            await ViewModel.OnNavigatedToAsync();
+            if (ViewModel.LayerAnalyzer.ViewportController == null && MainPerspectiveCamera is PerspectiveCamera cam)
             {
-                ViewModel.AttachCamera(cam);
+                ViewModel.LayerAnalyzer.AttachCamera(cam);
             }
         }
 
@@ -36,15 +37,14 @@ namespace Stack_Solver.Views.Pages
             var hitParams = new PointHitTestParameters(pos);
             PositionedItem? selected = null;
 
-            HitTestResultCallback resultCallback = r =>
+            HitTestResultBehavior resultCallback(HitTestResult r)
             {
                 if (r is RayHitTestResult rayResult)
                 {
                     if (rayResult.ModelHit is GeometryModel3D geo)
                     {
-                        // Access scene builder mapping via reflection (quick solution) or store in Tag
-                        var builderField = typeof(PalletBuilderViewModel).GetField("_sceneBuilder", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                        if (builderField?.GetValue(ViewModel) is LayerSceneBuilder builder)
+                        var builderField = typeof(LayerAnalyzerViewModel).GetField("_sceneBuilder", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                        if (builderField?.GetValue(ViewModel.LayerAnalyzer) is LayerSceneBuilder builder)
                         {
                             if (builder.TryGetItemForGeometry(geo, out var item))
                             {
@@ -55,10 +55,10 @@ namespace Stack_Solver.Views.Pages
                     }
                 }
                 return HitTestResultBehavior.Continue;
-            };
+            }
 
             VisualTreeHelper.HitTest(MainViewPort, null, resultCallback, hitParams);
-            ViewModel.UpdateSelectedItem(selected);
+            ViewModel.LayerAnalyzer.UpdateSelectedItem(selected);
         }
 
         private async void SkuSelectionGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
@@ -75,7 +75,7 @@ namespace Stack_Solver.Views.Pages
 
                 try
                 {
-                    await ViewModel.UpdateSkuAsync(sku);
+                    await ViewModel.Settings.UpdateSkuAsync(sku);
                 }
                 catch
                 {

@@ -32,8 +32,8 @@
         </Grid.RowDefinitions>
 
         <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.Row="0">
-            <ui:Button x:Name="generateButton" Content="Generate" Command="{Binding ViewModel.GenerateCommand}" IsEnabled="{Binding ViewModel.IsGenerating, Converter={StaticResource BooleanNegationConverter}}" Grid.Column="0" Grid.Row="0" VerticalAlignment="Top" Appearance="Primary" Icon="{ui:SymbolIcon ArrowTurnDownRight48}"/>
-            <ui:Button Content="Cancel" Command="{Binding ViewModel.CancelCommand}" Icon="{ui:SymbolIcon DismissCircle24}" Margin="8,0,0,0" VerticalAlignment="Top" IsEnabled="{Binding ViewModel.IsGenerating}"/>
+            <ui:Button x:Name="generateButton" Content="Generate" Command="{Binding ViewModel.LayerAnalyzer.GenerateCommand}" IsEnabled="{Binding ViewModel.LayerAnalyzer.IsGenerating, Converter={StaticResource BooleanNegationConverter}}" Grid.Column="0" Grid.Row="0" VerticalAlignment="Top" Appearance="Primary" Icon="{ui:SymbolIcon ArrowTurnDownRight48}"/>
+            <ui:Button Content="Cancel" Command="{Binding ViewModel.LayerAnalyzer.CancelCommand}" Icon="{ui:SymbolIcon DismissCircle24}" Margin="8,0,0,0" VerticalAlignment="Top" IsEnabled="{Binding ViewModel.LayerAnalyzer.IsGenerating}"/>
             <ui:Button x:Name="topHelpButton" Icon="{ui:SymbolIcon Question24}" Margin="8,0,0,0" VerticalAlignment="Top" Click="TopHelpButton_Click" Cursor="Help">
                 <WrapPanel>
                     <ui:TextBlock Text="Help"/>
@@ -58,7 +58,7 @@
                 </WrapPanel>
             </ui:Button>
         </StackPanel>
-        <ProgressBar Grid.Row ="1" Height="5" Margin="0,4,0,0" IsIndeterminate="True" Visibility="{Binding ViewModel.IsGenerating, Converter={StaticResource BoolToVisibilityConverter}}"/>
+        <ProgressBar Grid.Row ="1" Height="5" Margin="0,4,0,0" IsIndeterminate="True" Visibility="{Binding ViewModel.LayerAnalyzer.IsGenerating, Converter={StaticResource BoolToVisibilityConverter}}"/>
         <TabControl Grid.Row="2" Grid.Column="1" Margin="0,8,0,0">
             <TabItem Header="Settings" HorizontalAlignment="Left">
                 <Grid>
@@ -78,15 +78,15 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <Label>Length</Label>
-                                    <ui:TextBox x:Name="palletLengthTextBox" Text="{Binding ViewModel.PalletLength, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left" Width="80" Grid.Row="1"/>
+                                    <ui:TextBox x:Name="palletLengthTextBox" Text="{Binding ViewModel.Settings.PalletLength, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left" Width="80" Grid.Row="1"/>
                                     <Label Grid.Column="1">Width</Label>
-                                    <ui:TextBox x:Name="palletWidthTextBox" Text="{Binding ViewModel.PalletWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left" Width="80" Grid.Row="1" Grid.Column="1"/>
+                                    <ui:TextBox x:Name="palletWidthTextBox" Text="{Binding ViewModel.Settings.PalletWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left" Width="80" Grid.Row="1" Grid.Column="1"/>
                                     <Label Grid.Column="2">Height</Label>
-                                    <ui:TextBox x:Name="palletHeightTextBox" Text="{Binding ViewModel.PalletHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left" Width="80" Grid.Row="1" Grid.Column="2"/>
+                                    <ui:TextBox x:Name="palletHeightTextBox" Text="{Binding ViewModel.Settings.PalletHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left" Width="80" Grid.Row="1" Grid.Column="2"/>
 
                                     <ui:DataGrid Grid.Row="2" Grid.ColumnSpan="3"
-                             ItemsSource="{Binding ViewModel.CommonPalletsInternational}"
-                             SelectedItem="{Binding ViewModel.SelectedInternationalPallet, Mode=TwoWay}"
+                             ItemsSource="{Binding ViewModel.Settings.CommonPalletsInternational}"
+                             SelectedItem="{Binding ViewModel.Settings.SelectedInternationalPallet, Mode=TwoWay}"
                              CanUserAddRows="False"
                              CanUserDeleteRows="False"
                              AutoGenerateColumns="False"
@@ -100,8 +100,8 @@
                                         </ui:DataGrid.Columns>
                                     </ui:DataGrid>
                                     <ui:DataGrid Grid.Row="3" Grid.ColumnSpan="3"
-                     ItemsSource="{Binding ViewModel.CommonPalletsAmerica}"
-                     SelectedItem="{Binding ViewModel.SelectedAmericanPallet, Mode=TwoWay}"
+                     ItemsSource="{Binding ViewModel.Settings.CommonPalletsAmerica}"
+                     SelectedItem="{Binding ViewModel.Settings.SelectedAmericanPallet, Mode=TwoWay}"
                      CanUserAddRows="False"
                      CanUserDeleteRows="False"
                      AutoGenerateColumns="False"
@@ -121,7 +121,7 @@
                                     <ui:TextBlock Text="Select the SKUs to include in the pallet by adjusting the quantity." Margin="0,0,0,5"/>
                                     <ui:DataGrid
                 x:Name="SkuSelectionGrid"
-                ItemsSource="{Binding ViewModel.Skus, Mode=TwoWay}"
+                ItemsSource="{Binding ViewModel.Settings.Skus, Mode=TwoWay}"
                 CanUserAddRows="False"
                 CanUserDeleteRows="False"
                 AutoGenerateColumns="False"
@@ -152,13 +152,13 @@
                             <ui:CardExpander Header="Layer generation options">
                                 <StackPanel Orientation="Vertical">
                                     <ui:CardControl Header="Use CP-SAT layer generation">
-                                        <ui:ToggleSwitch x:Name="cpsatToggleSwitch" IsChecked="{Binding ViewModel.UseCpsat, Mode=TwoWay}"/>
+                                        <ui:ToggleSwitch x:Name="cpsatToggleSwitch" IsChecked="{Binding ViewModel.Settings.UseCpsat, Mode=TwoWay}"/>
                                     </ui:CardControl>
                                     <ui:CardControl Header="Maximum CP-SAT candidate placements">
-                                        <ui:NumberBox x:Name="maxCpsatCandidatesNumberBox" Value="{Binding ViewModel.MaxCpsatCandidates, Mode=TwoWay}" Minimum="1" IsEnabled="{Binding ViewModel.UseCpsat}"/>
+                                        <ui:NumberBox x:Name="maxCpsatCandidatesNumberBox" Value="{Binding ViewModel.Settings.MaxCpsatCandidates, Mode=TwoWay}" Minimum="1" IsEnabled="{Binding ViewModel.Settings.UseCpsat}"/>
                                     </ui:CardControl>
                                     <ui:CardControl Header="CP-SAT solver time limit (seconds)">
-                                        <ui:NumberBox x:Name="solverTimeLimitNumberBox" Value="{Binding ViewModel.SolverTimeLimit, Mode=TwoWay}" Minimum="1" IsEnabled="{Binding ViewModel.UseCpsat}"/>
+                                        <ui:NumberBox x:Name="solverTimeLimitNumberBox" Value="{Binding ViewModel.Settings.SolverTimeLimit, Mode=TwoWay}" Minimum="1" IsEnabled="{Binding ViewModel.Settings.UseCpsat}"/>
                                     </ui:CardControl>
                                 </StackPanel>
                             </ui:CardExpander>
@@ -195,18 +195,18 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Orientation="Horizontal" Margin="0,5,0,5" Grid.ColumnSpan="2">
                         <ui:SymbolIcon Symbol="Info24" VerticalAlignment="Center"/>
-                        <ui:TextBlock Text="{Binding ViewModel.LayerGenStats}" Margin="5,0,0,0"/>
+                        <ui:TextBlock Text="{Binding ViewModel.LayerAnalyzer.LayerGenStats}" Margin="5,0,0,0"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,5,0,0">
                         <ui:Button Content="Save Report" Icon="{ui:SymbolIcon Save24}" Height="38" IsEnabled="False" />
-                        <ComboBox x:Name="layersComboBox" Margin="10,0,0,0" VerticalAlignment="Bottom" ItemsSource="{Binding ViewModel.Layers}" SelectedItem="{Binding ViewModel.SelectedLayer, Mode=TwoWay}" DisplayMemberPath="Name" IsEnabled="{Binding ViewModel.HasLayers}"/>
-                        <ui:TextBlock Margin="10,0,0,0" Text="{Binding ViewModel.SelectedItemInfo}" VerticalAlignment="Center" FontFamily="Cascadia Code"/>
+                        <ComboBox x:Name="layersComboBox" Margin="10,0,0,0" VerticalAlignment="Bottom" ItemsSource="{Binding ViewModel.LayerAnalyzer.Layers}" SelectedItem="{Binding ViewModel.LayerAnalyzer.SelectedLayer, Mode=TwoWay}" DisplayMemberPath="Name" IsEnabled="{Binding ViewModel.LayerAnalyzer.HasLayers}"/>
+                        <ui:TextBlock Margin="10,0,0,0" Text="{Binding ViewModel.LayerAnalyzer.SelectedItemInfo}" VerticalAlignment="Center" FontFamily="Cascadia Code"/>
                     </StackPanel>
                     <Viewport3D x:Name="MainViewPort" Grid.Row="2" Grid.Column="1"
                         xmlns:behaviors="clr-namespace:Stack_Solver.Helpers.Rendering"
-                        behaviors:ViewportBehaviors.ZoomCommand="{Binding ViewModel.ZoomCommand}"
-                        behaviors:ViewportBehaviors.BeginPanCommand="{Binding ViewModel.BeginPanCommand}"
-                        behaviors:ViewportBehaviors.PanCommand="{Binding ViewModel.PanCommand}">
+                        behaviors:ViewportBehaviors.ZoomCommand="{Binding ViewModel.LayerAnalyzer.ZoomCommand}"
+                        behaviors:ViewportBehaviors.BeginPanCommand="{Binding ViewModel.LayerAnalyzer.BeginPanCommand}"
+                        behaviors:ViewportBehaviors.PanCommand="{Binding ViewModel.LayerAnalyzer.PanCommand}">
                         <Viewport3D.Camera>
                             <PerspectiveCamera x:Name="MainPerspectiveCamera" LookDirection="-1,-1,-1" UpDirection="0,1,0" Position="150,150,150" FieldOfView="60"/>
                         </Viewport3D.Camera>
@@ -215,13 +215,13 @@
                                 <DirectionalLight Color="White" Direction="-2,-3,-1"/>
                             </ModelVisual3D.Content>
                         </ModelVisual3D>
-                        <ModelVisual3D Content="{Binding ViewModel.Scene}" />
+                        <ModelVisual3D Content="{Binding ViewModel.LayerAnalyzer.Scene}" />
                     </Viewport3D>
                     <GridSplitter Grid.Row="2" Grid.Column="0" Width="3" HorizontalAlignment="Right" Height="200"/>
                     <Border Grid.Row="2" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,7,10,7">
                         <StackPanel>
                             <TextBlock Text="Layer Details" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                            <ui:TextBlock Text="{Binding ViewModel.OutputText}" FontFamily="Cascadia Code" FontSize="14" TextWrapping="Wrap" Margin="0,10,0,10"/>
+                            <ui:TextBlock Text="{Binding ViewModel.LayerAnalyzer.OutputText}" FontFamily="Cascadia Code" FontSize="14" TextWrapping="Wrap" Margin="0,10,0,10"/>
                         </StackPanel>
                     </Border>
                 </Grid>
@@ -240,20 +240,15 @@
                     <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.ColumnSpan="2" Margin="0,5,0,0">
                         <ui:Button Content="Save Report" Icon="{ui:SymbolIcon Save24}" Height="38" IsEnabled="False" />
                     </StackPanel>
-                    <ui:TextBlock Grid.Column="0" Grid.Row="1" Text="{Binding ViewModel.OutputText}" FontFamily="Cascadia Code" FontSize="14" TextWrapping="Wrap" Margin="0,10,10,10"/>
+                    <ui:TextBlock Grid.Column="0" Grid.Row="1" Text="{Binding ViewModel.PalletAnalyzer.OutputText}" FontFamily="Cascadia Code" FontSize="14" TextWrapping="Wrap" Margin="0,10,10,10"/>
                     <GridSplitter Grid.Row="1" Grid.Column="0" Width="3" HorizontalAlignment="Right" Height="200"/>
                     <StackPanel Orientation="Vertical" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
-                        <ui:DataGrid AutoGenerateColumns="False" FontSize="12">
+                        <ui:DataGrid AutoGenerateColumns="False" FontSize="12" ItemsSource="{Binding ViewModel.PalletAnalyzer.CandidateLayers}">
                             <ui:DataGrid.Columns>
-                                <DataGridTextColumn Header="#" />
-                                <DataGridTextColumn Header="Area Eff" />
-                                <DataGridTextColumn Header="Cubic Eff" />
-                                <DataGridTextColumn Header="L" />
-                                <DataGridTextColumn Header="W" />
-                                <DataGridTextColumn Header="H" />
-                                <DataGridTextColumn Header="Wght" />
-                                <DataGridTextColumn Header="Items/Layer" />
-                                <DataGridTextColumn Header="# Layers" />
+                                <DataGridTextColumn Header="#" Binding="{Binding Name}"/>
+                                <DataGridTextColumn Header="Area Eff" Binding="{Binding Metadata.Utilization}"/>
+                                <DataGridTextColumn Header="H" Binding="{Binding Metadata.Height}"/>
+                                <DataGridTextColumn Header="Items/Layer" Binding="{Binding Items.Count}"/>
                             </ui:DataGrid.Columns>
                         </ui:DataGrid>
                     </StackPanel>
