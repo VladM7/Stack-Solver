@@ -39,20 +39,24 @@
                     <ui:TextBlock Text="Help"/>
                     <ui:Flyout x:Name="helpFlyout" Placement="Mouse" Width="0" Height="0" MinWidth="0" MinHeight="0" VerticalAlignment="Top">
                         <ui:TextBlock>
-                            Here you can adjust different parameters and see the results.
+                            <Run Text="Here you can adjust different parameters and see the results."/>
                             <LineBreak/>
                             <LineBreak/>
-                            1. Set the pallet dimensions manually or by selecting a pallet type.
+                            <Run Text="1 - Set the pallet dimensions manually or by selecting a pallet type."/>
                             <LineBreak/>
-                            2. Adjust the quantity for each SKU type.
+                            <Run Text="2 - Adjust the quantity for each SKU type."/>
                             <LineBreak/>
-                            (or set it to 0 to ignore that specific SKU)
+                            <Run Text="(or set it to 0 to ignore that specific SKU)"/>
                             <LineBreak/>
-                            You can add more SKU types (or edit them) in the Library page.
+                            <Run Text="You can add more SKU types (or edit them) in the "/>
+                            <Run Text="Library " FontWeight="Bold"/>
+                            <Run Text="page." />
                             <LineBreak/>
-                            3. Change the layer generation and stacking options.
+                            <Run Text="3 - Change the layer generation and stacking options."/>
                             <LineBreak/>
-                            4. Click Generate and see the results in the analyzer pages.
+                            <Run Text="4 - Click"/>
+                            <Run Text=" Generate" FontWeight="Bold"/>
+                            <Run Text=" and see the results in the analyzer pages."/>
                         </ui:TextBlock>
                     </ui:Flyout>
                 </WrapPanel>
@@ -190,7 +194,7 @@
                     </ScrollViewer>
                 </Grid>
             </TabItem>
-            <TabItem Header="➜  Layer Analyzer" HorizontalAlignment="Left">
+            <TabItem Header="Layer Analyzer" HorizontalAlignment="Left">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -234,7 +238,7 @@
                     </Border>
                 </Grid>
             </TabItem>
-            <TabItem Header="➜  Pallet Analyzer" HorizontalAlignment="Left">
+            <TabItem Header="Pallet Analyzer" HorizontalAlignment="Left">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
