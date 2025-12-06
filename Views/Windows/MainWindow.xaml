@@ -35,7 +35,7 @@
             Grid.Row="0"
             CloseWindowByDoubleClickOnIcon="True">
             <ui:TitleBar.Icon>
-                <ui:ImageIcon Source="pack://application:,,,/Assets/wpfui-icon-256.png" />
+                <ui:ImageIcon Source="/Assets/stacksolver-icon-256.png" />
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 
