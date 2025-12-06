@@ -19,22 +19,22 @@ namespace Stack_Solver.ViewModels.Pages
         private ObservableCollection<SKU> _skus = [];
 
         [ObservableProperty]
-        private int _palletLength = 120;
+        private int _palletLength;
 
         [ObservableProperty]
-        private int _palletWidth = 80;
+        private int _palletWidth;
 
         [ObservableProperty]
-        private double _palletHeight = 14.4;
+        private double _palletHeight;
 
         [ObservableProperty]
         private bool _useCpsat;
 
         [ObservableProperty]
-        private int _maxCpsatCandidates = 2000;
+        private int _maxCpsatCandidates;
 
         [ObservableProperty]
-        private int _solverTimeLimit = 60;
+        private int _solverTimeLimit;
 
         [ObservableProperty]
         private int _maxStackHeight;
@@ -110,7 +110,6 @@ namespace Stack_Solver.ViewModels.Pages
                     CommonPalletsAmerica.Add(p);
             }
 
-            // If a specific catalog/name is set, select it
             if (!string.IsNullOrWhiteSpace(_palletDefaults.DefaultPalletName))
             {
                 if (string.Equals(_palletDefaults.DefaultCatalog, "America", StringComparison.OrdinalIgnoreCase))
@@ -123,7 +122,6 @@ namespace Stack_Solver.ViewModels.Pages
                 }
             }
 
-            // initialize defaults for solver inputs
             SolverTimeLimit = _defaults.MaxSolverTime;
             MaxCpsatCandidates = _defaults.MaxCandidates;
 

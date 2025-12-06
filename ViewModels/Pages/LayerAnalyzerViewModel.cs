@@ -1,5 +1,3 @@
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using Stack_Solver.Helpers.Rendering;
 using Stack_Solver.Infrastructure;
 using Stack_Solver.Models;
@@ -9,9 +7,7 @@ using Stack_Solver.Services;
 using Stack_Solver.Services.Layering;
 using System.Collections.ObjectModel;
 using System.Text;
-using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Media.Media3D;
 
 namespace Stack_Solver.ViewModels.Pages
@@ -88,7 +84,7 @@ namespace Stack_Solver.ViewModels.Pages
         private int _solverTimeLimit;
         private int _maxStackHeight;
         private int _maxStackWeight;
-        private List<SKU> _selectedSkus = new();
+        private List<SKU> _selectedSkus = [];
 
         private void OnSettingsChanged(SettingsChangedMessage msg)
         {
@@ -204,7 +200,7 @@ namespace Stack_Solver.ViewModels.Pages
             {
                 if (_selectedSkus.Count == 0)
                 {
-                    OutputText = "No SKUs with quantity > 0.";
+                    OutputText = "No SKUs with quantity greater than 0.";
                     return;
                 }
 
@@ -288,7 +284,6 @@ namespace Stack_Solver.ViewModels.Pages
                 }
                 LayerGenStats = LayerGenStats.TrimEnd(',') + ".";
 
-                // notify pallet analyzer
                 _events.Publish(new LayersGeneratedMessage(_allLayers));
             }
             catch (OperationCanceledException)
