@@ -55,7 +55,7 @@ namespace Stack_Solver.ViewModels.Pages
                 await InitializeViewModelAsync();
         }
 
-        public Task OnNavigatedFromAsync() => Task.CompletedTask;
+        public static Task OnNavigatedFromAsync() => Task.CompletedTask;
 
         private async Task InitializeViewModelAsync()
         {

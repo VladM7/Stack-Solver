@@ -1,0 +1,15 @@
+{
+  "LayerGeneration": {
+    "MaxSolverTime": 60,
+    "MaxCandidates": 2000
+  },
+  "PalletDefaults": {
+    "DefaultCatalog": "International",
+    "DefaultPalletName": "EUR 120x80",
+    "PalletLength": 120,
+    "PalletWidth": 80,
+    "PalletHeight": 14.4,
+    "MaxStackHeight": 180,
+    "MaxStackWeight": 950
+  }
+}

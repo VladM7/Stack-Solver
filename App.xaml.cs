@@ -2,8 +2,11 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Stack_Solver.Data;
 using Stack_Solver.Data.Repositories;
+using Stack_Solver.Infrastructure;
+using Stack_Solver.Models;
 using Stack_Solver.Services;
 using Stack_Solver.ViewModels.Pages;
 using Stack_Solver.ViewModels.Windows;
@@ -28,7 +31,11 @@ namespace Stack_Solver
         // https://docs.microsoft.com/dotnet/core/extensions/logging
         private static readonly IHost _host = Host
             .CreateDefaultBuilder()
-            .ConfigureAppConfiguration(c => { c.SetBasePath(Path.GetDirectoryName(AppContext.BaseDirectory)); })
+            .ConfigureAppConfiguration(c =>
+            {
+                c.SetBasePath(Path.GetDirectoryName(AppContext.BaseDirectory)!);
+                c.AddJsonFile("defaults.json", optional: true, reloadOnChange: true);
+            })
             .ConfigureServices((context, services) =>
             {
                 services.AddNavigationViewPageProvider();
@@ -55,22 +62,31 @@ namespace Stack_Solver
                 services.AddSingleton<SKULibraryPage>();
                 services.AddSingleton<SKULibraryViewModel>();
                 services.AddSingleton<PalletBuilderPage>();
-                services.AddSingleton<PalletBuilderViewModel>();
+                services.AddSingleton<PalletBuilderViewModel>(sp => new PalletBuilderViewModel(
+                    sp.GetRequiredService<ISkuRepository>(),
+                    sp.GetRequiredService<IEventAggregator>(),
+                    sp.GetRequiredService<ILayerVisualizationService>(),
+                    sp.GetRequiredService<IOptions<GenerationOptions>>(),
+                    sp.GetRequiredService<IOptions<PalletDefaultsOptions>>()));
                 services.AddSingleton<TruckLoadingPage>();
                 services.AddSingleton<TruckLoadingViewModel>();
                 services.AddSingleton<JobManagerPage>();
                 services.AddSingleton<JobManagerViewModel>();
+
+                services.AddSingleton<IEventAggregator, EventAggregator>();
+                services.AddSingleton<ILayerVisualizationService, LayerVisualizationService>();
 
                 services.AddDbContextFactory<ApplicationDbContext>(options =>
                 {
                     options.UseSqlite($"Data Source={AppPaths.DatabaseFile}");
                 });
 
-                // Repositories
                 services.AddSingleton<ISkuRepository, SkuRepository>();
-
-                // Initializer
                 services.AddSingleton<DatabaseInitializer>();
+
+                // Bind options from host configuration
+                services.Configure<GenerationOptions>(context.Configuration.GetSection("LayerGeneration"));
+                services.Configure<PalletDefaultsOptions>(context.Configuration.GetSection("PalletDefaults"));
             }).Build();
 
         /// <summary>
