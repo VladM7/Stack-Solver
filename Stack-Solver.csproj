@@ -4,7 +4,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>Box.ico</ApplicationIcon>
+    <ApplicationIcon>Assets\StackSolver.ico</ApplicationIcon>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -24,7 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Box.ico" />
     <Content Include="defaults.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -46,14 +45,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Assets\wpfui-icon-256.png" />
-    <None Remove="Assets\wpfui-icon-1024.png" />
-    <None Remove="defaults.json" />
+    <None Remove="Assets\stacksolver-icon-1024.png" />
+    <None Remove="Assets\stacksolver-icon-256.png" />
+    <None Remove="Assets\stacksolver-icon-512.png" />
+    <None Remove="Assets\StackSolver.ico" />
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="Assets\wpfui-icon-256.png" />
-    <Resource Include="Assets\wpfui-icon-1024.png" />
+    <Resource Include="Assets\stacksolver-icon-1024.png" />
+    <Resource Include="Assets\stacksolver-icon-256.png" />
+    <Resource Include="Assets\stacksolver-icon-512.png" />
+    <Resource Include="Assets\StackSolver.ico" />
   </ItemGroup>
 
   <ItemGroup>
@@ -67,6 +69,21 @@
     <None Include=".github\workflows\dependency-review.yml" />
     <None Include=".github\workflows\build-test.yml" />
     <None Include=".github\workflows\vulnerability-audit.yml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>
