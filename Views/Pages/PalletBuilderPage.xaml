@@ -161,6 +161,11 @@
                         </ui:CardExpander>
                         <ui:CardExpander Header="Layer generation options">
                             <StackPanel Orientation="Vertical">
+                                <ui:CardControl Header="Number of BLF attempts">
+                                    <ui:NumberBox x:Name="maxBLFAttempts"
+                                          Value="{Binding ViewModel.Settings.BlfAttempts, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          Minimum="0" SmallChange="10" LargeChange="10"/>  
+                                </ui:CardControl>
                                 <ui:CardControl Header="Use CP-SAT layer generation">
                                     <ui:ToggleSwitch x:Name="cpsatToggleSwitch" IsChecked="{Binding ViewModel.Settings.UseCpsat, Mode=TwoWay}"/>
                                 </ui:CardControl>

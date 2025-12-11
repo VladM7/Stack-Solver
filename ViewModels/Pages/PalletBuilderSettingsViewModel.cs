@@ -34,6 +34,9 @@ namespace Stack_Solver.ViewModels.Pages
         private int _maxCpsatCandidates;
 
         [ObservableProperty]
+        private int _blfAttempts;
+
+        [ObservableProperty]
         private int _solverTimeLimit;
 
         [ObservableProperty]
@@ -82,7 +85,8 @@ namespace Stack_Solver.ViewModels.Pages
             _skuRepository.SkuDeleted += OnSkuDeleted;
 
             SolverTimeLimit = _defaults.MaxSolverTime;
-            MaxCpsatCandidates = _defaults.MaxCandidates;
+            MaxCpsatCandidates = _defaults.MaxCPSATCandidates;
+            BlfAttempts = _defaults.BLFAttempts;
 
             PalletLength = _palletDefaults.PalletLength;
             PalletWidth = _palletDefaults.PalletWidth;
@@ -123,7 +127,7 @@ namespace Stack_Solver.ViewModels.Pages
             }
 
             SolverTimeLimit = _defaults.MaxSolverTime;
-            MaxCpsatCandidates = _defaults.MaxCandidates;
+            MaxCpsatCandidates = _defaults.MaxCPSATCandidates;
 
             _isInitialized = true;
             PublishSettingsChanged();
@@ -158,7 +162,7 @@ namespace Stack_Solver.ViewModels.Pages
         {
             _events.Publish(new SettingsChangedMessage(
                 PalletLength, PalletWidth, PalletHeight,
-                UseCpsat, MaxCpsatCandidates, SolverTimeLimit,
+                UseCpsat, MaxCpsatCandidates, BlfAttempts, SolverTimeLimit,
                 MaxStackHeight, MaxStackWeight,
                 [.. Skus]));
         }
@@ -248,6 +252,7 @@ namespace Stack_Solver.ViewModels.Pages
         double PalletHeight,
         bool UseCpsat,
         int MaxCpsatCandidates,
+        int BlfAttempts,
         int SolverTimeLimit,
         int MaxStackHeight,
         int MaxStackWeight,

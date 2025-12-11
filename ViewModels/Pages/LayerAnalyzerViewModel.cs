@@ -81,6 +81,7 @@ namespace Stack_Solver.ViewModels.Pages
         private double _palletHeight;
         private bool _useCpsat;
         private int _maxCpsatCandidates;
+        private int _blfAttempts;
         private int _solverTimeLimit;
         private int _maxStackHeight;
         private int _maxStackWeight;
@@ -93,6 +94,7 @@ namespace Stack_Solver.ViewModels.Pages
             _palletHeight = msg.PalletHeight;
             _useCpsat = msg.UseCpsat;
             _maxCpsatCandidates = msg.MaxCpsatCandidates;
+            _blfAttempts = msg.BlfAttempts;
             _solverTimeLimit = msg.SolverTimeLimit;
             _maxStackHeight = msg.MaxStackHeight;
             _maxStackWeight = msg.MaxStackWeight;
@@ -205,7 +207,7 @@ namespace Stack_Solver.ViewModels.Pages
                 }
 
                 var pallet = new Pallet("Pallet", _palletLength, _palletWidth, (int)Math.Round(_palletHeight));
-                var options = new GenerationOptions(_solverTimeLimit, _maxCpsatCandidates);
+                var options = new GenerationOptions(_solverTimeLimit, _maxCpsatCandidates, _blfAttempts);
                 var ct = localCts.Token;
 
                 var strategiesList = new List<ILayerGenerationStrategy>
