@@ -1,8 +1,8 @@
-﻿using Stack_Solver.Helpers.Rendering;
-using Stack_Solver.Models;
+﻿using Stack_Solver.Models;
 using Stack_Solver.Models.Layering;
 using Stack_Solver.ViewModels.Pages;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using Wpf.Ui.Abstractions.Controls;
@@ -31,7 +31,7 @@ namespace Stack_Solver.Views.Pages
             }
         }
 
-        private void MainViewPort_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void MainViewPort_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             var pos = e.GetPosition(MainViewPort);
             var hitParams = new PointHitTestParameters(pos);

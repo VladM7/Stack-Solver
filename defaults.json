@@ -1,7 +1,8 @@
 {
   "LayerGeneration": {
     "MaxSolverTime": 60,
-    "MaxCandidates": 2000
+    "MaxCPSATCandidates": 2000,
+    "BLFAttempts":  200
   },
   "PalletDefaults": {
     "DefaultCatalog": "International",

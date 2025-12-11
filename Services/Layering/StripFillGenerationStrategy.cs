@@ -1,4 +1,5 @@
-﻿using Stack_Solver.Models;
+﻿using Stack_Solver.Helpers.Layering;
+using Stack_Solver.Models;
 using Stack_Solver.Models.Layering;
 using Stack_Solver.Models.Metadata;
 using Stack_Solver.Models.Supports;
@@ -7,127 +8,181 @@ namespace Stack_Solver.Services.Layering
 {
     public class StripFillGenerationStrategy : ILayerGenerationStrategy
     {
+        private const int DefaultMaxRows = 50;
+
         public string Name => "Strip-Fill";
 
         public List<Layer> Generate(List<SKU> skus, SupportSurface supportSurface, GenerationOptions options)
         {
-            var layers = new List<Layer>();
+            if (skus == null || skus.Count == 0)
+                return [];
+
+
             int px = supportSurface.Length;
             int py = supportSurface.Width;
+            if (px <= 0 || py <= 0)
+                return [];
+
+
             double area = px * py;
+            var variants = SkuVariantFactory.CreateAllOrientations(skus);
+            if (variants.Count == 0)
+                return [];
 
-            int maxRows = 50;
-            int randomSequences = 50;
-            int seed = Environment.TickCount;
-            var rand = new Random(seed);
 
-            var variants = new List<(string sid, int w, int h, SKU sref)>();
-            foreach (var s in skus)
+            var candidateLayers = new List<Layer>();
+            int maxRows = Math.Max(1, Math.Min(py, DefaultMaxRows));
+
+            for (int rowCount = 1; rowCount <= maxRows; rowCount++)
             {
-                variants.Add((s.SkuId, s.Length, s.Width, s));
-                if (s.Rotatable && s.Length != s.Width)
-                    variants.Add((s.SkuId, s.Width, s.Length, s));
-            }
-
-            for (int nrows = 1; nrows <= maxRows; nrows++)
-            {
-                var candidateSequences = new List<List<(string sid, int w, int h, SKU sref)>>();
-
-                foreach (var v in variants)
+                foreach (var sequence in BuildCandidateSequences(variants, rowCount))
                 {
-                    candidateSequences.Add([.. Enumerable.Repeat(v, nrows)]);
-                }
-
-                if (variants.Count >= 2)
-                {
-                    for (int i = 0; i < variants.Count; i++)
-                    {
-                        for (int j = i + 1; j < variants.Count; j++)
-                        {
-                            var seq = new List<(string sid, int w, int h, SKU sref)>();
-                            for (int k = 0; k < nrows; k++)
-                                seq.Add(k % 2 == 0 ? variants[i] : variants[j]);
-                            candidateSequences.Add(seq);
-                        }
-                    }
-                }
-
-                for (int r = 0; r < randomSequences; r++)
-                {
-                    var seq = new List<(string sid, int w, int h, SKU sref)>();
-                    for (int k = 0; k < nrows; k++)
-                        seq.Add(variants[rand.Next(variants.Count)]);
-                    candidateSequences.Add(seq);
-                }
-
-                foreach (var seq in candidateSequences)
-                {
-                    int totalRowHeight = seq.Sum(v => v.h);
-                    if (totalRowHeight > py)
+                    if (!SequenceFitsSurface(sequence, py))
                         continue;
 
-                    var itemCounts = new Dictionary<string, int>();
-                    var placements = new List<PositionedItem>();
-                    double usedArea = 0;
-                    int boxes = 0;
-                    int yOffset = 0;
-                    bool feasible = true;
-
-                    foreach (var (sid, w, h, sref) in seq)
-                    {
-                        int nx = px / w;
-                        if (nx <= 0)
-                        {
-                            feasible = false;
-                            break;
-                        }
-
-                        for (int ix = 0; ix < nx; ix++)
-                        {
-                            placements.Add(new PositionedItem(sref, ix * w, yOffset, sref.Length != w));
-                        }
-
-                        int count = nx;
-                        if (itemCounts.ContainsKey(sid))
-                            itemCounts[sid] += count;
-                        else
-                            itemCounts[sid] = count;
-
-                        usedArea += count * w * h;
-                        boxes += count;
-                        yOffset += h;
-                    }
-
-                    if (!feasible)
-                        continue;
-
-                    double util = usedArea / area;
-                    string desc = $"rows={nrows} seq=" + string.Join(",", seq.Select(v => $"{v.sref.Name}:{v.w}x{v.h}"));
-                    string lid = $"strip_r{nrows}";
-
-                    int layerHeight = seq.Count != 0 ? seq.Max(v => v.sref.Height) : 0;
-                    var metadata = new LayerMetadata(util, layerHeight, desc);
-
-                    var layer = new Layer(lid, placements, metadata);
-                    layer.Geometry = LayerGeometryBuilder.Build(layer, supportSurface);
-
-                    layers.Add(layer);
+                    var layer = TryBuildLayer(sequence, px, area, supportSurface);
+                    if (layer != null)
+                        candidateLayers.Add(layer);
                 }
             }
 
-            var unique = new Dictionary<string, Layer>();
-            foreach (var layer in layers)
-            {
-                var key = string.Join(",", layer.Items
-                    .GroupBy(i => i.SkuType.SkuId)
-                    .OrderBy(g => g.Key)
-                    .Select(g => $"{g.Key}:{g.Count()}"));
+            return LayerCandidateHelper.SelectBestBySkuCounts(candidateLayers);
+        }
 
-                if (!unique.TryGetValue(key, out Layer? value) || value.Metadata.Utilization < layer.Metadata.Utilization)
-                    unique[key] = layer;
+
+        private static IEnumerable<List<SkuVariant>> BuildCandidateSequences(IReadOnlyList<SkuVariant> variants, int rowCount)
+        {
+            if (variants.Count == 0)
+                yield break;
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var variant in variants)
+            {
+                var seq = Enumerable.Repeat(variant, rowCount).ToList();
+                if (seen.Add(BuildSequenceFingerprint(seq)))
+                    yield return seq;
             }
 
-            return [.. unique.Values];
+            for (int i = 0; i < variants.Count - 1; i++)
+            {
+                for (int j = i + 1; j < variants.Count; j++)
+                {
+                    var seq = BuildAlternatingSequence(variants[i], variants[j], rowCount);
+                    if (seen.Add(BuildSequenceFingerprint(seq)))
+                        yield return seq;
+                }
+            }
+
+            var ordered = variants
+                .OrderByDescending(v => v.SpanX * v.SpanY)
+                .ThenByDescending(v => v.SpanX)
+                .ThenBy(v => v.Sku.SkuId, StringComparer.Ordinal)
+                .ToList();
+
+            for (int start = 0; start < ordered.Count; start++)
+            {
+                var seq = BuildWindowSequence(ordered, start, rowCount);
+                if (seen.Add(BuildSequenceFingerprint(seq)))
+                    yield return seq;
+            }
+        }
+
+        private static List<SkuVariant> BuildAlternatingSequence(SkuVariant first, SkuVariant second, int length)
+        {
+            var seq = new List<SkuVariant>(length);
+            for (int idx = 0; idx < length; idx++)
+            {
+                seq.Add(idx % 2 == 0 ? first : second);
+            }
+
+            return seq;
+        }
+
+        private static List<SkuVariant> BuildWindowSequence(IReadOnlyList<SkuVariant> ordered, int startIndex, int length)
+        {
+            var seq = new List<SkuVariant>(length);
+            for (int idx = 0; idx < length; idx++)
+            {
+                int sourceIndex = (startIndex + idx) % ordered.Count;
+                seq.Add(ordered[sourceIndex]);
+            }
+
+            return seq;
+        }
+
+        private static bool SequenceFitsSurface(IEnumerable<SkuVariant> sequence, int maxDepth)
+        {
+            int accumulated = 0;
+            foreach (var variant in sequence)
+            {
+                accumulated += variant.SpanY;
+                if (accumulated > maxDepth)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static Layer? TryBuildLayer(IReadOnlyList<SkuVariant> sequence, int palletLength, double area, SupportSurface supportSurface)
+        {
+            var placements = new List<PositionedItem>();
+            int yOffset = 0;
+            double usedArea = 0;
+
+            foreach (var variant in sequence)
+            {
+                int perRow = palletLength / variant.SpanX;
+                if (perRow <= 0)
+                    return null;
+
+                for (int ix = 0; ix < perRow; ix++)
+                {
+                    placements.Add(new PositionedItem(variant.Sku, ix * variant.SpanX, yOffset, variant.Rotated));
+                }
+
+                usedArea += perRow * variant.SpanX * variant.SpanY;
+                yOffset += variant.SpanY;
+            }
+
+            if (placements.Count == 0)
+                return null;
+
+            double utilization = usedArea / area;
+            int layerHeight = sequence.Count != 0 ? sequence.Max(v => v.Sku.Height) : 0;
+            string description = BuildSequenceDescription(sequence);
+            string layerId = BuildLayerId(sequence);
+
+            var metadata = new LayerMetadata(utilization, layerHeight, description);
+            var layer = new Layer(layerId, placements, metadata);
+            layer.Geometry = LayerGeometryBuilder.Build(layer, supportSurface);
+            return layer;
+        }
+
+        private static string BuildSequenceDescription(IReadOnlyList<SkuVariant> sequence)
+        {
+            var parts = sequence
+                .Select(v => $"{v.Sku.Name}:{v.SpanX}x{v.SpanY}");
+
+            return $"rows={sequence.Count} seq=" + string.Join(",", parts);
+        }
+
+        private static string BuildLayerId(IReadOnlyList<SkuVariant> sequence)
+        {
+            var fingerprint = BuildSequenceFingerprint(sequence);
+            int hash = 17;
+            foreach (char ch in fingerprint)
+            {
+                hash = (hash * 23) + ch;
+            }
+
+            hash = Math.Abs(hash);
+            return $"strip_r{sequence.Count}_{hash}";
+        }
+
+        private static string BuildSequenceFingerprint(IEnumerable<SkuVariant> sequence)
+        {
+            return string.Join("|", sequence.Select(v => $"{v.VariantId}:{v.SpanX}x{v.SpanY}"));
         }
     }
 }

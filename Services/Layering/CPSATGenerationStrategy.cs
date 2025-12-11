@@ -19,7 +19,7 @@ namespace Stack_Solver.Services.Layering
             int py = supportSurface.Width;
             int gridStep = ComputeGridStep(skus);
             int maxTime = options.MaxSolverTime > 0 ? options.MaxSolverTime : 60;
-            int maxCandidates = options.MaxCandidates > 0 ? options.MaxCandidates : 2000;
+            int maxCandidates = options.MaxCPSATCandidates > 0 ? options.MaxCPSATCandidates : 2000;
 
             var candidates = new List<(int skuIndex, string skuId, int x, int y, int w, int h, bool rotated)>();
             for (int si = 0; si < skus.Count; si++)
