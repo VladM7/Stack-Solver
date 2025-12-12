@@ -9,5 +9,6 @@ namespace Stack_Solver.Models
         public double PalletHeight { get; set; } = 14.4;
         public int MaxStackHeight { get; set; } = 180;
         public int MaxStackWeight { get; set; } = 950;
+        public double MaxSkuOverhang { get; set; } = 0;
     }
 }

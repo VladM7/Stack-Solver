@@ -16,10 +16,14 @@ namespace Stack_Solver.Services
             int gridWidth = (int)Math.Ceiling((double)supportSurface.Width / gridStep);
             int gridLength = (int)Math.Ceiling((double)supportSurface.Length / gridStep);
 
-            var geometry = new LayerGeometry(gridWidth, gridLength);
-
-            foreach (var item in layer.Items)
+            var geometry = new LayerGeometry(gridWidth, gridLength)
             {
+                GridStep = gridStep
+            };
+
+            for (int itemIndex = 0; itemIndex < layer.Items.Count; itemIndex++)
+            {
+                var item = layer.Items[itemIndex];
                 var sku = item.SkuType;
                 if (sku == null)
                     continue;
@@ -43,6 +47,7 @@ namespace Stack_Solver.Services
                     {
                         // OccupancyGrid indexed as [width, length] => [y, x]
                         geometry.OccupancyGrid[y, x] = true;
+                        geometry.ItemIndexGrid[y, x] = itemIndex;
                     }
                 }
                 // Store rectangle in pallet coordinates (origin bottom-left)

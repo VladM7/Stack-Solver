@@ -85,6 +85,7 @@ namespace Stack_Solver.ViewModels.Pages
         private int _solverTimeLimit;
         private int _maxStackHeight;
         private int _maxStackWeight;
+        private double _maxSkuOverhang;
         private List<SKU> _selectedSkus = [];
 
         private void OnSettingsChanged(SettingsChangedMessage msg)
@@ -98,6 +99,7 @@ namespace Stack_Solver.ViewModels.Pages
             _solverTimeLimit = msg.SolverTimeLimit;
             _maxStackHeight = msg.MaxStackHeight;
             _maxStackWeight = msg.MaxStackWeight;
+            _maxSkuOverhang = msg.MaxSkuOverhang;
             _selectedSkus = [.. msg.Skus.Where(s => s.Quantity > 0)];
             RecenterCameraTarget();
             if (SelectedLayer != null)

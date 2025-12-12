@@ -191,6 +191,13 @@
                                 <ui:CardControl Header="Maximum loaded pallet weight">
                                     <ui:NumberBox HorizontalAlignment="Left" Value="{Binding ViewModel.Settings.MaxStackWeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1" />
                                 </ui:CardControl>
+                                <ui:CardControl Header="Maximum SKU overhang">
+                                    <ui:NumberBox HorizontalAlignment="Left"
+                                                  Value="{Binding ViewModel.Settings.MaxSkuOverhang, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                  Minimum="0"
+                                                  SmallChange="10"
+                                                  LargeChange="100" />
+                                </ui:CardControl>
                             </StackPanel>
                         </ui:CardExpander>
                     </StackPanel>

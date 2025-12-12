@@ -2,7 +2,7 @@ using Stack_Solver.Models;
 using Stack_Solver.Models.Supports;
 using Stack_Solver.Services.Layering;
 
-namespace Stack_Solver.Tests.Strategies
+namespace Services.Strategies
 {
     public class StripFillGenerationStrategyTests
     {
@@ -36,7 +36,7 @@ namespace Stack_Solver.Tests.Strategies
 
             Assert.Equal(3, layers.Count);
             var counts = layers.Select(l => l.Items.Count).OrderBy(x => x).ToArray();
-            Assert.Equal(new[] { 3, 6, 9 }, counts);
+            Assert.Equal([3, 6, 9], counts);
 
             var best = layers.MaxBy(l => l.Metadata.Utilization)!;
             Assert.Equal(9, best.Items.Count);

@@ -45,6 +45,19 @@ namespace Stack_Solver.ViewModels.Pages
         [ObservableProperty]
         private int _maxStackWeight;
 
+        private double _maxSkuOverhang;
+        public double MaxSkuOverhang
+        {
+            get => _maxSkuOverhang;
+            set
+            {
+                if (SetProperty(ref _maxSkuOverhang, value))
+                {
+                    PublishSettingsChanged();
+                }
+            }
+        }
+
         public ObservableCollection<Pallet> CommonPalletsInternational { get; } = [];
         public ObservableCollection<Pallet> CommonPalletsAmerica { get; } = [];
 
@@ -94,6 +107,7 @@ namespace Stack_Solver.ViewModels.Pages
 
             MaxStackHeight = _palletDefaults.MaxStackHeight;
             MaxStackWeight = _palletDefaults.MaxStackWeight;
+            MaxSkuOverhang = _palletDefaults.MaxSkuOverhang;
         }
 
         public async Task InitializeAsync()
@@ -163,7 +177,7 @@ namespace Stack_Solver.ViewModels.Pages
             _events.Publish(new SettingsChangedMessage(
                 PalletLength, PalletWidth, PalletHeight,
                 UseCpsat, MaxCpsatCandidates, BlfAttempts, SolverTimeLimit,
-                MaxStackHeight, MaxStackWeight,
+                MaxStackHeight, MaxStackWeight, MaxSkuOverhang,
                 [.. Skus]));
         }
 
@@ -256,5 +270,6 @@ namespace Stack_Solver.ViewModels.Pages
         int SolverTimeLimit,
         int MaxStackHeight,
         int MaxStackWeight,
+        double MaxSkuOverhang,
         List<SKU> Skus);
 }

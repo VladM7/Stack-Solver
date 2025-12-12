@@ -1,10 +1,8 @@
 ﻿using Stack_Solver.Models;
 using Stack_Solver.Models.Supports;
 using Stack_Solver.Services.Layering;
-using Xunit;
 
-
-namespace Stack_Solver.Tests.Strategies
+namespace Services.Strategies
 {
     public class BLFGenerationStrategyTests
     {
