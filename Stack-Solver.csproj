@@ -59,6 +59,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="Resources\Fonts\**\*.ttf" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="Assets\Images\" />
     <Folder Include="Services\Stacking\" />
   </ItemGroup>
