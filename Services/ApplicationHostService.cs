@@ -7,16 +7,9 @@ namespace Stack_Solver.Services
     /// <summary>
     /// Managed host of the application.
     /// </summary>
-    public class ApplicationHostService : IHostedService
+    public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedService
     {
-        private readonly IServiceProvider _serviceProvider;
-
-        private INavigationWindow _navigationWindow;
-
-        public ApplicationHostService(IServiceProvider serviceProvider)
-        {
-            _serviceProvider = serviceProvider;
-        }
+        private INavigationWindow? _navigationWindow;
 
         /// <summary>
         /// Triggered when the application host is ready to start the service.
@@ -44,7 +37,7 @@ namespace Stack_Solver.Services
             if (!Application.Current.Windows.OfType<MainWindow>().Any())
             {
                 _navigationWindow = (
-                    _serviceProvider.GetService(typeof(INavigationWindow)) as INavigationWindow
+                    serviceProvider.GetService(typeof(INavigationWindow)) as INavigationWindow
                 )!;
                 _navigationWindow!.ShowWindow();
 

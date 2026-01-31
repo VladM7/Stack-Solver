@@ -2,6 +2,9 @@
 
 namespace Stack_Solver.Models.Layering
 {
+    /// <summary>
+    /// A single layer in a stacking solution, containing positioned items, metadata and geometry information.
+    /// </summary>
     public class Layer(string name, List<PositionedItem> items, LayerMetadata metadata)
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();

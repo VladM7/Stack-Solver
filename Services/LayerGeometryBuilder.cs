@@ -3,6 +3,10 @@ using Stack_Solver.Models.Supports;
 
 namespace Stack_Solver.Services
 {
+    /// <summary>
+    /// Provides functionality to construct a LayerGeometry object for a specified layer and support surface,
+    /// calculating grid dimensions and item placements based on the provided parameters.
+    /// </summary>
     public static class LayerGeometryBuilder
     {
         public static LayerGeometry Build(Layer layer, SupportSurface supportSurface, int gridStep = 1)

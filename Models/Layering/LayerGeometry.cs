@@ -1,7 +1,11 @@
-﻿using System.Windows;
-
-namespace Stack_Solver.Models.Layering
+﻿namespace Stack_Solver.Models.Layering
 {
+    /// <summary>
+    /// Represents the geometric configuration of a layer, including its dimensions, occupancy grid, and item placement
+    /// information.
+    /// </summary>
+    /// <param name="width">The number of columns in the layer's grid. Must be a positive integer.</param>
+    /// <param name="length">The number of rows in the layer's grid. Must be a positive integer.</param>
     public class LayerGeometry(int width, int length)
     {
         public int Width { get; } = width;

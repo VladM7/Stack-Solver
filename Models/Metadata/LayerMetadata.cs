@@ -1,5 +1,8 @@
 ﻿namespace Stack_Solver.Models.Metadata
 {
+    /// <summary>
+    /// Metadata about a specific layer in a stacking solution.
+    /// </summary>
     public class LayerMetadata(double utilization, int height, string description)
     {
         public double Utilization { get; set; } = utilization;

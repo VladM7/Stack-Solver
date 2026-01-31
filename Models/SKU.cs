@@ -2,11 +2,15 @@
 
 namespace Stack_Solver.Models
 {
+    /// <summary>
+    /// Represents a stock keeping unit (SKU) with properties for identification, physical dimensions, weight,
+    /// rotatability, etc.
+    /// </summary>
     public class SKU
     {
         [Key]
         public string SkuId { get; set; } = Guid.NewGuid().ToString();
-        public string Name { get; set; }
+        public required string Name { get; set; }
         public int Length { get; set; }
         public int Width { get; set; }
         public int Height { get; set; }

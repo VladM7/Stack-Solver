@@ -22,18 +22,24 @@
                 <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="" />
                 <DiscreteObjectKeyFrame KeyTime="0:0:0.18" Value="S" />
                 <DiscreteObjectKeyFrame KeyTime="0:0:0.36" Value="St" />
-                <DiscreteObjectKeyFrame KeyTime="0:0:0.54" Value="Sta" />
-                <DiscreteObjectKeyFrame KeyTime="0:0:0.72" Value="Stac" />
-                <DiscreteObjectKeyFrame KeyTime="0:0:0.9" Value="Stack" />
-                <DiscreteObjectKeyFrame KeyTime="0:0:1.08" Value="Stack " />
-                <DiscreteObjectKeyFrame KeyTime="0:0:1.26" Value="Stack S" />
-                <DiscreteObjectKeyFrame KeyTime="0:0:1.44" Value="Stack So" />
-                <DiscreteObjectKeyFrame KeyTime="0:0:1.62" Value="Stack Sol" />
-                <DiscreteObjectKeyFrame KeyTime="0:0:1.8" Value="Stack Solv" />
-                <DiscreteObjectKeyFrame KeyTime="0:0:1.98" Value="Stack Solve" />
-                <DiscreteObjectKeyFrame KeyTime="0:0:2.16" Value="Stack Solver" />
-                <DiscreteObjectKeyFrame KeyTime="0:0:2.34" Value="Stack Solver." />
-                <DiscreteObjectKeyFrame KeyTime="0:0:3" Value="Stack Solver." />
+                <DiscreteObjectKeyFrame KeyTime="0:0:0.54" Value="Stu" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:0.72" Value="Stuc" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:0.9" Value="Stuck" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:1.08" Value="Stuc" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:1.26" Value="Stu" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:1.44" Value="St" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:1.62" Value="Sta" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:1.8" Value="Stac" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:1.98" Value="Stack" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:2.16" Value="Stack " />
+                <DiscreteObjectKeyFrame KeyTime="0:0:2.34" Value="Stack S" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:2.52" Value="Stack So" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:2.7" Value="Stack Sol" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:2.88" Value="Stack Solv" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:3.06" Value="Stack Solve" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:3.24" Value="Stack Solver" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:3.42" Value="Stack Solver." />
+                <DiscreteObjectKeyFrame KeyTime="0:0:3.6" Value="Stack Solver." />
             </ObjectAnimationUsingKeyFrames>
         </Storyboard>
         <Storyboard x:Key="HeroCursorBlinkStoryboard" RepeatBehavior="Forever" AutoReverse="True">

@@ -2,6 +2,7 @@
 
 namespace Stack_Solver.Services
 {
+    //TODO finish this
     public static class LayerGeometryOptimizer
     {
         public static void OptimizeGeometry(Layer layer)

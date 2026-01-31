@@ -4,20 +4,16 @@ using Stack_Solver.Data;
 
 namespace Stack_Solver.Services
 {
-    public class DatabaseInitializer
+    /// <summary>
+    /// Provides functionality to initialize the application DB.
+    /// </summary>
+    /// <param name="factory">The factory used to create instances of the application's database context.</param>
+    /// <param name="logger">The logger used to record informational messages and errors during database initialization.</param>
+    public class DatabaseInitializer(IDbContextFactory<ApplicationDbContext> factory, ILogger<DatabaseInitializer> logger)
     {
-        private readonly IDbContextFactory<ApplicationDbContext> _factory;
-        private readonly ILogger<DatabaseInitializer> _logger;
-
-        public DatabaseInitializer(IDbContextFactory<ApplicationDbContext> factory, ILogger<DatabaseInitializer> logger)
-        {
-            _factory = factory;
-            _logger = logger;
-        }
-
         public async Task InitializeAsync(CancellationToken ct = default)
         {
-            await using var db = await _factory.CreateDbContextAsync(ct);
+            await using var db = await factory.CreateDbContextAsync(ct);
             await db.Database.EnsureCreatedAsync(ct);
         }
     }

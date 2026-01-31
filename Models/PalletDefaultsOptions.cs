@@ -1,5 +1,8 @@
 namespace Stack_Solver.Models
 {
+    /// <summary>
+    /// Represents the default configuration options for pallet properties, including dimensions and weight limits.
+    /// </summary>
     public class PalletDefaultsOptions
     {
         public string? DefaultCatalog { get; set; }
