@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -7,7 +8,9 @@ using Stack_Solver.Data;
 using Stack_Solver.Data.Repositories;
 using Stack_Solver.Infrastructure;
 using Stack_Solver.Models;
+using Stack_Solver.Models.Inputs;
 using Stack_Solver.Services;
+using Stack_Solver.Validation;
 using Stack_Solver.ViewModels.Pages;
 using Stack_Solver.ViewModels.Windows;
 using Stack_Solver.Views.Pages;
@@ -67,7 +70,9 @@ namespace Stack_Solver
                     sp.GetRequiredService<IEventAggregator>(),
                     sp.GetRequiredService<ILayerVisualizationService>(),
                     sp.GetRequiredService<IOptions<GenerationOptions>>(),
-                    sp.GetRequiredService<IOptions<PalletDefaultsOptions>>()));
+                    sp.GetRequiredService<IOptions<PalletDefaultsOptions>>(),
+                    sp.GetRequiredService<IValidator<PalletSettingsDto>>(),
+                    sp.GetRequiredService<IValidator<SkuQuantityDto>>()));
                 services.AddSingleton<TruckLoadingPage>();
                 services.AddSingleton<TruckLoadingViewModel>();
                 services.AddSingleton<JobManagerPage>();
@@ -75,6 +80,8 @@ namespace Stack_Solver
 
                 services.AddSingleton<IEventAggregator, EventAggregator>();
                 services.AddSingleton<ILayerVisualizationService, LayerVisualizationService>();
+
+                services.AddValidatorsFromAssemblyContaining<SkuInputDtoValidator>();
 
                 services.AddDbContextFactory<ApplicationDbContext>(options =>
                 {

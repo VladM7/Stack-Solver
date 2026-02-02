@@ -30,17 +30,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.OrTools" Version="9.14.6206" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="10.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.0">
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+    <PackageReference Include="Google.OrTools" Version="9.15.6755" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="10.0.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="WPF-UI" Version="4.0.3" />
-    <PackageReference Include="WPF-UI.DependencyInjection" Version="4.0.3" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="WPF-UI" Version="4.2.0" />
+    <PackageReference Include="WPF-UI.DependencyInjection" Version="4.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0 " />
   </ItemGroup>
 

@@ -183,7 +183,7 @@
                                 </ui:CardControl>
                             </StackPanel>
                         </ui:CardExpander>
-                        <ui:CardExpander Header="Layer stacking options">
+                        <ui:CardExpander Header="Layer stacking options" Margin="0,0,0,20">
                             <StackPanel>
                                 <ui:CardControl Header="Maximum loaded pallet height">
                                     <ui:NumberBox HorizontalAlignment="Left" Value="{Binding ViewModel.Settings.MaxStackHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1" />

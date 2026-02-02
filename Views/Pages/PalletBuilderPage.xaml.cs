@@ -1,4 +1,5 @@
-﻿using Stack_Solver.Models;
+﻿using FluentValidation;
+using Stack_Solver.Models;
 using Stack_Solver.Models.Layering;
 using Stack_Solver.ViewModels.Pages;
 using System.Windows.Controls;
@@ -73,8 +74,10 @@ namespace Stack_Solver.Views.Pages
                 {
                     await ViewModel.Settings.UpdateSkuAsync(sku);
                 }
-                catch
+                catch (ValidationException ex)
                 {
+                    var message = string.Join(Environment.NewLine, ex.Errors.Select(e => e.ErrorMessage));
+                    MessageBox.Show(message, "Validation error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
         }

@@ -76,7 +76,7 @@ namespace Services
 
         private static Layer CreateLayer(string name, params PositionedItem[] items)
         {
-            return new Layer(name, items.ToList(), new LayerMetadata(1.0, 1, name));
+            return new Layer(name, [.. items], new LayerMetadata(1.0, 1, name));
         }
     }
 }
