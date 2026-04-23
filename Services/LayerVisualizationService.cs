@@ -2,7 +2,6 @@ using Stack_Solver.Helpers.Rendering;
 using Stack_Solver.Models.Layering;
 using Stack_Solver.Models.Supports;
 using System.Collections.ObjectModel;
-using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 

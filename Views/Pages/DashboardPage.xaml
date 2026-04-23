@@ -16,52 +16,169 @@
     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
     mc:Ignorable="d">
 
+    <Page.Resources>
+        <Storyboard x:Key="StackSolverTypewriterStoryboard" FillBehavior="HoldEnd">
+            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="HeroTitle" Storyboard.TargetProperty="Text">
+                <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:0.18" Value="S" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:0.36" Value="St" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:0.54" Value="Stu" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:0.72" Value="Stuc" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:0.9" Value="Stuck" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:1.08" Value="Stuc" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:1.26" Value="Stu" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:1.44" Value="St" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:1.62" Value="Sta" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:1.8" Value="Stac" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:1.98" Value="Stack" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:2.16" Value="Stack " />
+                <DiscreteObjectKeyFrame KeyTime="0:0:2.34" Value="Stack S" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:2.52" Value="Stack So" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:2.7" Value="Stack Sol" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:2.88" Value="Stack Solv" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:3.06" Value="Stack Solve" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:3.24" Value="Stack Solver" />
+                <DiscreteObjectKeyFrame KeyTime="0:0:3.42" Value="Stack Solver." />
+                <DiscreteObjectKeyFrame KeyTime="0:0:3.6" Value="Stack Solver." />
+            </ObjectAnimationUsingKeyFrames>
+        </Storyboard>
+        <Storyboard x:Key="HeroCursorBlinkStoryboard" RepeatBehavior="Forever" AutoReverse="True">
+            <DoubleAnimation
+                Storyboard.TargetName="HeroCursor"
+                Storyboard.TargetProperty="Opacity"
+                From="1"
+                To="0"
+                Duration="0:0:0.4" />
+        </Storyboard>
+        <SolidColorBrush x:Key="DashboardCardBackgroundBrush" Color="#19FFFFFF" />
+        <SolidColorBrush x:Key="DashboardCardBorderBrush" Color="#2AFFFFFF" />
+        <Style x:Key="FeatureCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource DashboardCardBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource DashboardCardBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Margin" Value="0,0,16,16" />
+            <Setter Property="MinWidth" Value="220" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.18" />
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Page.Resources>
+
+    <Page.Triggers>
+        <EventTrigger RoutedEvent="Loaded">
+            <BeginStoryboard Storyboard="{StaticResource StackSolverTypewriterStoryboard}" />
+            <BeginStoryboard Storyboard="{StaticResource HeroCursorBlinkStoryboard}" />
+        </EventTrigger>
+    </Page.Triggers>
+
     <Grid VerticalAlignment="Top">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
-        <StackPanel Orientation="Vertical">
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,24,0,24">
+            <TextBlock
+                x:Name="HeroTitle"
+                FontFamily="pack://application:,,,/Resources/Fonts/Unbounded-Bold.ttf#Unbounded"
+                FontSize="48"
+                FontWeight="Bold"
+                Text=""
+                TextOptions.TextFormattingMode="Display"
+                TextOptions.TextRenderingMode="ClearType" VerticalAlignment="Center" />
+            <TextBlock
+                x:Name="HeroCursor"
+                FontFamily="pack://application:,,,/Resources/Fonts/Unbounded-Light.ttf#Unbounded"
+                FontSize="64"
+                FontWeight="Light"
+                Text="|"
+                TextOptions.TextFormattingMode="Display"
+                TextOptions.TextRenderingMode="ClearType"
+                Margin="4,0,0,0" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Vertical" Margin="0,16,0,0">
             <StackPanel Orientation="Horizontal">
-                <ui:SymbolIcon Symbol="New24" VerticalAlignment="Top" Width="30"/>
-                <ui:TextBlock Text="What's new in version 2.0" FontTypography="Subtitle"/>
+                <ui:SymbolIcon Symbol="New24" VerticalAlignment="Top" Width="30" />
+                <ui:TextBlock Text="What's new in the latest version" FontFamily="pack://application:,,,/Resources/Fonts/Unbounded-Medium.ttf#Unbounded" FontSize="22" />
             </StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="30,5,0,0">
-                <ui:ListView IsEnabled="False">
-                    <ui:ListViewItem>
-                        <TextBlock Text="→ Improved UI and 3D rendering" TextWrapping="Wrap" Width="700"/>
-                    </ui:ListViewItem>
-                    <ui:ListViewItem>
-                        <TextBlock Text="→ Mixed SKU pallets" TextWrapping="Wrap" Width="700"/>
-                    </ui:ListViewItem>
-                    <ui:ListViewItem>
-                        <TextBlock Text="→ Multiple constraints, such as stability, weight distribution, etc." TextWrapping="Wrap" Width="700"/>
-                    </ui:ListViewItem>
-                    <ui:ListViewItem>
-                        <TextBlock Text="→ Improved SKU management" TextWrapping="Wrap" Width="700"/>
-                    </ui:ListViewItem>
-                </ui:ListView>
+            <StackPanel Margin="30,16,30,0">
+                <Border Style="{StaticResource FeatureCardStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="DesignIdeas24" Width="28" Height="28" VerticalAlignment="Top" />
+                        <StackPanel Margin="12,0,0,0">
+                            <TextBlock Text="Improved UI and 3D rendering" FontWeight="SemiBold" FontSize="16" TextWrapping="Wrap" />
+                            <TextBlock Text="Now with separate pages for editing the SKU types and viewing the end result." TextWrapping="Wrap" Opacity="0.75" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource FeatureCardStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="GroupList24" Width="28" Height="28" VerticalAlignment="Top" />
+                        <StackPanel Margin="12,0,0,0">
+                            <TextBlock Text="Mixed SKU pallets" FontWeight="SemiBold" FontSize="16" TextWrapping="Wrap" />
+                            <TextBlock Text="Have multiple SKUs on the same pallet, or keep them on separate pallets." TextWrapping="Wrap" Opacity="0.75" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource FeatureCardStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="AlignSpaceEvenlyVertical24" Width="28" Height="28" VerticalAlignment="Top" />
+                        <StackPanel Margin="12,0,0,0">
+                            <TextBlock Text="Advanced constraints" FontWeight="SemiBold" FontSize="16" TextWrapping="Wrap" />
+                            <TextBlock Text="Stability, weight distribution, and stacking tolerances are fully customizable." TextWrapping="Wrap" Opacity="0.75" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource FeatureCardStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="Database24" Width="28" Height="28" VerticalAlignment="Top" />
+                        <StackPanel Margin="12,0,0,0">
+                            <TextBlock Text="Improved SKU management" FontWeight="SemiBold" FontSize="16" TextWrapping="Wrap" />
+                            <TextBlock Text="Easier editing, with the ability to import/export." TextWrapping="Wrap" Opacity="0.75" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                <ui:SymbolIcon Symbol="Clock24" Width="30"/>
-                <ui:TextBlock Text="Features coming soon" FontTypography="Subtitle"/>
+                <ui:SymbolIcon Symbol="Clock24" Width="30" />
+                <ui:TextBlock Text="Features coming soon" FontFamily="pack://application:,,,/Resources/Fonts/Unbounded-Medium.ttf#Unbounded" FontSize="22" />
             </StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="30,5,0,0">
-                <ui:ListView IsEnabled="False">
-                    <ui:ListViewItem>
-                        <TextBlock Text="→ Truck loading optimization" TextWrapping="Wrap" Width="700"/>
-                    </ui:ListViewItem>
-                    <ui:ListViewItem>
-                        <TextBlock Text="→ A new way to manage jobs (for example, for re-generating with the same parameters)" TextWrapping="Wrap" Width="700"/>
-                    </ui:ListViewItem>
-                </ui:ListView>
+            <StackPanel Margin="30,16,30,0">
+                <Border Style="{StaticResource FeatureCardStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="VehicleTruckProfile24" Width="28" Height="28" VerticalAlignment="Top" />
+                        <StackPanel Margin="12,0,0,0">
+                            <TextBlock Text="Truck loading optimization" FontWeight="SemiBold" FontSize="16" TextWrapping="Wrap" />
+                            <TextBlock Text="Plan truck fills with axle constraints, mixed pallets, and utilization targets." TextWrapping="Wrap" Opacity="0.75" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource FeatureCardStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="ArrowRepeatAll24" Width="28" Height="28" VerticalAlignment="Top" />
+                        <StackPanel Margin="12,0,0,0">
+                            <TextBlock Text="Job re-generation workflows" FontWeight="SemiBold" FontSize="16" TextWrapping="Wrap" />
+                            <TextBlock Text="Replay previous jobs with tweaked parameters to compare outcomes instantly." TextWrapping="Wrap" Opacity="0.75" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
             </StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,20">
                 <ui:TextBlock VerticalAlignment="Center">For more details, check the </ui:TextBlock>
                 <ui:HyperlinkButton Padding="5,5,5,6" NavigateUri="https://github.com/VladM7/Stack-Solver" Height="28" Margin="2,0,2,0">
                     <WrapPanel>
                         <ui:TextBlock>GitHub</ui:TextBlock>
-                        <ui:SymbolIcon Symbol="ArrowUpRight16" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                        <ui:SymbolIcon Symbol="ArrowUpRight16" VerticalAlignment="Center" Margin="4,0,0,0" />
                     </WrapPanel>
                 </ui:HyperlinkButton>
                 <ui:TextBlock VerticalAlignment="Center">page.</ui:TextBlock>

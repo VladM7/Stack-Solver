@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Stack_Solver.Views.Windows;
 using Wpf.Ui;
 
@@ -7,16 +8,9 @@ namespace Stack_Solver.Services
     /// <summary>
     /// Managed host of the application.
     /// </summary>
-    public class ApplicationHostService : IHostedService
+    public class ApplicationHostService(IServiceProvider serviceProvider, ILogger<ApplicationHostService> logger) : IHostedService
     {
-        private readonly IServiceProvider _serviceProvider;
-
-        private INavigationWindow _navigationWindow;
-
-        public ApplicationHostService(IServiceProvider serviceProvider)
-        {
-            _serviceProvider = serviceProvider;
-        }
+        private INavigationWindow? _navigationWindow;
 
         /// <summary>
         /// Triggered when the application host is ready to start the service.
@@ -24,7 +18,9 @@ namespace Stack_Solver.Services
         /// <param name="cancellationToken">Indicates that the start process has been aborted.</param>
         public async Task StartAsync(CancellationToken cancellationToken)
         {
+            logger.LogInformation("Starting application host service");
             await HandleActivationAsync();
+            logger.LogInformation("Application host service started");
         }
 
         /// <summary>
@@ -33,6 +29,7 @@ namespace Stack_Solver.Services
         /// <param name="cancellationToken">Indicates that the shutdown process should no longer be graceful.</param>
         public async Task StopAsync(CancellationToken cancellationToken)
         {
+            logger.LogInformation("Stopping application host service");
             await Task.CompletedTask;
         }
 
@@ -43,12 +40,14 @@ namespace Stack_Solver.Services
         {
             if (!Application.Current.Windows.OfType<MainWindow>().Any())
             {
+                logger.LogDebug("Creating main navigation window");
                 _navigationWindow = (
-                    _serviceProvider.GetService(typeof(INavigationWindow)) as INavigationWindow
+                    serviceProvider.GetService(typeof(INavigationWindow)) as INavigationWindow
                 )!;
                 _navigationWindow!.ShowWindow();
 
                 _navigationWindow.Navigate(typeof(Views.Pages.DashboardPage));
+                logger.LogDebug("Main navigation window shown and dashboard navigated");
             }
 
             await Task.CompletedTask;

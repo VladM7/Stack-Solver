@@ -3,8 +3,22 @@ using Stack_Solver.Models.Supports;
 
 namespace Stack_Solver.Services
 {
+    /// <summary>
+    /// Provides functionality to construct a LayerGeometry object for a specified layer and support surface,
+    /// calculating grid dimensions and item placements based on the provided parameters.
+    /// </summary>
     public static class LayerGeometryBuilder
     {
+        /// <summary>
+        /// Builds a LayerGeometry object that represents the spatial arrangement and occupancy grid of items in the
+        /// specified layer on the given support surface.
+        /// </summary>
+        /// <param name="layer">The layer containing the items to be represented in the geometry. Cannot be null.</param>
+        /// <param name="supportSurface">The support surface that defines the width and length for the geometry calculation. Cannot be null.</param>
+        /// <param name="gridStep">The size, in units, of each grid cell. Must be a positive integer greater than zero. Defaults to 1.</param>
+        /// <returns>A LayerGeometry object that describes the calculated occupancy grid and item placements for the specified
+        /// layer and support surface.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if gridStep is less than or equal to zero.</exception>
         public static LayerGeometry Build(Layer layer, SupportSurface supportSurface, int gridStep = 1)
         {
             ArgumentNullException.ThrowIfNull(layer);
@@ -16,10 +30,14 @@ namespace Stack_Solver.Services
             int gridWidth = (int)Math.Ceiling((double)supportSurface.Width / gridStep);
             int gridLength = (int)Math.Ceiling((double)supportSurface.Length / gridStep);
 
-            var geometry = new LayerGeometry(gridWidth, gridLength);
-
-            foreach (var item in layer.Items)
+            var geometry = new LayerGeometry(gridWidth, gridLength)
             {
+                GridStep = gridStep
+            };
+
+            for (int itemIndex = 0; itemIndex < layer.Items.Count; itemIndex++)
+            {
+                var item = layer.Items[itemIndex];
                 var sku = item.SkuType;
                 if (sku == null)
                     continue;
@@ -43,6 +61,7 @@ namespace Stack_Solver.Services
                     {
                         // OccupancyGrid indexed as [width, length] => [y, x]
                         geometry.OccupancyGrid[y, x] = true;
+                        geometry.ItemIndexGrid[y, x] = itemIndex;
                     }
                 }
                 // Store rectangle in pallet coordinates (origin bottom-left)

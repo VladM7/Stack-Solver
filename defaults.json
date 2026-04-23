@@ -1,8 +1,30 @@
 {
+  "Serilog": {
+    "Using": [ "Serilog.Sinks.File" ],
+    "MinimumLevel": {
+      "Default": "Information",
+      "Override": {
+        "Microsoft": "Warning",
+        "System": "Warning"
+      }
+    },
+    "Enrich": [ "FromLogContext" ],
+    "WriteTo": [
+      {
+        "Name": "File",
+        "Args": {
+          "path": "%LocalAppData%\\StackSolver\\logs\\app-.log",
+          "rollingInterval": "Day",
+          "retainedFileCountLimit": 14,
+          "shared": true
+        }
+      }
+    ]
+  },
   "LayerGeneration": {
     "MaxSolverTime": 60,
     "MaxCPSATCandidates": 2000,
-    "BLFAttempts":  200
+    "BLFAttempts": 200
   },
   "PalletDefaults": {
     "DefaultCatalog": "International",
@@ -11,6 +33,7 @@
     "PalletWidth": 80,
     "PalletHeight": 14.4,
     "MaxStackHeight": 180,
-    "MaxStackWeight": 950
+    "MaxStackWeight": 950,
+    "MaxSkuOverhang": 0
   }
 }

@@ -1,5 +1,8 @@
-﻿using Stack_Solver.Data.Repositories;
+﻿using FluentValidation;
+using Stack_Solver.Data.Repositories;
 using Stack_Solver.Models;
+using Stack_Solver.Models.Inputs;
+using Stack_Solver.Validation;
 using System.Collections.ObjectModel;
 
 namespace Stack_Solver.ViewModels.Pages
@@ -7,14 +10,16 @@ namespace Stack_Solver.ViewModels.Pages
     public partial class SKULibraryViewModel : ObservableObject
     {
         private readonly ISkuRepository _skuRepository;
+        private readonly IValidator<SkuInputDto> _skuValidator;
         private bool _isInitialized = false;
 
         [ObservableProperty]
         private ObservableCollection<SKU> _skus = [];
 
-        public SKULibraryViewModel(ISkuRepository skuRepository)
+        public SKULibraryViewModel(ISkuRepository skuRepository, IValidator<SkuInputDto> skuValidator)
         {
             _skuRepository = skuRepository;
+            _skuValidator = skuValidator;
             _ = InitializeViewModelAsync();
         }
 
@@ -24,13 +29,14 @@ namespace Stack_Solver.ViewModels.Pages
             var newSku = new SKU
             {
                 Name = "New SKU",
-                Length = 0,
-                Width = 0,
-                Height = 0,
+                Length = 1,
+                Width = 1,
+                Height = 1,
                 Weight = 0,
                 Notes = "",
                 Rotatable = true
             };
+            ValidateSku(newSku);
             await _skuRepository.AddAsync(newSku);
             Skus.Add(newSku);
         }
@@ -38,6 +44,7 @@ namespace Stack_Solver.ViewModels.Pages
         [RelayCommand]
         private async Task SaveSkuAsync(SKU sku)
         {
+            ValidateSku(sku);
             await _skuRepository.UpdateAsync(sku);
         }
 
@@ -62,6 +69,26 @@ namespace Stack_Solver.ViewModels.Pages
             var list = await _skuRepository.GetAllAsync();
             Skus = new ObservableCollection<SKU>(list);
             _isInitialized = true;
+        }
+
+        private void ValidateSku(SKU sku)
+        {
+            if (sku == null) return;
+            var dto = new SkuInputDto
+            {
+                Name = sku.Name,
+                Length = sku.Length,
+                Width = sku.Width,
+                Height = sku.Height,
+                Weight = sku.Weight,
+                Rotatable = sku.Rotatable,
+                Notes = sku.Notes
+            };
+            var result = _skuValidator.Validate(dto);
+            if (!result.IsValid)
+            {
+                throw new ValidationException(ValidationErrorFormatter.Format(result.Errors));
+            }
         }
     }
 }

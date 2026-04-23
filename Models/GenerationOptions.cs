@@ -1,5 +1,9 @@
 ﻿namespace Stack_Solver.Models
 {
+    /// <summary>
+    /// Provides configuration options for the generation process.
+    /// </summary>
+    /// <remarks>This class stores the generation parameters for easier accessibility.</remarks>
     public class GenerationOptions
     {
         public int MaxSolverTime { get; set; }

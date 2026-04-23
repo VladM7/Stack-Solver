@@ -1,4 +1,5 @@
 ﻿using Stack_Solver.ViewModels.Windows;
+using Stack_Solver.Views.Pages;
 using Wpf.Ui;
 using Wpf.Ui.Abstractions;
 using Wpf.Ui.Appearance;
@@ -25,6 +26,7 @@ namespace Stack_Solver.Views.Windows
             SetPageService(navigationViewPageProvider);
 
             navigationService.SetNavigationControl(RootNavigation);
+            RootNavigation.Navigated += OnRootNavigationNavigated;
         }
 
         #region INavigationWindow methods
@@ -41,9 +43,6 @@ namespace Stack_Solver.Views.Windows
 
         #endregion INavigationWindow methods
 
-        /// <summary>
-        /// Raises the closed event.
-        /// </summary>
         protected override void OnClosed(EventArgs e)
         {
             base.OnClosed(e);
@@ -60,6 +59,18 @@ namespace Stack_Solver.Views.Windows
         public void SetServiceProvider(IServiceProvider serviceProvider)
         {
             throw new NotImplementedException();
+        }
+
+        private void OnRootNavigationNavigated(NavigationView sender, NavigatedEventArgs args)
+        {
+            if (BreadcrumbBar is null)
+            {
+                return;
+            }
+
+            BreadcrumbBar.Visibility = args?.Page is DashboardPage
+                ? Visibility.Collapsed
+                : Visibility.Visible;
         }
     }
 }

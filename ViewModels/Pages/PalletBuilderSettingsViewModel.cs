@@ -1,8 +1,11 @@
+using FluentValidation;
 using Microsoft.Extensions.Options;
 using Stack_Solver.Data.Repositories;
 using Stack_Solver.Infrastructure;
 using Stack_Solver.Models;
+using Stack_Solver.Models.Inputs;
 using Stack_Solver.Models.Supports;
+using Stack_Solver.Validation;
 using System.Collections.ObjectModel;
 
 namespace Stack_Solver.ViewModels.Pages
@@ -11,6 +14,8 @@ namespace Stack_Solver.ViewModels.Pages
     {
         private readonly ISkuRepository _skuRepository;
         private readonly IEventAggregator _events;
+        private readonly IValidator<PalletSettingsDto> _settingsValidator;
+        private readonly IValidator<SkuQuantityDto> _skuQuantityValidator;
         private readonly GenerationOptions _defaults;
         private readonly PalletDefaultsOptions _palletDefaults;
         private bool _isInitialized;
@@ -45,6 +50,19 @@ namespace Stack_Solver.ViewModels.Pages
         [ObservableProperty]
         private int _maxStackWeight;
 
+        private double _maxSkuOverhang;
+        public double MaxSkuOverhang
+        {
+            get => _maxSkuOverhang;
+            set
+            {
+                if (SetProperty(ref _maxSkuOverhang, value))
+                {
+                    PublishSettingsChanged();
+                }
+            }
+        }
+
         public ObservableCollection<Pallet> CommonPalletsInternational { get; } = [];
         public ObservableCollection<Pallet> CommonPalletsAmerica { get; } = [];
 
@@ -74,10 +92,18 @@ namespace Stack_Solver.ViewModels.Pages
             }
         }
 
-        public PalletBuilderSettingsViewModel(ISkuRepository skuRepository, IEventAggregator events, IOptions<GenerationOptions> genOptions, IOptions<PalletDefaultsOptions> palletDefaults)
+        public PalletBuilderSettingsViewModel(
+            ISkuRepository skuRepository,
+            IEventAggregator events,
+            IOptions<GenerationOptions> genOptions,
+            IOptions<PalletDefaultsOptions> palletDefaults,
+            IValidator<PalletSettingsDto> settingsValidator,
+            IValidator<SkuQuantityDto> skuQuantityValidator)
         {
             _skuRepository = skuRepository;
             _events = events;
+            _settingsValidator = settingsValidator;
+            _skuQuantityValidator = skuQuantityValidator;
             _defaults = GenerationOptions.From(genOptions.Value);
             _palletDefaults = palletDefaults.Value ?? new PalletDefaultsOptions();
             _skuRepository.SkuAdded += OnSkuAdded;
@@ -94,6 +120,7 @@ namespace Stack_Solver.ViewModels.Pages
 
             MaxStackHeight = _palletDefaults.MaxStackHeight;
             MaxStackWeight = _palletDefaults.MaxStackWeight;
+            MaxSkuOverhang = _palletDefaults.MaxSkuOverhang;
         }
 
         public async Task InitializeAsync()
@@ -145,6 +172,16 @@ namespace Stack_Solver.ViewModels.Pages
         public async Task UpdateSkuAsync(SKU sku, CancellationToken ct = default)
         {
             if (sku == null) return;
+            var dto = new SkuQuantityDto
+            {
+                SkuId = sku.SkuId,
+                Quantity = sku.Quantity
+            };
+            var result = _skuQuantityValidator.Validate(dto);
+            if (!result.IsValid)
+            {
+                throw new ValidationException(ValidationErrorFormatter.Format(result.Errors));
+            }
             await _skuRepository.UpdateAsync(sku, ct);
             PublishSettingsChanged();
         }
@@ -160,10 +197,29 @@ namespace Stack_Solver.ViewModels.Pages
 
         private void PublishSettingsChanged()
         {
+            var dto = new PalletSettingsDto
+            {
+                PalletLength = PalletLength,
+                PalletWidth = PalletWidth,
+                PalletHeight = PalletHeight,
+                UseCpsat = UseCpsat,
+                MaxCpsatCandidates = MaxCpsatCandidates,
+                BlfAttempts = BlfAttempts,
+                SolverTimeLimit = SolverTimeLimit,
+                MaxStackHeight = MaxStackHeight,
+                MaxStackWeight = MaxStackWeight,
+                MaxSkuOverhang = MaxSkuOverhang
+            };
+            var result = _settingsValidator.Validate(dto);
+            if (!result.IsValid)
+            {
+                var _ = ValidationErrorFormatter.Format(result.Errors);
+                return;
+            }
             _events.Publish(new SettingsChangedMessage(
                 PalletLength, PalletWidth, PalletHeight,
                 UseCpsat, MaxCpsatCandidates, BlfAttempts, SolverTimeLimit,
-                MaxStackHeight, MaxStackWeight,
+                MaxStackHeight, MaxStackWeight, MaxSkuOverhang,
                 [.. Skus]));
         }
 
@@ -256,5 +312,6 @@ namespace Stack_Solver.ViewModels.Pages
         int SolverTimeLimit,
         int MaxStackHeight,
         int MaxStackWeight,
+        double MaxSkuOverhang,
         List<SKU> Skus);
 }

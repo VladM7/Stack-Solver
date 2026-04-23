@@ -1,9 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Stack_Solver.Models;
 
 namespace Stack_Solver.Data.Repositories
 {
-    public class SkuRepository(IDbContextFactory<ApplicationDbContext> factory) : ISkuRepository
+    public class SkuRepository(IDbContextFactory<ApplicationDbContext> factory, ILogger<SkuRepository> logger) : ISkuRepository
     {
         public event EventHandler<SKU>? SkuAdded;
         public event EventHandler<SKU>? SkuUpdated;
@@ -26,6 +27,10 @@ namespace Stack_Solver.Data.Repositories
             using var db = await factory.CreateDbContextAsync(ct);
             db.Skus.Add(sku);
             await db.SaveChangesAsync(ct);
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("SKU added: {SkuId}", sku.SkuId);
+            }
             SkuAdded?.Invoke(this, sku);
         }
 
@@ -34,18 +39,33 @@ namespace Stack_Solver.Data.Repositories
             using var db = await factory.CreateDbContextAsync(ct);
             db.Skus.Update(sku);
             await db.SaveChangesAsync(ct);
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("SKU updated: {SkuId}", sku.SkuId);
+            }
             SkuUpdated?.Invoke(this, sku);
         }
 
         public async Task DeleteAsync(string skuId, CancellationToken ct = default)
         {
             using var db = await factory.CreateDbContextAsync(ct);
-            var entity = await db.Skus.FindAsync(new object?[] { skuId }, ct);
+            var entity = await db.Skus.FindAsync([skuId], ct);
             if (entity != null)
             {
                 db.Skus.Remove(entity);
                 await db.SaveChangesAsync(ct);
+                if (logger.IsEnabled(LogLevel.Information))
+                {
+                    logger.LogInformation("SKU deleted: {SkuId}", skuId);
+                }
                 SkuDeleted?.Invoke(this, skuId);
+            }
+            else
+            {
+                if (logger.IsEnabled(LogLevel.Debug))
+                {
+                    logger.LogDebug("Delete skipped for missing SKU: {SkuId}", skuId);
+                }
             }
         }
 

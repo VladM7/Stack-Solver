@@ -33,7 +33,7 @@
         </Grid.RowDefinitions>
 
         <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.Row="0">
-            <ui:Button x:Name="generateButton" Content="Generate" Command="{Binding ViewModel.LayerAnalyzer.GenerateCommand}" IsEnabled="{Binding ViewModel.LayerAnalyzer.IsGenerating, Converter={StaticResource BooleanNegationConverter}}" Grid.Column="0" Grid.Row="0" VerticalAlignment="Top" Appearance="Primary" Icon="{ui:SymbolIcon ArrowTurnDownRight48}"/>
+            <ui:Button x:Name="generateButton" Content="Generate" Command="{Binding ViewModel.LayerAnalyzer.GenerateCommand}" IsEnabled="{Binding ViewModel.LayerAnalyzer.IsGenerating, Converter={StaticResource BooleanNegationConverter}}" Grid.Column="0" Grid.Row="0" VerticalAlignment="Top" Icon="{ui:SymbolIcon ArrowTurnDownRight48}" Appearance="Primary"/>
             <ui:Button Content="Cancel" Command="{Binding ViewModel.LayerAnalyzer.CancelCommand}" Icon="{ui:SymbolIcon DismissCircle24}" Margin="8,0,0,0" VerticalAlignment="Top" IsEnabled="{Binding ViewModel.LayerAnalyzer.IsGenerating}"/>
             <ui:Button x:Name="topHelpButton" Icon="{ui:SymbolIcon Question24}" Margin="8,0,0,0" VerticalAlignment="Top" Click="TopHelpButton_Click" Cursor="Help">
                 <WrapPanel>
@@ -65,7 +65,7 @@
         </StackPanel>
         <ProgressBar Grid.Row ="1" Height="5" Margin="0,4,0,0" IsIndeterminate="True" Visibility="{Binding ViewModel.LayerAnalyzer.IsGenerating, Converter={StaticResource BoolToVisibilityConverter}}"/>
         <TabControl Grid.Row="2" Grid.Column="1" Margin="0,8,0,0">
-            <TabItem Header="Settings" HorizontalAlignment="Left">
+            <TabItem Header="Settings" HorizontalAlignment="Left" Width="150">
                 <ScrollViewer x:Name="SettingsScrollViewer" Margin="0,8,0,0" VerticalScrollBarVisibility="Auto">
                     <StackPanel x:Name="SettingsStackPanel" Orientation="Vertical" behaviors:ParentScrollBehavior.Enabled="True">
                         <ui:CardExpander Header="Pallet dimensions">
@@ -183,7 +183,7 @@
                                 </ui:CardControl>
                             </StackPanel>
                         </ui:CardExpander>
-                        <ui:CardExpander Header="Layer stacking options">
+                        <ui:CardExpander Header="Layer stacking options" Margin="0,0,0,20">
                             <StackPanel>
                                 <ui:CardControl Header="Maximum loaded pallet height">
                                     <ui:NumberBox HorizontalAlignment="Left" Value="{Binding ViewModel.Settings.MaxStackHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1" />
@@ -191,12 +191,19 @@
                                 <ui:CardControl Header="Maximum loaded pallet weight">
                                     <ui:NumberBox HorizontalAlignment="Left" Value="{Binding ViewModel.Settings.MaxStackWeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1" />
                                 </ui:CardControl>
+                                <ui:CardControl Header="Maximum SKU overhang">
+                                    <ui:NumberBox HorizontalAlignment="Left"
+                                                  Value="{Binding ViewModel.Settings.MaxSkuOverhang, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                  Minimum="0"
+                                                  SmallChange="10"
+                                                  LargeChange="100" />
+                                </ui:CardControl>
                             </StackPanel>
                         </ui:CardExpander>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
-            <TabItem Header="Layer Analyzer" HorizontalAlignment="Left">
+            <TabItem Header="Layer Analyzer" HorizontalAlignment="Left" Width="151">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -240,7 +247,7 @@
                     </Border>
                 </Grid>
             </TabItem>
-            <TabItem Header="Pallet Analyzer" HorizontalAlignment="Left">
+            <TabItem Header="Pallet Analyzer" HorizontalAlignment="Left" Width="150">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
