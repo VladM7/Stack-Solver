@@ -89,11 +89,11 @@
             <TextBlock
                 x:Name="HeroTitle"
                 FontFamily="pack://application:,,,/Resources/Fonts/Unbounded-Bold.ttf#Unbounded"
-                FontSize="64"
+                FontSize="48"
                 FontWeight="Bold"
                 Text=""
                 TextOptions.TextFormattingMode="Display"
-                TextOptions.TextRenderingMode="ClearType" />
+                TextOptions.TextRenderingMode="ClearType" VerticalAlignment="Center" />
             <TextBlock
                 x:Name="HeroCursor"
                 FontFamily="pack://application:,,,/Resources/Fonts/Unbounded-Light.ttf#Unbounded"

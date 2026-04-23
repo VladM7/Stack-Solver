@@ -3,7 +3,7 @@
 namespace Stack_Solver.Models
 {
     /// <summary>
-    /// Represents a stock keeping unit (SKU) with properties for identification, physical dimensions, weight,
+    /// Represents a generic stock keeping unit (SKU) type with properties for identification, physical dimensions, weight,
     /// rotatability, etc.
     /// </summary>
     public class SKU

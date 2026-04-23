@@ -1,4 +1,5 @@
-﻿using Stack_Solver.Models;
+﻿using FluentValidation;
+using Stack_Solver.Models;
 using Stack_Solver.Models.Layering;
 using Stack_Solver.ViewModels.Pages;
 using System.Windows.Controls;
@@ -39,16 +40,10 @@ namespace Stack_Solver.Views.Pages
 
             HitTestResultBehavior resultCallback(HitTestResult r)
             {
-                if (r is RayHitTestResult rayResult)
+                if (r is RayHitTestResult rayResult && rayResult.ModelHit is GeometryModel3D geo && ViewModel.LayerAnalyzer.TryGetItemFromGeometry(geo, out var item))
                 {
-                    if (rayResult.ModelHit is GeometryModel3D geo)
-                    {
-                        if (ViewModel.LayerAnalyzer.TryGetItemFromGeometry(geo, out var item))
-                        {
-                            selected = item;
-                            return HitTestResultBehavior.Stop;
-                        }
-                    }
+                    selected = item;
+                    return HitTestResultBehavior.Stop;
                 }
                 return HitTestResultBehavior.Continue;
             }
@@ -73,8 +68,10 @@ namespace Stack_Solver.Views.Pages
                 {
                     await ViewModel.Settings.UpdateSkuAsync(sku);
                 }
-                catch
+                catch (ValidationException ex)
                 {
+                    var message = string.Join(Environment.NewLine, ex.Errors.Select(e => e.ErrorMessage));
+                    MessageBox.Show(message, "Validation error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
         }

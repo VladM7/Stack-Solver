@@ -1,13 +1,17 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Serilog;
 using Stack_Solver.Data;
 using Stack_Solver.Data.Repositories;
 using Stack_Solver.Infrastructure;
 using Stack_Solver.Models;
+using Stack_Solver.Models.Inputs;
 using Stack_Solver.Services;
+using Stack_Solver.Validation;
 using Stack_Solver.ViewModels.Pages;
 using Stack_Solver.ViewModels.Windows;
 using Stack_Solver.Views.Pages;
@@ -31,6 +35,10 @@ namespace Stack_Solver
         // https://docs.microsoft.com/dotnet/core/extensions/logging
         private static readonly IHost _host = Host
             .CreateDefaultBuilder()
+            .UseSerilog((context, services, loggerConfiguration) =>
+            {
+                loggerConfiguration.ReadFrom.Configuration(context.Configuration);
+            })
             .ConfigureAppConfiguration(c =>
             {
                 c.SetBasePath(Path.GetDirectoryName(AppContext.BaseDirectory)!);
@@ -67,7 +75,9 @@ namespace Stack_Solver
                     sp.GetRequiredService<IEventAggregator>(),
                     sp.GetRequiredService<ILayerVisualizationService>(),
                     sp.GetRequiredService<IOptions<GenerationOptions>>(),
-                    sp.GetRequiredService<IOptions<PalletDefaultsOptions>>()));
+                    sp.GetRequiredService<IOptions<PalletDefaultsOptions>>(),
+                    sp.GetRequiredService<IValidator<PalletSettingsDto>>(),
+                    sp.GetRequiredService<IValidator<SkuQuantityDto>>()));
                 services.AddSingleton<TruckLoadingPage>();
                 services.AddSingleton<TruckLoadingViewModel>();
                 services.AddSingleton<JobManagerPage>();
@@ -75,6 +85,8 @@ namespace Stack_Solver
 
                 services.AddSingleton<IEventAggregator, EventAggregator>();
                 services.AddSingleton<ILayerVisualizationService, LayerVisualizationService>();
+
+                services.AddValidatorsFromAssemblyContaining<SkuInputDtoValidator>();
 
                 services.AddDbContextFactory<ApplicationDbContext>(options =>
                 {
@@ -102,11 +114,15 @@ namespace Stack_Solver
         /// </summary>
         private async void OnStartup(object sender, StartupEventArgs e)
         {
+            Log.Information("Application starting");
+
             await _host.StartAsync();
+            Log.Information("Host started");
 
             // Initialize database
             var dbInit = Services.GetRequiredService<DatabaseInitializer>();
             await dbInit.InitializeAsync();
+            Log.Information("Database initialized");
         }
 
         /// <summary>
@@ -114,17 +130,21 @@ namespace Stack_Solver
         /// </summary>
         private async void OnExit(object sender, ExitEventArgs e)
         {
+            Log.Information("Application shutting down");
             await _host.StopAsync();
+            Log.Information("Host stopped");
 
             _host.Dispose();
+            Log.CloseAndFlush();
         }
+
 
         /// <summary>
         /// Occurs when an exception is thrown by an application but not handled.
         /// </summary>
         private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
-            // For more info see https://docs.microsoft.com/en-us/dotnet/api/system.windows.application.dispatcherunhandledexception?view=windowsdesktop-6.0
+            Log.Error(e.Exception, "Unhandled dispatcher exception");
         }
     }
 }

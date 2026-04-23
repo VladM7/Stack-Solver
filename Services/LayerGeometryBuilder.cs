@@ -9,6 +9,16 @@ namespace Stack_Solver.Services
     /// </summary>
     public static class LayerGeometryBuilder
     {
+        /// <summary>
+        /// Builds a LayerGeometry object that represents the spatial arrangement and occupancy grid of items in the
+        /// specified layer on the given support surface.
+        /// </summary>
+        /// <param name="layer">The layer containing the items to be represented in the geometry. Cannot be null.</param>
+        /// <param name="supportSurface">The support surface that defines the width and length for the geometry calculation. Cannot be null.</param>
+        /// <param name="gridStep">The size, in units, of each grid cell. Must be a positive integer greater than zero. Defaults to 1.</param>
+        /// <returns>A LayerGeometry object that describes the calculated occupancy grid and item placements for the specified
+        /// layer and support surface.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if gridStep is less than or equal to zero.</exception>
         public static LayerGeometry Build(Layer layer, SupportSurface supportSurface, int gridStep = 1)
         {
             ArgumentNullException.ThrowIfNull(layer);
