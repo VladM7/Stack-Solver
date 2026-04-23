@@ -13,8 +13,10 @@ namespace Stack_Solver.Services
     {
         public async Task InitializeAsync(CancellationToken ct = default)
         {
+            logger.LogInformation("Initializing database");
             await using var db = await factory.CreateDbContextAsync(ct);
             await db.Database.EnsureCreatedAsync(ct);
+            logger.LogInformation("Database initialization completed");
         }
     }
 }

@@ -5,6 +5,7 @@ using Stack_Solver.Infrastructure;
 using Stack_Solver.Models;
 using Stack_Solver.Models.Inputs;
 using Stack_Solver.Models.Supports;
+using Stack_Solver.Validation;
 using System.Collections.ObjectModel;
 
 namespace Stack_Solver.ViewModels.Pages
@@ -179,7 +180,7 @@ namespace Stack_Solver.ViewModels.Pages
             var result = _skuQuantityValidator.Validate(dto);
             if (!result.IsValid)
             {
-                throw new ValidationException(result.Errors);
+                throw new ValidationException(ValidationErrorFormatter.Format(result.Errors));
             }
             await _skuRepository.UpdateAsync(sku, ct);
             PublishSettingsChanged();
@@ -212,6 +213,7 @@ namespace Stack_Solver.ViewModels.Pages
             var result = _settingsValidator.Validate(dto);
             if (!result.IsValid)
             {
+                var _ = ValidationErrorFormatter.Format(result.Errors);
                 return;
             }
             _events.Publish(new SettingsChangedMessage(

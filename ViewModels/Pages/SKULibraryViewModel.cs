@@ -2,6 +2,7 @@
 using Stack_Solver.Data.Repositories;
 using Stack_Solver.Models;
 using Stack_Solver.Models.Inputs;
+using Stack_Solver.Validation;
 using System.Collections.ObjectModel;
 
 namespace Stack_Solver.ViewModels.Pages
@@ -86,7 +87,7 @@ namespace Stack_Solver.ViewModels.Pages
             var result = _skuValidator.Validate(dto);
             if (!result.IsValid)
             {
-                throw new ValidationException(result.Errors);
+                throw new ValidationException(ValidationErrorFormatter.Format(result.Errors));
             }
         }
     }
