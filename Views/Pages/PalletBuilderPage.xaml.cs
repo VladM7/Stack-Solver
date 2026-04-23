@@ -40,16 +40,10 @@ namespace Stack_Solver.Views.Pages
 
             HitTestResultBehavior resultCallback(HitTestResult r)
             {
-                if (r is RayHitTestResult rayResult)
+                if (r is RayHitTestResult rayResult && rayResult.ModelHit is GeometryModel3D geo && ViewModel.LayerAnalyzer.TryGetItemFromGeometry(geo, out var item))
                 {
-                    if (rayResult.ModelHit is GeometryModel3D geo)
-                    {
-                        if (ViewModel.LayerAnalyzer.TryGetItemFromGeometry(geo, out var item))
-                        {
-                            selected = item;
-                            return HitTestResultBehavior.Stop;
-                        }
-                    }
+                    selected = item;
+                    return HitTestResultBehavior.Stop;
                 }
                 return HitTestResultBehavior.Continue;
             }

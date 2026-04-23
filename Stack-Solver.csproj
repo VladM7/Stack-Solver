@@ -44,6 +44,9 @@
     <PackageReference Include="WPF-UI.DependencyInjection" Version="4.2.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0 " />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -70,6 +73,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include=".github\copilot-instructions.md" />
     <None Include=".github\dependabot.yml" />
     <None Include=".github\workflows\codeql.yml" />
     <None Include=".github\workflows\dependency-review.yml" />
