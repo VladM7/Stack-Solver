@@ -52,6 +52,11 @@ namespace Services.Strategies
             Assert.All(normal.Items, it => Assert.False(it.Rotated));
             Assert.Contains(normal.Items, it => it.X == 0 && it.Y == 0);
             Assert.Contains(normal.Items, it => it.X == 80 && it.Y == 60);
+            Assert.Equal(100.0, normal.Metrics.Utilization, 5);
+            Assert.Equal(0.0, normal.Metrics.Stability, 5);
+            Assert.Equal(0.0, normal.Metrics.TotalWeight, 5);
+            Assert.Single(normal.Metrics.UsedSkuTypes);
+            Assert.Contains("A", normal.Metrics.UsedSkuTypes);
 
             Assert.Equal(8, rotated.Items.Count);
             Assert.Equal(9600.0 / 10800.0, rotated.Metadata.Utilization, 6);
@@ -63,6 +68,13 @@ namespace Services.Strategies
             Assert.All(rotated.Items, it => Assert.True(it.Rotated));
             Assert.Contains(rotated.Items, it => it.X == 0 && it.Y == 0);
             Assert.Contains(rotated.Items, it => it.X == 90 && it.Y == 40);
+            Assert.Equal((9600.0 / 10800.0) * 100.0, rotated.Metrics.Utilization, 6);
+            Assert.Equal(0.0, rotated.Metrics.Stability, 5);
+            Assert.Equal(0.0, rotated.Metrics.TotalWeight, 5);
+            Assert.Single(rotated.Metrics.UsedSkuTypes);
+            Assert.Contains("A", rotated.Metrics.UsedSkuTypes);
+            Assert.Contains(rotated.Id, normal.Metrics.CompatibleTopLayerIds);
+            Assert.DoesNotContain(normal.Id, rotated.Metrics.CompatibleTopLayerIds);
         }
 
         [Fact]

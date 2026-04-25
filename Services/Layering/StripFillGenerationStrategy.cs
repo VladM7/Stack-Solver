@@ -46,7 +46,9 @@ namespace Stack_Solver.Services.Layering
                 }
             }
 
-            return LayerCandidateHelper.SelectBestBySkuCounts(candidateLayers);
+            var selectedLayers = LayerCandidateHelper.SelectBestBySkuCounts(candidateLayers);
+            LayerMetricsCalculator.ComputeCompatibility(selectedLayers);
+            return selectedLayers;
         }
 
 
@@ -156,6 +158,7 @@ namespace Stack_Solver.Services.Layering
             var metadata = new LayerMetadata(utilization, layerHeight, description);
             var layer = new Layer(layerId, placements, metadata);
             layer.Geometry = LayerGeometryBuilder.Build(layer, supportSurface);
+            layer.Metrics = LayerMetricsCalculator.Compute(layer, supportSurface);
             return layer;
         }
 

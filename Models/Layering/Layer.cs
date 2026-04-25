@@ -15,6 +15,8 @@ namespace Stack_Solver.Models.Layering
 
         public LayerGeometry? Geometry { get; set; } = null;
 
+        public LayerMetrics Metrics { get; set; } = new();
+
         public override string ToString()
         {
             return $"{Name} ({Id})\n\n{Metadata}";

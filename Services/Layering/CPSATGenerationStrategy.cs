@@ -120,8 +120,11 @@ namespace Stack_Solver.Services.Layering
             var metadata = new LayerMetadata(util, layerHeight, desc);
             var layer = new Layer("CPSAT", placements, metadata);
             layer.Geometry = LayerGeometryBuilder.Build(layer, supportSurface);
+            layer.Metrics = LayerMetricsCalculator.Compute(layer, supportSurface);
 
-            return [layer];
+            var layers = new List<Layer> { layer };
+            LayerMetricsCalculator.ComputeCompatibility(layers);
+            return layers;
         }
 
         private static int ComputeGridStep(List<SKU> skus)
