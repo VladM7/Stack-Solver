@@ -71,6 +71,9 @@ namespace Services.Strategies
             Assert.Equal(33, layers.Last().Items.Count);
             layers.Sort((l1, l2) => l1.Metadata.Utilization.CompareTo(l2.Metadata.Utilization));
             Assert.Equal(0.942, layers.Last().Metadata.Utilization, 3);
+            Assert.InRange(layers.Last().Metrics.Utilization, 0.0, 100.0);
+            Assert.InRange(layers.Last().Metrics.Stability, 0.0, 100.0);
+            Assert.NotEmpty(layers.Last().Metrics.UsedSkuTypes);
         }
 
         [Fact]

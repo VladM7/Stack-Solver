@@ -42,6 +42,11 @@ namespace Services.Strategies
             Assert.Equal(9, best.Items.Count);
             Assert.Equal(1.0, best.Metadata.Utilization, 6);
             Assert.Equal(10, best.Metadata.Height);
+            Assert.Equal(100.0, best.Metrics.Utilization, 6);
+            Assert.Equal(0.0, best.Metrics.Stability, 6);
+            Assert.Equal(0.0, best.Metrics.TotalWeight, 6);
+            Assert.Single(best.Metrics.UsedSkuTypes);
+            Assert.Contains("A", best.Metrics.UsedSkuTypes);
 
             Assert.NotNull(best.Geometry);
             Assert.Equal(90, best.Geometry!.Width);

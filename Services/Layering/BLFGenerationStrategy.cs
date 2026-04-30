@@ -36,7 +36,9 @@ namespace Stack_Solver.Services.Layering
                     candidateLayers.Add(layer);
             }
 
-            return LayerCandidateHelper.SelectBestBySkuCounts(candidateLayers);
+            var selectedLayers = LayerCandidateHelper.SelectBestBySkuCounts(candidateLayers);
+            LayerMetricsCalculator.ComputeCompatibility(selectedLayers);
+            return selectedLayers;
         }
 
         private static Layer? BuildLayerAttempt(IReadOnlyList<SkuVariant> variants, List<SKU> skus, int maxWidth, int maxDepth, double area, int attemptIndex, Random rand, SupportSurface supportSurface)
@@ -77,6 +79,7 @@ namespace Stack_Solver.Services.Layering
             var metadata = new LayerMetadata(utilization, layerHeight, $"BLF attempt {attemptIndex}, boxes={boxes}, util={utilization:F3}");
             var layer = new Layer($"blf_attempt_{attemptIndex}", placements, metadata);
             layer.Geometry = LayerGeometryBuilder.Build(layer, supportSurface);
+            layer.Metrics = LayerMetricsCalculator.Compute(layer, supportSurface);
             return layer;
         }
 

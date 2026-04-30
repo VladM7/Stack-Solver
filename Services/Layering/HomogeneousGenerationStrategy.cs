@@ -37,6 +37,7 @@ namespace Stack_Solver.Services.Layering
                     candidateLayers.Add(layer);
             }
 
+            LayerMetricsCalculator.ComputeCompatibility(candidateLayers);
             return candidateLayers;
         }
 
@@ -77,6 +78,7 @@ namespace Stack_Solver.Services.Layering
             var metadata = new LayerMetadata(utilization, variant.Sku.Height, description);
             var layer = new Layer($"hom_grid_{variant.Sku.SkuId}_{orientation}", placements, metadata);
             layer.Geometry = LayerGeometryBuilder.Build(layer, supportSurface);
+            layer.Metrics = LayerMetricsCalculator.Compute(layer, supportSurface);
             return layer;
         }
     }
