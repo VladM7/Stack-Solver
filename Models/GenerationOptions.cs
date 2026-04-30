@@ -11,6 +11,10 @@
 
         public int BLFAttempts { get; set; }
 
+        public double MaxLayerStability { get; set; } = 50;
+
+        public double PerSkuTopLayerFraction { get; set; } = 0.5;
+
         public GenerationOptions() { }
 
         public GenerationOptions(int maxSolverTime, int maxCandidates, int blfAttempts)
@@ -23,7 +27,11 @@
         public static GenerationOptions From(GenerationOptions? source)
         {
             if (source == null) return new GenerationOptions();
-            return new GenerationOptions(source.MaxSolverTime, source.MaxCPSATCandidates, source.BLFAttempts);
+            return new GenerationOptions(source.MaxSolverTime, source.MaxCPSATCandidates, source.BLFAttempts)
+            {
+                MaxLayerStability = source.MaxLayerStability,
+                PerSkuTopLayerFraction = source.PerSkuTopLayerFraction
+            };
         }
     }
 }

@@ -24,7 +24,9 @@
   "LayerGeneration": {
     "MaxSolverTime": 60,
     "MaxCPSATCandidates": 2000,
-    "BLFAttempts": 200
+    "BLFAttempts": 200,
+    "MaxLayerStability": 50,
+    "PerSkuTopLayerFraction": 0.5
   },
   "PalletDefaults": {
     "DefaultCatalog": "International",
