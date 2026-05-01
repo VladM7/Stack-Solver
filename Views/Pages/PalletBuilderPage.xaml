@@ -251,28 +251,81 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="2*"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="2*"/>
                     </Grid.ColumnDefinitions>
-                    <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.ColumnSpan="2" Margin="0,5,0,0">
-                        <ui:Button Content="Save Report" Icon="{ui:SymbolIcon Save24}" Height="38" IsEnabled="False" />
+
+                    <!-- Toolbar -->
+                    <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.ColumnSpan="2" Margin="0,5,0,5">
+                        <ui:Button Content="Build Pallets"
+                                   Command="{Binding ViewModel.PalletAnalyzer.BuildPalletsCommand}"
+                                   IsEnabled="{Binding ViewModel.PalletAnalyzer.IsBuilding, Converter={StaticResource BooleanNegationConverter}}"
+                                   Icon="{ui:SymbolIcon LayerDiagonal24}"
+                                   Appearance="Primary"/>
+                        <ui:Button Content="Save Report" Icon="{ui:SymbolIcon Save24}" Margin="8,0,0,0" IsEnabled="False"/>
                     </StackPanel>
-                    <ui:TextBlock Grid.Column="0" Grid.Row="1" Text="{Binding ViewModel.PalletAnalyzer.OutputText}" FontFamily="Cascadia Code" FontSize="14" TextWrapping="Wrap" Margin="0,10,10,10"/>
-                    <GridSplitter Grid.Row="1" Grid.Column="0" Width="3" HorizontalAlignment="Right" Height="200"/>
-                    <StackPanel Orientation="Vertical" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
-                        <ui:DataGrid AutoGenerateColumns="False" FontSize="12" ItemsSource="{Binding ViewModel.PalletAnalyzer.CandidateLayers}">
+
+                    <!-- Progress -->
+                    <ProgressBar Grid.Row="1" Grid.ColumnSpan="2" Height="5" Margin="0,0,0,4"
+                                 IsIndeterminate="True"
+                                 Visibility="{Binding ViewModel.PalletAnalyzer.IsBuilding, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                    <!-- Left panel: summary + assignment list -->
+                    <Grid Grid.Row="2" Grid.Column="0" Margin="0,0,4,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,0,0,6">
+                            <ui:TextBlock Text="{Binding ViewModel.PalletAnalyzer.OutputText}"
+                                         FontFamily="Cascadia Code" FontSize="12"
+                                         TextWrapping="Wrap"/>
+                        </Border>
+                        <ui:DataGrid Grid.Row="1"
+                                     AutoGenerateColumns="False"
+                                     FontSize="12"
+                                     ItemsSource="{Binding ViewModel.PalletAnalyzer.Assignments}"
+                                     SelectedItem="{Binding ViewModel.PalletAnalyzer.SelectedAssignment, Mode=TwoWay}"
+                                     CanUserAddRows="False"
+                                     CanUserDeleteRows="False"
+                                     IsReadOnly="True"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto">
                             <ui:DataGrid.Columns>
-                                <DataGridTextColumn Header="#" Binding="{Binding Name}"/>
-                                <DataGridTextColumn Header="Area Eff" Binding="{Binding Metadata.Utilization}"/>
-                                <DataGridTextColumn Header="H" Binding="{Binding Metadata.Height}"/>
-                                <DataGridTextColumn Header="Items/Layer" Binding="{Binding Items.Count}"/>
+                                <DataGridTextColumn Header="Assignment" Binding="{Binding Header}" Width="*"/>
                             </ui:DataGrid.Columns>
                         </ui:DataGrid>
-                    </StackPanel>
+                    </Grid>
+
+                    <GridSplitter Grid.Row="2" Grid.Column="0" Width="3" HorizontalAlignment="Right"/>
+
+                    <!-- Right panel: selected template detail -->
+                    <Border Grid.Row="2" Grid.Column="1"
+                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                            BorderThickness="1" CornerRadius="4" Padding="6" Margin="4,0,0,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="Template Detail" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <ui:TextBlock Grid.Row="1"
+                                         Text="{Binding ViewModel.PalletAnalyzer.SelectedAssignment.SkuSummary}"
+                                         FontFamily="Cascadia Code" FontSize="12"
+                                         TextWrapping="Wrap" Margin="0,0,0,6"/>
+                            <ItemsControl Grid.Row="2" ItemsSource="{Binding ViewModel.PalletAnalyzer.SelectedAssignment.LayerLines}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <ui:TextBlock Text="{Binding}" FontFamily="Cascadia Code" FontSize="12" Margin="0,2"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </Border>
                 </Grid>
             </TabItem>
         </TabControl>

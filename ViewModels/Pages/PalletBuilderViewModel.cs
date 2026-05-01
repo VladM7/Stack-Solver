@@ -15,9 +15,10 @@ namespace Stack_Solver.ViewModels.Pages
         IOptions<GenerationOptions> genOptions,
         IOptions<PalletDefaultsOptions> palletDefaults,
         IValidator<PalletSettingsDto> settingsValidator,
-        IValidator<SkuQuantityDto> skuQuantityValidator) : ObservableObject
+        IValidator<SkuQuantityDto> skuQuantityValidator,
+        IUserSettingsService userSettings) : ObservableObject
     {
-        public PalletBuilderSettingsViewModel Settings { get; } = new PalletBuilderSettingsViewModel(skuRepository, events, genOptions, palletDefaults, settingsValidator, skuQuantityValidator);
+        public PalletBuilderSettingsViewModel Settings { get; } = new PalletBuilderSettingsViewModel(skuRepository, events, genOptions, palletDefaults, settingsValidator, skuQuantityValidator, userSettings);
         public LayerAnalyzerViewModel LayerAnalyzer { get; } = new LayerAnalyzerViewModel(events, viz);
         public PalletAnalyzerViewModel PalletAnalyzer { get; } = new PalletAnalyzerViewModel(events);
 

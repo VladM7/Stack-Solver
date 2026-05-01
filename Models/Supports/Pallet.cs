@@ -12,8 +12,11 @@ namespace Stack_Solver.Models.Supports
     /// <param name="height">The height of the pallet.</param>
     public class Pallet(string name, int length, int width, int height) : SupportSurface(name, length, width, height)
     {
-        List<Layer> Layers { get; } = [];
+        public int MaxStackHeight { get; init; } = 180;
+        public int MaxStackWeight { get; init; } = 950;
+        public double MaxSkuOverhang { get; init; } = 0;
 
-        PalletMetadata Metadata { get; set; } = new();
+        public List<Layer> Layers { get; } = [];
+        public PalletMetadata Metadata { get; set; } = new();
     }
 }

@@ -208,7 +208,12 @@ namespace Stack_Solver.ViewModels.Pages
                     return;
                 }
 
-                var pallet = new Pallet("Pallet", _palletLength, _palletWidth, (int)Math.Round(_palletHeight));
+                var pallet = new Pallet("Pallet", _palletLength, _palletWidth, (int)Math.Round(_palletHeight))
+                {
+                    MaxStackHeight = _maxStackHeight,
+                    MaxStackWeight = _maxStackWeight,
+                    MaxSkuOverhang = _maxSkuOverhang
+                };
                 var options = new GenerationOptions(_solverTimeLimit, _maxCpsatCandidates, _blfAttempts);
                 var ct = localCts.Token;
 
@@ -365,7 +370,12 @@ namespace Stack_Solver.ViewModels.Pages
                 LayerRectangles.Clear();
                 return;
             }
-            var pallet = new Pallet("Pallet", _palletLength, _palletWidth, (int)Math.Round(_palletHeight));
+            var pallet = new Pallet("Pallet", _palletLength, _palletWidth, (int)Math.Round(_palletHeight))
+            {
+                MaxStackHeight = _maxStackHeight,
+                MaxStackWeight = _maxStackWeight,
+                MaxSkuOverhang = _maxSkuOverhang
+            };
             _viz.Build2DRectangles(SelectedLayer, pallet, 1, LayerRectangles);
         }
     }

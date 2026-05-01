@@ -9,6 +9,8 @@ namespace Stack_Solver.Data
 
         public static readonly string DatabaseFile = Path.Combine(AppDataDirectory, "stacksolver.db");
 
+        public static readonly string UserSettingsFile = Path.Combine(AppDataDirectory, "user-settings.json");
+
         public static void EnsureAppData()
         {
             if (!Directory.Exists(AppDataDirectory))
