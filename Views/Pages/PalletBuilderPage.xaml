@@ -251,6 +251,8 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
@@ -261,52 +263,71 @@
                     <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.ColumnSpan="2" Margin="0,5,0,5">
                         <ui:Button Content="Save Report" Icon="{ui:SymbolIcon Save24}" IsEnabled="False"/>
                     </StackPanel>
-
-                    <Grid Grid.Row="1" Grid.Column="0" Margin="0,0,4,0">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-
-                        <Border Grid.Row="0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,0,0,6">
-                            <ui:TextBlock Text="{Binding ViewModel.PalletAnalyzer.OutputText}"
-                                         FontFamily="Cascadia Code" FontSize="14" TextWrapping="Wrap"/>
+                    <Border Grid.Row="2" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,7,10,7">
+                        <StackPanel>
+                            <TextBlock Text="Pallet Details" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                            <ui:TextBlock Text="{Binding ViewModel.PalletAnalyzer.OutputText}" FontFamily="Cascadia Code" FontSize="14" TextWrapping="Wrap" Margin="0,10,0,10"/>
+                        </StackPanel>
+                    </Border>
+                    <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Vertical" Margin="0,7,10,7">
+                        <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Margin="0,0,0,6">
+                            <ui:DataGrid AutoGenerateColumns="False"
+                                         CanUserAddRows="False"
+                                         CanUserDeleteRows="False"
+                                         IsReadOnly="True"
+                                         HeadersVisibility="Column"
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                         BorderThickness="0"
+                                         ItemsSource="{Binding ViewModel.PalletAnalyzer.Assignments}"
+                                         SelectedItem="{Binding ViewModel.PalletAnalyzer.SelectedAssignment, Mode=TwoWay}">
+                                <ui:DataGrid.Columns>
+                                    <DataGridTextColumn Header="Pallet" Binding="{Binding Name}"/>
+                                    <DataGridTextColumn Header="Times Used" Binding="{Binding Count}"/>
+                                    <DataGridTextColumn Header="# Boxes" Binding="{Binding Template.TotalBoxCount}"/>
+                                    <DataGridTextColumn Header="# Layers" Binding="{Binding Template.Layers.Count}"/>
+                                    <DataGridTextColumn Header="Eff" Binding="{Binding Efficiency}"/>
+                                </ui:DataGrid.Columns>
+                            </ui:DataGrid>
                         </Border>
-
-                        <ui:DataGrid Grid.Row="1"
-                                     AutoGenerateColumns="False"
-                                     FontSize="14"
-                                     ItemsSource="{Binding ViewModel.PalletAnalyzer.Assignments}"
-                                     SelectedItem="{Binding ViewModel.PalletAnalyzer.SelectedAssignment, Mode=TwoWay}"
-                                     CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True"
-                                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4">
+                            <ui:DataGrid AutoGenerateColumns="False"
+                                         CanUserAddRows="False"
+                                         CanUserDeleteRows="False"
+                                         IsReadOnly="True"
+                                         HeadersVisibility="Column"
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                         BorderThickness="0"
+                                         ItemsSource="{Binding ViewModel.PalletAnalyzer.SelectedLayerTypes}">
+                                <ui:DataGrid.Columns>
+                                    <DataGridTextColumn Header="Layer" Binding="{Binding Name}"/>
+                                    <DataGridTextColumn Header="Times Used" Binding="{Binding Count}"/>
+                                    <DataGridTextColumn Header="Contents" Binding="{Binding Contents}"/>
+                                    <DataGridTextColumn Header="Eff" Binding="{Binding Utilization}"/>
+                                </ui:DataGrid.Columns>
+                            </ui:DataGrid>
+                        </Border>
+                    </StackPanel>
+                    <GridSplitter Grid.Row="1" Grid.RowSpan="2" Grid.Column="0" Width="3" HorizontalAlignment="Right" Height="200"/>
+                    <GridSplitter Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Height="3" VerticalAlignment="Top" HorizontalAlignment="Center" Width="200" ResizeDirection="Rows"/>
+                    <StackPanel Orientation="Vertical" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,7,0,0">
+                        <ui:DataGrid AutoGenerateColumns="False" FontSize="14"
+                                     CanUserAddRows="False"
+                                     CanUserDeleteRows="False"
+                                     IsReadOnly="True"
+                                     HeadersVisibility="Column"
+                                     ItemsSource="{Binding ViewModel.PalletAnalyzer.Solutions}">
                             <ui:DataGrid.Columns>
-                                <DataGridTextColumn Header="Pallet Configurations" Binding="{Binding Header}" Width="*" FontWeight="Normal"/>
+                                <DataGridTextColumn Header="Sol. #" Binding="{Binding Number}"/>
+                                <DataGridTextColumn Header="# Pallets" Binding="{Binding TotalPallets}"/>
+                                <DataGridTextColumn Header="# Pallet Types" Binding="{Binding PalletTypes}"/>
+                                <DataGridTextColumn Header="Total Items Packed" Binding="{Binding TotalItemsPacked}"/>
+                                <DataGridTextColumn Header="Eff" Binding="{Binding Efficiency}"/>
+                                <DataGridCheckBoxColumn Binding="{Binding IsActive}"/>
                             </ui:DataGrid.Columns>
                         </ui:DataGrid>
+                    </StackPanel>
 
-                        <Border Grid.Row="2" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,6,0,0" MaxHeight="160">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel>
-                                    <ui:TextBlock Text="{Binding ViewModel.PalletAnalyzer.SelectedAssignment.SkuSummary}"
-                                                 FontFamily="Cascadia Code" FontSize="14" TextWrapping="Wrap" Margin="0,0,0,4"/>
-                                    <ItemsControl ItemsSource="{Binding ViewModel.PalletAnalyzer.SelectedAssignment.LayerLines}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <ui:TextBlock Text="{Binding}" FontFamily="Cascadia Code" FontSize="12" Margin="0,1"/>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </ScrollViewer>
-                        </Border>
-                    </Grid>
-
-                    <GridSplitter Grid.Row="2" Grid.Column="0" Width="3" HorizontalAlignment="Right" Height="200"/>
-
-                    <!-- Right panel: 3D pallet viewport -->
-                    <Viewport3D x:Name="PalletViewPort" Grid.Row="2" Grid.Column="1"
+                    <Viewport3D x:Name="PalletViewPort" Grid.Row="0" Grid.RowSpan="3" Grid.Column="1"
                                 xmlns:rendering="clr-namespace:Stack_Solver.Helpers.Rendering"
                                 rendering:ViewportBehaviors.ZoomCommand="{Binding ViewModel.PalletAnalyzer.ZoomCommand}"
                                 rendering:ViewportBehaviors.BeginPanCommand="{Binding ViewModel.PalletAnalyzer.BeginPanCommand}"

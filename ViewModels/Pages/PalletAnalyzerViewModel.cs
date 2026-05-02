@@ -46,6 +46,12 @@ namespace Stack_Solver.ViewModels.Pages
         [ObservableProperty]
         private bool _hasLayers;
 
+        [ObservableProperty]
+        private ObservableCollection<LayerTypeDisplay> _selectedLayerTypes = [];
+
+        [ObservableProperty]
+        private ObservableCollection<SolutionDisplay> _solutions = [];
+
         public Model3DGroup Scene { get; } = new();
         public ViewportController? ViewportController => _viewportController;
         public ICommand ZoomCommand { get; }
@@ -84,6 +90,7 @@ namespace Stack_Solver.ViewModels.Pages
             HasLayers = _availableLayers.Count > 0;
             HasResults = false;
             Assignments.Clear();
+            Solutions.Clear();
             OutputText = $"{_availableLayers.Count} candidate layers ready. Building pallets...";
 
             _buildCts?.Cancel();
@@ -141,11 +148,14 @@ namespace Stack_Solver.ViewModels.Pages
 
                 ct.ThrowIfCancellationRequested();
 
+                int index = 1;
                 foreach (var (template, count) in result.Assignments)
-                    Assignments.Add(new TemplateAssignmentDisplay(template, count, skus));
+                    Assignments.Add(new TemplateAssignmentDisplay(template, count, skus, index++));
 
                 HasResults = Assignments.Count > 0;
                 SelectedAssignment = Assignments.FirstOrDefault();
+                if (HasResults)
+                    Solutions.Add(new SolutionDisplay(1, result));
                 OutputText = BuildSummaryText(result, templates.Count, skus);
             }
             catch (OperationCanceledException) { }
@@ -161,6 +171,18 @@ namespace Stack_Solver.ViewModels.Pages
 
         partial void OnSelectedAssignmentChanged(TemplateAssignmentDisplay? value)
         {
+            SelectedLayerTypes = value != null
+                ? new ObservableCollection<LayerTypeDisplay>(value.LayerTypes)
+                : [];
+
+            if (value != null && _viewportController != null)
+            {
+                double totalHeight = _palletHeight + value.Template.TotalHeight;
+                var center = new Point3D(_palletLength / 2.0, totalHeight / 2.0, _palletWidth / 2.0);
+                double distance = Math.Sqrt(_palletLength * _palletLength + _palletWidth * _palletWidth + totalHeight * totalHeight) * 1.5;
+                _viewportController.ResetView(center, distance);
+            }
+
             _sceneCts?.Cancel();
             _sceneCts?.Dispose();
             _sceneCts = new CancellationTokenSource();
@@ -207,25 +229,66 @@ namespace Stack_Solver.ViewModels.Pages
     {
         public PalletTemplate Template { get; }
         public int Count { get; }
-        public string Header { get; }
+        public string Name { get; }
         public string SkuSummary { get; }
-        public IReadOnlyList<string> LayerLines { get; }
+        public string Efficiency { get; }
+        public IReadOnlyList<LayerTypeDisplay> LayerTypes { get; }
 
-        public TemplateAssignmentDisplay(PalletTemplate template, int count, IEnumerable<SKU> skuLookup)
+        public TemplateAssignmentDisplay(PalletTemplate template, int count, IEnumerable<SKU> skuLookup, int index)
         {
             Template = template;
             Count = count;
+            Name = $"Type {index}";
+            Efficiency = template.AverageLayerUtilization.ToString("P0");
 
             var skuMap = skuLookup.ToDictionary(s => s.SkuId, s => s.Name, StringComparer.Ordinal);
-            Header = $"{count}×  —  {template.TotalBoxCount} boxes, {template.Layers.Count} layer(s), " +
-                     $"H={template.TotalHeight:F0}, W={template.TotalWeight:F1} kg, " +
-                     $"{template.AverageLayerUtilization:P0} avg util";
             SkuSummary = string.Join("  |  ", template.SkuCounts
                 .OrderBy(kvp => skuMap.GetValueOrDefault(kvp.Key, kvp.Key), StringComparer.Ordinal)
                 .Select(kvp => $"{skuMap.GetValueOrDefault(kvp.Key, kvp.Key)} ×{kvp.Value}"));
-            LayerLines = template.Layers
-                .Select((l, i) => $"Layer {i + 1}  {l.Name}  —  {l.Items.Count} items, H={l.Metadata.Height}, {l.Metadata.Utilization:P0} util")
+            LayerTypes = template.Layers
+                .GroupBy(l => l.Id)
+                .Select(g => new LayerTypeDisplay(g.First(), g.Count(), skuMap))
                 .ToList();
+        }
+    }
+
+    public class LayerTypeDisplay
+    {
+        public string Name { get; }
+        public int Count { get; }
+        public string Contents { get; }
+        public string Utilization { get; }
+
+        public LayerTypeDisplay(Layer layer, int count, IReadOnlyDictionary<string, string> skuNames)
+        {
+            Name = layer.Name;
+            Count = count;
+            Utilization = layer.Metadata.Utilization.ToString("P0");
+            Contents = string.Join(", ", layer.Items
+                .GroupBy(i => i.SkuType.SkuId)
+                .Select(g => $"{g.Count()}x {skuNames.GetValueOrDefault(g.Key, g.Key)}"));
+        }
+    }
+
+    public class SolutionDisplay
+    {
+        public int Number { get; }
+        public int TotalPallets { get; }
+        public int PalletTypes { get; }
+        public int TotalItemsPacked { get; }
+        public string Efficiency { get; }
+        public bool IsActive { get; set; } = true;
+
+        public SolutionDisplay(int number, AssignmentResult result)
+        {
+            Number = number;
+            TotalPallets = result.TotalPallets;
+            PalletTypes = result.Assignments.Count;
+            TotalItemsPacked = result.Assignments.Sum(a => a.Template.TotalBoxCount * a.Count);
+            var weightedUtil = result.TotalPallets > 0
+                ? result.Assignments.Sum(a => a.Template.AverageLayerUtilization * a.Count) / result.TotalPallets
+                : 0;
+            Efficiency = weightedUtil.ToString("P0");
         }
     }
 }
