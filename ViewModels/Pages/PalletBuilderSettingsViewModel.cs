@@ -172,6 +172,8 @@ namespace Stack_Solver.ViewModels.Pages
             PublishSettingsChanged();
         }
 
+        public void NotifySelectionChanged() => PublishSettingsChanged();
+
         public async Task UpdateSkuAsync(SKU sku, CancellationToken ct = default)
         {
             if (sku == null) return;

@@ -4,7 +4,6 @@ using Stack_Solver.Models;
 using Stack_Solver.Models.Layering;
 using Stack_Solver.Models.Supports;
 using Stack_Solver.Services;
-using Stack_Solver.Services.Layering;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Windows.Input;
@@ -100,7 +99,7 @@ namespace Stack_Solver.ViewModels.Pages
             _maxStackHeight = msg.MaxStackHeight;
             _maxStackWeight = msg.MaxStackWeight;
             _maxSkuOverhang = msg.MaxSkuOverhang;
-            _selectedSkus = [.. msg.Skus.Where(s => s.Quantity > 0)];
+            _selectedSkus = [.. msg.Skus.Where(s => s.IsSelected && s.Quantity > 0)];
             RecenterCameraTarget();
             if (SelectedLayer != null)
             {
@@ -204,7 +203,7 @@ namespace Stack_Solver.ViewModels.Pages
             {
                 if (_selectedSkus.Count == 0)
                 {
-                    OutputText = "No SKUs with quantity greater than 0.";
+                    OutputText = "No SKUs selected with quantity greater than 0.";
                     return;
                 }
 
@@ -217,37 +216,8 @@ namespace Stack_Solver.ViewModels.Pages
                 var options = new GenerationOptions(_solverTimeLimit, _maxCpsatCandidates, _blfAttempts);
                 var ct = localCts.Token;
 
-                var strategiesList = new List<ILayerGenerationStrategy>
-                {
-                    new BLFGenerationStrategy(),
-                    new HomogeneousGenerationStrategy(),
-                    new StripFillGenerationStrategy(),
-                    new RadialPlacementGenerationStrategy()
-                };
-
-                if (_useCpsat)
-                {
-                    strategiesList.Add(new CPSATGenerationStrategy());
-                }
-                var strategies = strategiesList.ToArray();
-
                 _allLayers = await Task.Run(() =>
-                {
-                    var aggregate = new List<Layer>();
-                    foreach (var strat in strategies)
-                    {
-                        if (ct.IsCancellationRequested) break;
-                        try
-                        {
-                            var produced = strat.Generate(_selectedSkus, pallet, options);
-                            if (produced != null && produced.Count > 0)
-                                aggregate.AddRange(produced);
-                        }
-                        catch (OperationCanceledException) { throw; }
-                        catch { }
-                    }
-                    return aggregate;
-                }, ct);
+                    LayerGenerator.Generate(_selectedSkus, pallet, options, _useCpsat, ct), ct);
 
                 if (ct.IsCancellationRequested) return;
 
@@ -256,17 +226,6 @@ namespace Stack_Solver.ViewModels.Pages
                     OutputText = "No layers generated.";
                     return;
                 }
-
-                _allLayers = [.. _allLayers
-                    .Where(l =>
-                        l?.Metadata != null &&
-                        !double.IsNaN(l.Metadata.Utilization) &&
-                        !double.IsInfinity(l.Metadata.Utilization) &&
-                        l.Metadata.Utilization > 0.0 &&
-                        l.Metadata.Utilization <= 1.0)];
-
-                foreach (var layer in _allLayers)
-                    LayerGeometryOptimizer.CenterLayer(layer);
 
                 var topLayers = _allLayers
                     .OrderByDescending(l => l.Metadata.Utilization)
@@ -286,12 +245,7 @@ namespace Stack_Solver.ViewModels.Pages
                     OutputText = "No layers after filtering.";
                 }
 
-                LayerGenStats = $"Generated {_allLayers.Count} candidate layers using";
-                foreach (var strat in strategies)
-                {
-                    LayerGenStats += $" {strat.Name},";
-                }
-                LayerGenStats = LayerGenStats.TrimEnd(',') + ".";
+                LayerGenStats = $"Generated {_allLayers.Count} candidate layers using BLF, Homogeneous, StripFill, Radial{(_useCpsat ? ", CPSAT" : "")}.";
 
                 _events.Publish(new LayersGeneratedMessage(_allLayers));
             }

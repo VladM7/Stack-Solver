@@ -1,52 +1,37 @@
 using Stack_Solver.Models.Assignment;
+using Stack_Solver.Models.Layering;
 using Stack_Solver.Models.Supports;
 
 namespace Stack_Solver.Services
 {
     /// <summary>
-    /// Greedily assigns pallet templates to cover SKU demand. Each iteration picks the template
-    /// that satisfies the most remaining boxes, uses as many copies as the demand allows, and
-    /// decrements remaining quantities. Stops when demand is fully covered or no template helps.
+    /// Builds pallets one layer at a time (Strategy B from the greedy palletization plan).
+    /// At each step the highest-scoring candidate layer is selected from the pool: it must
+    /// fit within height/weight limits and must not exceed remaining per-SKU demand.
+    /// Opens new pallets until demand is exhausted or no layer can be placed.
+    /// Identical pallets (same layer sequence) are grouped in the output.
     /// </summary>
     public static class GreedyAssignmentService
     {
         public static AssignmentResult Assign(
-            IReadOnlyList<PalletTemplate> templates,
-            IReadOnlyDictionary<string, int> demand)
+            IReadOnlyList<Layer> layers,
+            IReadOnlyDictionary<string, int> demand,
+            Pallet pallet)
         {
             var remaining = new Dictionary<string, int>(demand, StringComparer.Ordinal);
-            var assignments = new List<(PalletTemplate Template, int Count)>();
-            const int maxIterations = 10_000;
+            var builtPallets = new List<PalletTemplate>();
 
-            for (int iter = 0; iter < maxIterations && remaining.Values.Any(v => v > 0); iter++)
+            while (remaining.Values.Any(v => v > 0))
             {
-                PalletTemplate? best = null;
-                int bestScore = 0;
-
-                foreach (var template in templates)
-                {
-                    int score = template.SkuCounts.Sum(kvp =>
-                        remaining.TryGetValue(kvp.Key, out int rem) ? Math.Min(rem, kvp.Value) : 0);
-
-                    if (score > bestScore)
-                    {
-                        bestScore = score;
-                        best = template;
-                    }
-                }
-
-                if (best == null || bestScore == 0)
-                    break;
-
-                int count = ComputeCount(best, remaining);
-                MergeAssignment(assignments, best, count);
-
-                foreach (var kvp in best.SkuCounts)
-                {
-                    if (remaining.ContainsKey(kvp.Key))
-                        remaining[kvp.Key] = Math.Max(0, remaining[kvp.Key] - kvp.Value * count);
-                }
+                var template = PackOnePallet(layers, remaining, pallet);
+                if (template == null) break;
+                builtPallets.Add(template);
             }
+
+            var assignments = builtPallets
+                .GroupBy(PalletSignature, StringComparer.Ordinal)
+                .Select(g => (Template: g.First(), Count: g.Count()))
+                .ToList();
 
             var leftovers = remaining
                 .Where(kvp => kvp.Value > 0)
@@ -55,31 +40,98 @@ namespace Stack_Solver.Services
             return new AssignmentResult { Assignments = assignments, Leftovers = leftovers };
         }
 
-        private static int ComputeCount(PalletTemplate template, IReadOnlyDictionary<string, int> remaining)
+        private static PalletTemplate? PackOnePallet(
+            IReadOnlyList<Layer> layers,
+            Dictionary<string, int> remaining,
+            Pallet pallet)
         {
-            int count = int.MaxValue;
-            foreach (var kvp in template.SkuCounts)
+            var stackedLayers = new List<Layer>();
+            double usedHeight = pallet.Height;
+            double usedWeight = 0;
+
+            while (true)
             {
-                if (remaining.TryGetValue(kvp.Key, out int rem) && rem > 0 && kvp.Value > 0)
-                    count = Math.Min(count, rem / kvp.Value);
+                var best = SelectBestLayer(layers, stackedLayers, remaining, pallet, usedHeight, usedWeight);
+                if (best == null) break;
+
+                foreach (var item in best.Items)
+                {
+                    var skuId = item.SkuType.SkuId;
+                    if (remaining.ContainsKey(skuId))
+                        remaining[skuId] = Math.Max(0, remaining[skuId] - 1);
+                }
+
+                stackedLayers.Add(best);
+                usedHeight += best.Metadata.Height;
+                usedWeight += best.Metrics.TotalWeight;
             }
-            return count == int.MaxValue || count == 0 ? 1 : count;
+
+            return stackedLayers.Count > 0 ? PalletTemplate.FromLayers(stackedLayers) : null;
         }
 
-        private static void MergeAssignment(
-            List<(PalletTemplate Template, int Count)> assignments,
-            PalletTemplate template,
-            int count)
+        private static Layer? SelectBestLayer(
+            IReadOnlyList<Layer> layers,
+            IReadOnlyList<Layer> stackedLayers,
+            IReadOnlyDictionary<string, int> remaining,
+            Pallet pallet,
+            double usedHeight,
+            double usedWeight)
         {
-            for (int i = 0; i < assignments.Count; i++)
+            Layer? best = null;
+            double bestScore = double.MinValue;
+
+            foreach (var layer in layers)
             {
-                if (assignments[i].Template.Id == template.Id)
+                if (!CanAddLayer(layer, stackedLayers, pallet, usedHeight, usedWeight)) continue;
+                if (!FitsWithinDemand(layer, remaining)) continue;
+
+                double score = ScoreLayer(layer);
+                if (score > bestScore)
                 {
-                    assignments[i] = (template, assignments[i].Count + count);
-                    return;
+                    bestScore = score;
+                    best = layer;
                 }
             }
-            assignments.Add((template, count));
+
+            return best;
         }
+
+        private static bool CanAddLayer(
+            Layer layer,
+            IReadOnlyList<Layer> stackedLayers,
+            Pallet pallet,
+            double usedHeight,
+            double usedWeight)
+        {
+            if (usedHeight + layer.Metadata.Height > pallet.MaxStackHeight) return false;
+            if (usedWeight + layer.Metrics.TotalWeight > pallet.MaxStackWeight) return false;
+
+            if (stackedLayers.Count > 0)
+            {
+                var support = LayerSupportAnalyzer.Analyze(stackedLayers[^1], layer, pallet);
+                if (support.MaximumSkuOverhangArea > pallet.MaxSkuOverhang) return false;
+            }
+
+            return true;
+        }
+
+        private static bool FitsWithinDemand(Layer layer, IReadOnlyDictionary<string, int> remaining)
+        {
+            foreach (var g in layer.Items.GroupBy(i => i.SkuType.SkuId, StringComparer.Ordinal))
+            {
+                if (!remaining.TryGetValue(g.Key, out int rem) || rem < g.Count())
+                    return false;
+            }
+            return true;
+        }
+
+        private static double ScoreLayer(Layer layer)
+        {
+            // Maximize boxes packed per layer; break ties by utilization
+            return layer.Items.Count * 1000.0 + layer.Metrics.Utilization;
+        }
+
+        private static string PalletSignature(PalletTemplate t) =>
+            string.Join("|", t.Layers.Select(l => l.Id));
     }
 }

@@ -5,7 +5,6 @@ using Stack_Solver.Models.Assignment;
 using Stack_Solver.Models.Layering;
 using Stack_Solver.Models.Supports;
 using Stack_Solver.Services;
-using Stack_Solver.Services.Stacking;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Windows.Input;
@@ -107,7 +106,7 @@ namespace Stack_Solver.ViewModels.Pages
             _maxStackHeight = msg.MaxStackHeight;
             _maxStackWeight = msg.MaxStackWeight;
             _maxSkuOverhang = msg.MaxSkuOverhang;
-            _selectedSkus = [.. msg.Skus.Where(s => s.Quantity > 0)];
+            _selectedSkus = [.. msg.Skus.Where(s => s.IsSelected && s.Quantity > 0)];
             _generationOptions = new GenerationOptions(msg.SolverTimeLimit, msg.MaxCpsatCandidates, msg.BlfAttempts);
             if (_viewportController != null)
                 _viewportController.Target = CurrentPalletCenter;
@@ -119,7 +118,7 @@ namespace Stack_Solver.ViewModels.Pages
             {
                 OutputText = _availableLayers.Count == 0
                     ? "No layers available."
-                    : "No SKUs with quantity > 0.";
+                    : "No SKUs selected with quantity > 0.";
                 return;
             }
 
@@ -137,14 +136,37 @@ namespace Stack_Solver.ViewModels.Pages
                 var skus = _selectedSkus.ToList();
                 var layersSnapshot = _availableLayers.ToList();
 
-                var (templates, result) = await Task.Run(() =>
+                var result = await Task.Run(() =>
                 {
                     ct.ThrowIfCancellationRequested();
                     var filtered = LayerMetricsCalculator.FilterLayers(layersSnapshot, options);
-                    var tmpl = PalletTemplateEnumerator.Enumerate(pallet, filtered, options);
-                    var assignment = GreedyAssignmentService.Assign(tmpl, demand);
-                    return (tmpl, assignment);
+                    return GreedyAssignmentService.Assign(filtered, demand, pallet);
                 }, ct);
+
+                ct.ThrowIfCancellationRequested();
+
+                // Tail pass: the main layer pool was generated for full demand, so layers sized for
+                // small remainders may not exist. Regenerate layers from the leftover quantities
+                // and run Strategy B once more to pack the tail exactly.
+                if (result.HasLeftovers)
+                {
+                    var tailInput = result;
+                    result = await Task.Run(() =>
+                    {
+                        var leftoverSkus = BuildLeftoverSkus(skus, tailInput.Leftovers);
+                        if (leftoverSkus.Count == 0) return tailInput;
+                        var tailLayers = LayerGenerator.Generate(leftoverSkus, pallet, options, ct: ct);
+                        if (tailLayers.Count == 0) return tailInput;
+                        var tailOptions = new GenerationOptions(options.MaxSolverTime, options.MaxCPSATCandidates, options.BLFAttempts)
+                        {
+                            MaxLayerStability = options.MaxLayerStability,
+                            PerSkuTopLayerFraction = 1.0
+                        };
+                        var filtered = LayerMetricsCalculator.FilterLayers(tailLayers, tailOptions);
+                        if (filtered.Count == 0) return tailInput;
+                        return MergeResults(tailInput, GreedyAssignmentService.Assign(filtered, tailInput.Leftovers, pallet));
+                    }, ct);
+                }
 
                 ct.ThrowIfCancellationRequested();
 
@@ -156,7 +178,7 @@ namespace Stack_Solver.ViewModels.Pages
                 SelectedAssignment = Assignments.FirstOrDefault();
                 if (HasResults)
                     Solutions.Add(new SolutionDisplay(1, result));
-                OutputText = BuildSummaryText(result, templates.Count, skus);
+                OutputText = BuildSummaryText(result, skus);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
@@ -203,11 +225,43 @@ namespace Stack_Solver.ViewModels.Pages
             catch (OperationCanceledException) { }
         }
 
-        private string BuildSummaryText(AssignmentResult result, int templateCount, List<SKU> skus)
+        private static AssignmentResult MergeResults(AssignmentResult main, AssignmentResult extra)
+        {
+            var merged = main.Assignments.ToList();
+            foreach (var (template, count) in extra.Assignments)
+            {
+                var idx = merged.FindIndex(a => a.Template.Id == template.Id);
+                if (idx >= 0)
+                    merged[idx] = (template, merged[idx].Count + count);
+                else
+                    merged.Add((template, count));
+            }
+            return new AssignmentResult { Assignments = merged, Leftovers = extra.Leftovers };
+        }
+
+        private static List<SKU> BuildLeftoverSkus(List<SKU> originalSkus, IReadOnlyDictionary<string, int> leftovers)
+        {
+            return [.. originalSkus
+                .Select(s => (Sku: s, Rem: leftovers.GetValueOrDefault(s.SkuId)))
+                .Where(x => x.Rem > 0)
+                .Select(x => new SKU
+                {
+                    SkuId = x.Sku.SkuId,
+                    Name = x.Sku.Name,
+                    Length = x.Sku.Length,
+                    Width = x.Sku.Width,
+                    Height = x.Sku.Height,
+                    Weight = x.Sku.Weight,
+                    Rotatable = x.Sku.Rotatable,
+                    Notes = x.Sku.Notes,
+                    Quantity = x.Rem
+                })];
+        }
+
+        private string BuildSummaryText(AssignmentResult result, List<SKU> skus)
         {
             var skuMap = skus.ToDictionary(s => s.SkuId, s => s.Name, StringComparer.Ordinal);
             var sb = new StringBuilder();
-            sb.AppendLine($"Templates generated: {templateCount}");
             sb.AppendLine($"Total pallets:       {result.TotalPallets}");
             sb.AppendLine($"Distinct templates:  {result.Assignments.Count}");
             if (result.HasLeftovers)

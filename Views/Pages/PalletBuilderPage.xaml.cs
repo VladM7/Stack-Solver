@@ -76,6 +76,11 @@ namespace Stack_Solver.Views.Pages
             }
         }
 
+        private void SkuCheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.Settings.NotifySelectionChanged();
+        }
+
         private void TopHelpButton_Click(object sender, RoutedEventArgs e)
         {
             helpFlyout.IsOpen = !helpFlyout.IsOpen;

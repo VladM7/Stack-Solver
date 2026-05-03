@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Stack_Solver.Models
 {
@@ -19,6 +20,9 @@ namespace Stack_Solver.Models
         public string? Notes { get; set; }
 
         public int Quantity { get; set; } = 0;
+
+        [NotMapped]
+        public bool IsSelected { get; set; } = false;
 
         public SKU(string skuId, string name, int length, int width, int height, double weight, bool rotatable, string notes)
         {

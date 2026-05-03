@@ -45,9 +45,9 @@
                             <LineBreak/>
                             <Run Text="1 - Set the pallet dimensions manually or by selecting a pallet type."/>
                             <LineBreak/>
-                            <Run Text="2 - Adjust the quantity for each SKU type."/>
+                            <Run Text="2 - Check the box next to each SKU you want to include, then set its quantity."/>
                             <LineBreak/>
-                            <Run Text="(or set it to 0 to ignore that specific SKU)"/>
+                            <Run Text="(unchecked SKUs are ignored regardless of quantity)"/>
                             <LineBreak/>
                             <Run Text="You can add more SKU types (or edit them) in the "/>
                             <Run Text="Library " FontWeight="Bold"/>
@@ -126,7 +126,7 @@
                         </ui:CardExpander>
                         <ui:CardExpander Header="SKU selection">
                             <StackPanel Orientation="Vertical" Margin="0,0,0,0">
-                                <ui:TextBlock Text="Select the SKUs to include in the pallet by adjusting the quantity." Margin="0,0,0,5"/>
+                                <ui:TextBlock Text="Select the SKUs to include in the pallet. Don't forget to also set the quantity." Margin="0,0,0,5"/>
                                 <ui:DataGrid
             x:Name="SkuSelectionGrid"
             ItemsSource="{Binding ViewModel.Settings.Skus, Mode=TwoWay}"
@@ -155,6 +155,16 @@
                                         </DataGridTemplateColumn>
                                         <DataGridTextColumn Header="Weight" Binding="{Binding Weight}" IsReadOnly="True" Width="Auto"/>
                                         <DataGridTextColumn Header="Qty" Binding="{Binding Quantity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="Auto"/>
+                                        <DataGridTemplateColumn Width="Auto">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"
+                                                              Click="SkuCheckBox_Click"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
                                     </ui:DataGrid.Columns>
                                 </ui:DataGrid>
                             </StackPanel>
@@ -285,7 +295,7 @@
                                     <DataGridTextColumn Header="Times Used" Binding="{Binding Count}"/>
                                     <DataGridTextColumn Header="# Boxes" Binding="{Binding Template.TotalBoxCount}"/>
                                     <DataGridTextColumn Header="# Layers" Binding="{Binding Template.Layers.Count}"/>
-                                    <DataGridTextColumn Header="Eff" Binding="{Binding Efficiency}"/>
+                                    <DataGridTextColumn Header="Util" Binding="{Binding Efficiency}"/>
                                 </ui:DataGrid.Columns>
                             </ui:DataGrid>
                         </Border>
@@ -302,7 +312,7 @@
                                     <DataGridTextColumn Header="Layer" Binding="{Binding Name}"/>
                                     <DataGridTextColumn Header="Times Used" Binding="{Binding Count}"/>
                                     <DataGridTextColumn Header="Contents" Binding="{Binding Contents}"/>
-                                    <DataGridTextColumn Header="Eff" Binding="{Binding Utilization}"/>
+                                    <DataGridTextColumn Header="Util" Binding="{Binding Utilization}"/>
                                 </ui:DataGrid.Columns>
                             </ui:DataGrid>
                         </Border>
