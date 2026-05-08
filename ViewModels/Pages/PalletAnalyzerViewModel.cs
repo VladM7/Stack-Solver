@@ -5,6 +5,7 @@ using Stack_Solver.Models.Assignment;
 using Stack_Solver.Models.Layering;
 using Stack_Solver.Models.Supports;
 using Stack_Solver.Services;
+using Stack_Solver.Services.Stacking;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Windows.Input;
@@ -50,6 +51,9 @@ namespace Stack_Solver.ViewModels.Pages
 
         [ObservableProperty]
         private ObservableCollection<SolutionDisplay> _solutions = [];
+
+        [ObservableProperty]
+        private SolutionDisplay? _selectedSolution;
 
         public Model3DGroup Scene { get; } = new();
         public ViewportController? ViewportController => _viewportController;
@@ -136,46 +140,57 @@ namespace Stack_Solver.ViewModels.Pages
                 var skus = _selectedSkus.ToList();
                 var layersSnapshot = _availableLayers.ToList();
 
-                var result = await Task.Run(() =>
+                var greedyResult = await Task.Run(() =>
                 {
                     ct.ThrowIfCancellationRequested();
                     var filtered = LayerMetricsCalculator.FilterLayers(layersSnapshot, options);
-                    return GreedyAssignmentService.Assign(filtered, demand, pallet);
+                    var greedy = GreedyAssignmentService.Assign(filtered, demand, pallet);
+                    if (!greedy.HasLeftovers) return greedy;
+
+                    var leftoverSkus = BuildLeftoverSkus(skus, greedy.Leftovers);
+                    if (leftoverSkus.Count == 0) return greedy;
+                    var tailLayers = LayerGenerator.Generate(leftoverSkus, pallet, options, ct: ct);
+                    if (tailLayers.Count == 0) return greedy;
+                    var tailOptions = new GenerationOptions(options.MaxSolverTime, options.MaxCPSATCandidates, options.BLFAttempts)
+                    {
+                        MaxLayerStability = options.MaxLayerStability,
+                        PerSkuTopLayerFraction = 1.0
+                    };
+                    var tailFiltered = LayerMetricsCalculator.FilterLayers(tailLayers, tailOptions);
+                    if (tailFiltered.Count == 0) return greedy;
+                    return MergeResults(greedy, GreedyAssignmentService.Assign(tailFiltered, greedy.Leftovers, pallet));
                 }, ct);
 
                 ct.ThrowIfCancellationRequested();
 
-                if (result.HasLeftovers)
+                AssignmentResult? cpsatResult = null;
+                try
                 {
-                    var tailInput = result;
-                    result = await Task.Run(() =>
+                    cpsatResult = await Task.Run(() =>
                     {
-                        var leftoverSkus = BuildLeftoverSkus(skus, tailInput.Leftovers);
-                        if (leftoverSkus.Count == 0) return tailInput;
-                        var tailLayers = LayerGenerator.Generate(leftoverSkus, pallet, options, ct: ct);
-                        if (tailLayers.Count == 0) return tailInput;
-                        var tailOptions = new GenerationOptions(options.MaxSolverTime, options.MaxCPSATCandidates, options.BLFAttempts)
-                        {
-                            MaxLayerStability = options.MaxLayerStability,
-                            PerSkuTopLayerFraction = 1.0
-                        };
-                        var filtered = LayerMetricsCalculator.FilterLayers(tailLayers, tailOptions);
-                        if (filtered.Count == 0) return tailInput;
-                        return MergeResults(tailInput, GreedyAssignmentService.Assign(filtered, tailInput.Leftovers, pallet));
+                        ct.ThrowIfCancellationRequested();
+                        var filtered = LayerMetricsCalculator.FilterLayers(layersSnapshot, options);
+                        var pool = PalletTemplateEnumerator.Enumerate(pallet, filtered, options);
+                        var pruned = TemplateFilter.Filter(pool, pallet);
+                        return CPSATAssignmentService.Assign(pruned, demand, pallet, options, greedyResult, ct);
                     }, ct);
                 }
+                catch (OperationCanceledException) { throw; }
+                catch { /* CP-SAT is best-effort; greedy result still shown */ }
 
                 ct.ThrowIfCancellationRequested();
 
-                int index = 1;
-                foreach (var (template, count) in result.Assignments)
-                    Assignments.Add(new TemplateAssignmentDisplay(template, count, skus, index++, _palletLength, _palletWidth, _palletHeight));
+                Solutions.Clear();
+                if (cpsatResult != null && cpsatResult.Assignments.Count > 0)
+                    Solutions.Add(new SolutionDisplay(Solutions.Count + 1, "CP-SAT", cpsatResult, skus, _palletLength, _palletWidth, _palletHeight));
+                if (greedyResult.Assignments.Count > 0)
+                    Solutions.Add(new SolutionDisplay(Solutions.Count + 1, "Greedy", greedyResult, skus, _palletLength, _palletWidth, _palletHeight));
 
-                HasResults = Assignments.Count > 0;
-                SelectedAssignment = Assignments.FirstOrDefault();
+                HasResults = Solutions.Count > 0;
                 if (HasResults)
-                    Solutions.Add(new SolutionDisplay(1, result));
-                OutputText = BuildSummaryText(result, skus);
+                    SelectedSolution = Solutions[0];
+                else
+                    OutputText = "No assignments produced.";
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
@@ -186,6 +201,24 @@ namespace Stack_Solver.ViewModels.Pages
             {
                 IsBuilding = false;
             }
+        }
+
+        partial void OnSelectedSolutionChanged(SolutionDisplay? value)
+        {
+            Assignments.Clear();
+
+            if (value == null)
+            {
+                SelectedAssignment = null;
+                return;
+            }
+
+            int idx = 1;
+            foreach (var (template, count) in value.Result.Assignments)
+                Assignments.Add(new TemplateAssignmentDisplay(template, count, value.Skus, idx++, value.PalletLength, value.PalletWidth, value.PalletHeight));
+
+            SelectedAssignment = Assignments.FirstOrDefault();
+            OutputText = BuildSummaryText(value.Result);
         }
 
         partial void OnSelectedAssignmentChanged(TemplateAssignmentDisplay? value)
@@ -255,23 +288,11 @@ namespace Stack_Solver.ViewModels.Pages
                 })];
         }
 
-        private static string BuildSummaryText(AssignmentResult result, List<SKU> skus)
+        private static string BuildSummaryText(AssignmentResult result)
         {
-            var skuMap = skus.ToDictionary(s => s.SkuId, s => s.Name, StringComparer.Ordinal);
             var sb = new StringBuilder();
             sb.AppendLine($"Total pallets: {result.TotalPallets}");
             sb.AppendLine($"Distinct templates: {result.Assignments.Count}");
-            //if (result.HasLeftovers)
-            //{
-            //    sb.AppendLine();
-            //    sb.AppendLine("Leftover boxes:");
-            //    foreach (var (skuId, count) in result.Leftovers)
-            //        sb.AppendLine($"  {skuMap.GetValueOrDefault(skuId, skuId)}: {count}");
-            //}
-            //else
-            //{
-            //    sb.AppendLine("All boxes packed.");
-            //}
             return sb.ToString();
         }
     }
@@ -320,20 +341,36 @@ namespace Stack_Solver.ViewModels.Pages
         public string Utilization { get; } = layer.Metadata.Utilization.ToString("P0");
     }
 
-    public class SolutionDisplay
+    public partial class SolutionDisplay : ObservableObject
     {
         public int Number { get; }
         public string Name { get; }
+        public AssignmentResult Result { get; }
+        public IReadOnlyList<SKU> Skus { get; }
+        public int PalletLength { get; }
+        public int PalletWidth { get; }
+        public int PalletHeight { get; }
         public int TotalPallets { get; }
         public int PalletTypes { get; }
         public int TotalItemsPacked { get; }
         public string Efficiency { get; }
-        public bool IsActive { get; set; } = true;
 
-        public SolutionDisplay(int number, AssignmentResult result)
+        public SolutionDisplay(
+            int number,
+            string name,
+            AssignmentResult result,
+            IReadOnlyList<SKU> skus,
+            int palletLength,
+            int palletWidth,
+            int palletHeight)
         {
             Number = number;
-            Name = "Greedy";
+            Name = name;
+            Result = result;
+            Skus = skus;
+            PalletLength = palletLength;
+            PalletWidth = palletWidth;
+            PalletHeight = palletHeight;
             TotalPallets = result.TotalPallets;
             PalletTypes = result.Assignments.Count;
             TotalItemsPacked = result.Assignments.Sum(a => a.Template.TotalBoxCount * a.Count);

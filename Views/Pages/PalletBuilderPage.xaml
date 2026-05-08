@@ -328,7 +328,8 @@
                                      CanUserDeleteRows="False"
                                      IsReadOnly="True"
                                      HeadersVisibility="Column"
-                                     ItemsSource="{Binding ViewModel.PalletAnalyzer.Solutions}">
+                                     ItemsSource="{Binding ViewModel.PalletAnalyzer.Solutions}"
+                                     SelectedItem="{Binding ViewModel.PalletAnalyzer.SelectedSolution, Mode=TwoWay}">
                             <ui:DataGrid.Columns>
                                 <DataGridTextColumn Header="Sol. #" Binding="{Binding Number}"/>
                                 <DataGridTextColumn Header="Name" Binding="{Binding Name}"/>
@@ -336,7 +337,6 @@
                                 <DataGridTextColumn Header="# Pallet Types" Binding="{Binding PalletTypes}"/>
                                 <DataGridTextColumn Header="Total Items Packed" Binding="{Binding TotalItemsPacked}"/>
                                 <DataGridTextColumn Header="Eff" Binding="{Binding Efficiency}"/>
-                                <DataGridCheckBoxColumn Binding="{Binding IsActive}"/>
                             </ui:DataGrid.Columns>
                         </ui:DataGrid>
                     </StackPanel>
