@@ -293,8 +293,11 @@
                                 <ui:DataGrid.Columns>
                                     <DataGridTextColumn Header="Pallet" Binding="{Binding Name}"/>
                                     <DataGridTextColumn Header="Times Used" Binding="{Binding Count}"/>
-                                    <DataGridTextColumn Header="# Boxes" Binding="{Binding Template.TotalBoxCount}"/>
                                     <DataGridTextColumn Header="# Layers" Binding="{Binding Template.Layers.Count}"/>
+                                    <DataGridTextColumn Header="# Boxes" Binding="{Binding Template.TotalBoxCount}"/>
+                                    <DataGridTextColumn Header="Contents" Binding="{Binding Contents}"/>
+                                    <DataGridTextColumn Header="Load Dim." Binding="{Binding LoadDimensions}"/>
+                                    <DataGridTextColumn Header="Wght" Binding="{Binding Weight}"/>
                                     <DataGridTextColumn Header="Util" Binding="{Binding Efficiency}"/>
                                 </ui:DataGrid.Columns>
                             </ui:DataGrid>
@@ -328,6 +331,7 @@
                                      ItemsSource="{Binding ViewModel.PalletAnalyzer.Solutions}">
                             <ui:DataGrid.Columns>
                                 <DataGridTextColumn Header="Sol. #" Binding="{Binding Number}"/>
+                                <DataGridTextColumn Header="Name" Binding="{Binding Name}"/>
                                 <DataGridTextColumn Header="# Pallets" Binding="{Binding TotalPallets}"/>
                                 <DataGridTextColumn Header="# Pallet Types" Binding="{Binding PalletTypes}"/>
                                 <DataGridTextColumn Header="Total Items Packed" Binding="{Binding TotalItemsPacked}"/>

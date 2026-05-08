@@ -145,9 +145,6 @@ namespace Stack_Solver.ViewModels.Pages
 
                 ct.ThrowIfCancellationRequested();
 
-                // Tail pass: the main layer pool was generated for full demand, so layers sized for
-                // small remainders may not exist. Regenerate layers from the leftover quantities
-                // and run Strategy B once more to pack the tail exactly.
                 if (result.HasLeftovers)
                 {
                     var tailInput = result;
@@ -172,7 +169,7 @@ namespace Stack_Solver.ViewModels.Pages
 
                 int index = 1;
                 foreach (var (template, count) in result.Assignments)
-                    Assignments.Add(new TemplateAssignmentDisplay(template, count, skus, index++));
+                    Assignments.Add(new TemplateAssignmentDisplay(template, count, skus, index++, _palletLength, _palletWidth, _palletHeight));
 
                 HasResults = Assignments.Count > 0;
                 SelectedAssignment = Assignments.FirstOrDefault();
@@ -258,23 +255,23 @@ namespace Stack_Solver.ViewModels.Pages
                 })];
         }
 
-        private string BuildSummaryText(AssignmentResult result, List<SKU> skus)
+        private static string BuildSummaryText(AssignmentResult result, List<SKU> skus)
         {
             var skuMap = skus.ToDictionary(s => s.SkuId, s => s.Name, StringComparer.Ordinal);
             var sb = new StringBuilder();
-            sb.AppendLine($"Total pallets:       {result.TotalPallets}");
-            sb.AppendLine($"Distinct templates:  {result.Assignments.Count}");
-            if (result.HasLeftovers)
-            {
-                sb.AppendLine();
-                sb.AppendLine("Leftover boxes:");
-                foreach (var (skuId, count) in result.Leftovers)
-                    sb.AppendLine($"  {skuMap.GetValueOrDefault(skuId, skuId)}: {count}");
-            }
-            else
-            {
-                sb.AppendLine("All boxes packed.");
-            }
+            sb.AppendLine($"Total pallets: {result.TotalPallets}");
+            sb.AppendLine($"Distinct templates: {result.Assignments.Count}");
+            //if (result.HasLeftovers)
+            //{
+            //    sb.AppendLine();
+            //    sb.AppendLine("Leftover boxes:");
+            //    foreach (var (skuId, count) in result.Leftovers)
+            //        sb.AppendLine($"  {skuMap.GetValueOrDefault(skuId, skuId)}: {count}");
+            //}
+            //else
+            //{
+            //    sb.AppendLine("All boxes packed.");
+            //}
             return sb.ToString();
         }
     }
@@ -285,48 +282,48 @@ namespace Stack_Solver.ViewModels.Pages
         public int Count { get; }
         public string Name { get; }
         public string SkuSummary { get; }
+        public string Contents { get; }
+        public string LoadDimensions { get; }
+        public string Weight { get; }
         public string Efficiency { get; }
         public IReadOnlyList<LayerTypeDisplay> LayerTypes { get; }
 
-        public TemplateAssignmentDisplay(PalletTemplate template, int count, IEnumerable<SKU> skuLookup, int index)
+        public TemplateAssignmentDisplay(PalletTemplate template, int count, IEnumerable<SKU> skuLookup, int index, int palletLength, int palletWidth, int palletHeight)
         {
             Template = template;
             Count = count;
             Name = $"Type {index}";
             Efficiency = template.AverageLayerUtilization.ToString("P0");
+            Weight = template.TotalWeight.ToString("N0");
+            LoadDimensions = $"{palletLength}x{palletWidth}x{(int)Math.Round(palletHeight + template.TotalHeight)}";
 
             var skuMap = skuLookup.ToDictionary(s => s.SkuId, s => s.Name, StringComparer.Ordinal);
             SkuSummary = string.Join("  |  ", template.SkuCounts
                 .OrderBy(kvp => skuMap.GetValueOrDefault(kvp.Key, kvp.Key), StringComparer.Ordinal)
                 .Select(kvp => $"{skuMap.GetValueOrDefault(kvp.Key, kvp.Key)} ×{kvp.Value}"));
-            LayerTypes = template.Layers
+            Contents = string.Join(", ", template.SkuCounts
+                .OrderBy(kvp => skuMap.GetValueOrDefault(kvp.Key, kvp.Key), StringComparer.Ordinal)
+                .Select(kvp => $"{kvp.Value}x {skuMap.GetValueOrDefault(kvp.Key, kvp.Key)}"));
+            LayerTypes = [.. template.Layers
                 .GroupBy(l => l.Id)
-                .Select(g => new LayerTypeDisplay(g.First(), g.Count(), skuMap))
-                .ToList();
+                .Select(g => new LayerTypeDisplay(g.First(), g.Count(), skuMap))];
         }
     }
 
-    public class LayerTypeDisplay
+    public class LayerTypeDisplay(Layer layer, int count, IReadOnlyDictionary<string, string> skuNames)
     {
-        public string Name { get; }
-        public int Count { get; }
-        public string Contents { get; }
-        public string Utilization { get; }
-
-        public LayerTypeDisplay(Layer layer, int count, IReadOnlyDictionary<string, string> skuNames)
-        {
-            Name = layer.Name;
-            Count = count;
-            Utilization = layer.Metadata.Utilization.ToString("P0");
-            Contents = string.Join(", ", layer.Items
+        public string Name { get; } = layer.Name;
+        public int Count { get; } = count;
+        public string Contents { get; } = string.Join(", ", layer.Items
                 .GroupBy(i => i.SkuType.SkuId)
                 .Select(g => $"{g.Count()}x {skuNames.GetValueOrDefault(g.Key, g.Key)}"));
-        }
+        public string Utilization { get; } = layer.Metadata.Utilization.ToString("P0");
     }
 
     public class SolutionDisplay
     {
         public int Number { get; }
+        public string Name { get; }
         public int TotalPallets { get; }
         public int PalletTypes { get; }
         public int TotalItemsPacked { get; }
@@ -336,6 +333,7 @@ namespace Stack_Solver.ViewModels.Pages
         public SolutionDisplay(int number, AssignmentResult result)
         {
             Number = number;
+            Name = "Greedy";
             TotalPallets = result.TotalPallets;
             PalletTypes = result.Assignments.Count;
             TotalItemsPacked = result.Assignments.Sum(a => a.Template.TotalBoxCount * a.Count);
