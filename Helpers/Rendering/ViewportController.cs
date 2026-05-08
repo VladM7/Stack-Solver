@@ -62,6 +62,15 @@ namespace Stack_Solver.Helpers.Rendering
             UpdateCameraPosition();
         }
 
+        public void ResetView(Point3D target, double distance)
+        {
+            Target = target;
+            Distance = distance;
+            Azimuth = Math.PI / 4;
+            Elevation = Math.PI / 6;
+            UpdateCameraPosition();
+        }
+
         private void UpdateCameraPosition()
         {
             double x = Target.X + Distance * Math.Cos(Elevation) * Math.Sin(Azimuth);

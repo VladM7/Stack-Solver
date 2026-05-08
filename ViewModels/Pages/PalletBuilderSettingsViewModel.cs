@@ -16,6 +16,7 @@ namespace Stack_Solver.ViewModels.Pages
         private readonly IEventAggregator _events;
         private readonly IValidator<PalletSettingsDto> _settingsValidator;
         private readonly IValidator<SkuQuantityDto> _skuQuantityValidator;
+        private readonly IUserSettingsService _userSettings;
         private readonly GenerationOptions _defaults;
         private readonly PalletDefaultsOptions _palletDefaults;
         private bool _isInitialized;
@@ -98,12 +99,14 @@ namespace Stack_Solver.ViewModels.Pages
             IOptions<GenerationOptions> genOptions,
             IOptions<PalletDefaultsOptions> palletDefaults,
             IValidator<PalletSettingsDto> settingsValidator,
-            IValidator<SkuQuantityDto> skuQuantityValidator)
+            IValidator<SkuQuantityDto> skuQuantityValidator,
+            IUserSettingsService userSettings)
         {
             _skuRepository = skuRepository;
             _events = events;
             _settingsValidator = settingsValidator;
             _skuQuantityValidator = skuQuantityValidator;
+            _userSettings = userSettings;
             _defaults = GenerationOptions.From(genOptions.Value);
             _palletDefaults = palletDefaults.Value ?? new PalletDefaultsOptions();
             _skuRepository.SkuAdded += OnSkuAdded;
@@ -169,6 +172,8 @@ namespace Stack_Solver.ViewModels.Pages
             PublishSettingsChanged();
         }
 
+        public void NotifySelectionChanged() => PublishSettingsChanged();
+
         public async Task UpdateSkuAsync(SKU sku, CancellationToken ct = default)
         {
             if (sku == null) return;
@@ -191,6 +196,7 @@ namespace Stack_Solver.ViewModels.Pages
         partial void OnPalletHeightChanged(double value) => PublishSettingsChanged();
         partial void OnUseCpsatChanged(bool value) => PublishSettingsChanged();
         partial void OnMaxCpsatCandidatesChanged(int value) => PublishSettingsChanged();
+        partial void OnBlfAttemptsChanged(int value) => PublishSettingsChanged();
         partial void OnSolverTimeLimitChanged(int value) => PublishSettingsChanged();
         partial void OnMaxStackHeightChanged(int value) => PublishSettingsChanged();
         partial void OnMaxStackWeightChanged(int value) => PublishSettingsChanged();
@@ -221,6 +227,30 @@ namespace Stack_Solver.ViewModels.Pages
                 UseCpsat, MaxCpsatCandidates, BlfAttempts, SolverTimeLimit,
                 MaxStackHeight, MaxStackWeight, MaxSkuOverhang,
                 [.. Skus]));
+
+            if (_isInitialized)
+            {
+                var palletOpts = new PalletDefaultsOptions
+                {
+                    DefaultCatalog = _palletDefaults.DefaultCatalog,
+                    DefaultPalletName = _palletDefaults.DefaultPalletName,
+                    PalletLength = PalletLength,
+                    PalletWidth = PalletWidth,
+                    PalletHeight = PalletHeight,
+                    MaxStackHeight = MaxStackHeight,
+                    MaxStackWeight = MaxStackWeight,
+                    MaxSkuOverhang = MaxSkuOverhang
+                };
+                var genOpts = new GenerationOptions
+                {
+                    MaxSolverTime = SolverTimeLimit,
+                    MaxCPSATCandidates = MaxCpsatCandidates,
+                    BLFAttempts = BlfAttempts,
+                    MaxLayerStability = _defaults.MaxLayerStability,
+                    PerSkuTopLayerFraction = _defaults.PerSkuTopLayerFraction
+                };
+                _ = _userSettings.SaveAsync(palletOpts, genOpts);
+            }
         }
 
         private void OnSkuAdded(object? sender, SKU sku)

@@ -27,9 +27,9 @@ namespace Stack_Solver.Views.Pages
         {
             await ViewModel.OnNavigatedToAsync();
             if (ViewModel.LayerAnalyzer.ViewportController == null && MainPerspectiveCamera is PerspectiveCamera cam)
-            {
                 ViewModel.LayerAnalyzer.AttachCamera(cam);
-            }
+            if (ViewModel.PalletAnalyzer.ViewportController == null && PalletPerspectiveCamera is PerspectiveCamera palletCam)
+                ViewModel.PalletAnalyzer.AttachCamera(palletCam);
         }
 
         private void MainViewPort_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -74,6 +74,11 @@ namespace Stack_Solver.Views.Pages
                     MessageBox.Show(message, "Validation error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
+        }
+
+        private void SkuCheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.Settings.NotifySelectionChanged();
         }
 
         private void TopHelpButton_Click(object sender, RoutedEventArgs e)

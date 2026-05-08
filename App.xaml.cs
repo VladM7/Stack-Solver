@@ -42,7 +42,8 @@ namespace Stack_Solver
             .ConfigureAppConfiguration(c =>
             {
                 c.SetBasePath(Path.GetDirectoryName(AppContext.BaseDirectory)!);
-                c.AddJsonFile("defaults.json", optional: true, reloadOnChange: true);
+                c.AddJsonFile("defaults.json", optional: true, reloadOnChange: false);
+                c.AddJsonFile(AppPaths.UserSettingsFile, optional: true, reloadOnChange: false);
             })
             .ConfigureServices((context, services) =>
             {
@@ -70,6 +71,8 @@ namespace Stack_Solver
                 services.AddSingleton<SKULibraryPage>();
                 services.AddSingleton<SKULibraryViewModel>();
                 services.AddSingleton<PalletBuilderPage>();
+                services.AddSingleton<IUserSettingsService, UserSettingsService>();
+
                 services.AddSingleton<PalletBuilderViewModel>(sp => new PalletBuilderViewModel(
                     sp.GetRequiredService<ISkuRepository>(),
                     sp.GetRequiredService<IEventAggregator>(),
@@ -77,7 +80,8 @@ namespace Stack_Solver
                     sp.GetRequiredService<IOptions<GenerationOptions>>(),
                     sp.GetRequiredService<IOptions<PalletDefaultsOptions>>(),
                     sp.GetRequiredService<IValidator<PalletSettingsDto>>(),
-                    sp.GetRequiredService<IValidator<SkuQuantityDto>>()));
+                    sp.GetRequiredService<IValidator<SkuQuantityDto>>(),
+                    sp.GetRequiredService<IUserSettingsService>()));
                 services.AddSingleton<TruckLoadingPage>();
                 services.AddSingleton<TruckLoadingViewModel>();
                 services.AddSingleton<JobManagerPage>();

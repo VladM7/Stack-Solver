@@ -45,9 +45,9 @@
                             <LineBreak/>
                             <Run Text="1 - Set the pallet dimensions manually or by selecting a pallet type."/>
                             <LineBreak/>
-                            <Run Text="2 - Adjust the quantity for each SKU type."/>
+                            <Run Text="2 - Check the box next to each SKU you want to include, then set its quantity."/>
                             <LineBreak/>
-                            <Run Text="(or set it to 0 to ignore that specific SKU)"/>
+                            <Run Text="(unchecked SKUs are ignored regardless of quantity)"/>
                             <LineBreak/>
                             <Run Text="You can add more SKU types (or edit them) in the "/>
                             <Run Text="Library " FontWeight="Bold"/>
@@ -126,7 +126,7 @@
                         </ui:CardExpander>
                         <ui:CardExpander Header="SKU selection">
                             <StackPanel Orientation="Vertical" Margin="0,0,0,0">
-                                <ui:TextBlock Text="Select the SKUs to include in the pallet by adjusting the quantity." Margin="0,0,0,5"/>
+                                <ui:TextBlock Text="Select the SKUs to include in the pallet. Don't forget to also set the quantity." Margin="0,0,0,5"/>
                                 <ui:DataGrid
             x:Name="SkuSelectionGrid"
             ItemsSource="{Binding ViewModel.Settings.Skus, Mode=TwoWay}"
@@ -155,6 +155,16 @@
                                         </DataGridTemplateColumn>
                                         <DataGridTextColumn Header="Weight" Binding="{Binding Weight}" IsReadOnly="True" Width="Auto"/>
                                         <DataGridTextColumn Header="Qty" Binding="{Binding Quantity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="Auto"/>
+                                        <DataGridTemplateColumn Width="Auto">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"
+                                                              Click="SkuCheckBox_Click"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
                                     </ui:DataGrid.Columns>
                                 </ui:DataGrid>
                             </StackPanel>
@@ -164,7 +174,7 @@
                                 <ui:CardControl Header="Number of BLF attempts">
                                     <ui:NumberBox x:Name="maxBLFAttempts"
                                           Value="{Binding ViewModel.Settings.BlfAttempts, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                          Minimum="0" SmallChange="10" LargeChange="10"/>  
+                                          Minimum="0" SmallChange="10" LargeChange="10"/>
                                 </ui:CardControl>
                                 <ui:CardControl Header="Use CP-SAT layer generation">
                                     <ui:ToggleSwitch x:Name="cpsatToggleSwitch" IsChecked="{Binding ViewModel.Settings.UseCpsat, Mode=TwoWay}"/>
@@ -251,7 +261,7 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
@@ -259,8 +269,9 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="2*"/>
                     </Grid.ColumnDefinitions>
-                    <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.ColumnSpan="2" Margin="0,5,0,0">
-                        <ui:Button Content="Save Report" Icon="{ui:SymbolIcon Save24}" Height="38" IsEnabled="False" />
+
+                    <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.ColumnSpan="2" Margin="0,5,0,5">
+                        <ui:Button Content="Save Report" Icon="{ui:SymbolIcon Save24}" IsEnabled="False"/>
                     </StackPanel>
                     <Border Grid.Row="2" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,7,10,7">
                         <StackPanel>
@@ -276,13 +287,18 @@
                                          IsReadOnly="True"
                                          HeadersVisibility="Column"
                                          ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                         BorderThickness="0">
+                                         BorderThickness="0"
+                                         ItemsSource="{Binding ViewModel.PalletAnalyzer.Assignments}"
+                                         SelectedItem="{Binding ViewModel.PalletAnalyzer.SelectedAssignment, Mode=TwoWay}">
                                 <ui:DataGrid.Columns>
-                                    <DataGridTextColumn Header="Pallet"/>
-                                    <DataGridTextColumn Header="Times Used"/>
-                                    <DataGridTextColumn Header="# Boxes"/>
-                                    <DataGridTextColumn Header="# Layers"/>
-                                    <DataGridTextColumn Header="Eff"/>
+                                    <DataGridTextColumn Header="Pallet" Binding="{Binding Name}"/>
+                                    <DataGridTextColumn Header="Times Used" Binding="{Binding Count}"/>
+                                    <DataGridTextColumn Header="# Layers" Binding="{Binding Template.Layers.Count}"/>
+                                    <DataGridTextColumn Header="# Boxes" Binding="{Binding Template.TotalBoxCount}"/>
+                                    <DataGridTextColumn Header="Contents" Binding="{Binding Contents}"/>
+                                    <DataGridTextColumn Header="Load Dim." Binding="{Binding LoadDimensions}"/>
+                                    <DataGridTextColumn Header="Wght" Binding="{Binding Weight}"/>
+                                    <DataGridTextColumn Header="Util" Binding="{Binding Efficiency}"/>
                                 </ui:DataGrid.Columns>
                             </ui:DataGrid>
                         </Border>
@@ -293,12 +309,13 @@
                                          IsReadOnly="True"
                                          HeadersVisibility="Column"
                                          ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                         BorderThickness="0">
+                                         BorderThickness="0"
+                                         ItemsSource="{Binding ViewModel.PalletAnalyzer.SelectedLayerTypes}">
                                 <ui:DataGrid.Columns>
-                                    <DataGridTextColumn Header="Layer"/>
-                                    <DataGridTextColumn Header="Times Used"/>
-                                    <DataGridTextColumn Header="Contents"/>
-                                    <DataGridTextColumn Header="Eff"/>
+                                    <DataGridTextColumn Header="Layer" Binding="{Binding Name}"/>
+                                    <DataGridTextColumn Header="Times Used" Binding="{Binding Count}"/>
+                                    <DataGridTextColumn Header="Contents" Binding="{Binding Contents}"/>
+                                    <DataGridTextColumn Header="Util" Binding="{Binding Utilization}"/>
                                 </ui:DataGrid.Columns>
                             </ui:DataGrid>
                         </Border>
@@ -306,17 +323,41 @@
                     <GridSplitter Grid.Row="1" Grid.RowSpan="2" Grid.Column="0" Width="3" HorizontalAlignment="Right" Height="200"/>
                     <GridSplitter Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Height="3" VerticalAlignment="Top" HorizontalAlignment="Center" Width="200" ResizeDirection="Rows"/>
                     <StackPanel Orientation="Vertical" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,7,0,0">
-                        <ui:DataGrid AutoGenerateColumns="False" FontSize="14">
+                        <ui:DataGrid AutoGenerateColumns="False" FontSize="14"
+                                     CanUserAddRows="False"
+                                     CanUserDeleteRows="False"
+                                     IsReadOnly="True"
+                                     HeadersVisibility="Column"
+                                     ItemsSource="{Binding ViewModel.PalletAnalyzer.Solutions}">
                             <ui:DataGrid.Columns>
-                                <DataGridTextColumn Header="Sol. #" />
-                                <DataGridTextColumn Header="# Pallets" />
-                                <DataGridTextColumn Header="# Pallet Types" />
-                                <DataGridTextColumn Header="Total Items Packed" />
-                                <DataGridTextColumn Header="Eff" />
-                                <DataGridCheckBoxColumn/>
+                                <DataGridTextColumn Header="Sol. #" Binding="{Binding Number}"/>
+                                <DataGridTextColumn Header="Name" Binding="{Binding Name}"/>
+                                <DataGridTextColumn Header="# Pallets" Binding="{Binding TotalPallets}"/>
+                                <DataGridTextColumn Header="# Pallet Types" Binding="{Binding PalletTypes}"/>
+                                <DataGridTextColumn Header="Total Items Packed" Binding="{Binding TotalItemsPacked}"/>
+                                <DataGridTextColumn Header="Eff" Binding="{Binding Efficiency}"/>
+                                <DataGridCheckBoxColumn Binding="{Binding IsActive}"/>
                             </ui:DataGrid.Columns>
                         </ui:DataGrid>
                     </StackPanel>
+
+                    <Viewport3D x:Name="PalletViewPort" Grid.Row="0" Grid.RowSpan="3" Grid.Column="1"
+                                xmlns:rendering="clr-namespace:Stack_Solver.Helpers.Rendering"
+                                rendering:ViewportBehaviors.ZoomCommand="{Binding ViewModel.PalletAnalyzer.ZoomCommand}"
+                                rendering:ViewportBehaviors.BeginPanCommand="{Binding ViewModel.PalletAnalyzer.BeginPanCommand}"
+                                rendering:ViewportBehaviors.PanCommand="{Binding ViewModel.PalletAnalyzer.PanCommand}">
+                        <Viewport3D.Camera>
+                            <PerspectiveCamera x:Name="PalletPerspectiveCamera"
+                                               LookDirection="-1,-1,-1" UpDirection="0,1,0"
+                                               Position="150,150,150" FieldOfView="60"/>
+                        </Viewport3D.Camera>
+                        <ModelVisual3D>
+                            <ModelVisual3D.Content>
+                                <DirectionalLight Color="White" Direction="-2,-3,-1"/>
+                            </ModelVisual3D.Content>
+                        </ModelVisual3D>
+                        <ModelVisual3D Content="{Binding ViewModel.PalletAnalyzer.Scene}"/>
+                    </Viewport3D>
                 </Grid>
             </TabItem>
         </TabControl>
