@@ -6,10 +6,8 @@ namespace Stack_Solver.Services.Stacking
 {
     /// <summary>
     /// Generates a pool of pallet templates from a filtered layer set in three classes:
-    /// (1) pure homogeneous chains, (2) stacked-homogeneous pairs (no A-B-A-B alternation),
-    /// (3) mixed-layer combinations. Heaviest-on-bottom is enforced by ordering pairs by
-    /// total layer weight; inter-layer support is enforced via Pallet.MaxSkuOverhang.
-    /// Templates are deduplicated by their SKU-count signature.
+    /// (1) pure homogeneous chains, (2) stacked-homogeneous pairs,
+    /// (3) mixed-layer combinations
     /// </summary>
     public static class PalletTemplateEnumerator
     {
@@ -18,8 +16,7 @@ namespace Stack_Solver.Services.Stacking
 
         public static List<PalletTemplate> Enumerate(
             Pallet pallet,
-            IReadOnlyList<Layer> layers,
-            GenerationOptions options)
+            IReadOnlyList<Layer> layers)
         {
             if (layers.Count == 0)
                 return [];
@@ -31,11 +28,9 @@ namespace Stack_Solver.Services.Stacking
             var homogeneous = layers.Where(IsHomogeneous).ToList();
             var mixed = layers.Where(l => !IsHomogeneous(l)).ToList();
 
-            // Class 1: pure homogeneous chains (one SKU, one layer pattern repeated).
             foreach (var layer in homogeneous)
                 TryAddRepeated(pallet, layer, templates, seen);
 
-            // Class 2: stacked-homogeneous pairs. Heavier layer on bottom, no alternation.
             foreach (var bottom in homogeneous)
             {
                 foreach (var top in homogeneous)
@@ -49,7 +44,6 @@ namespace Stack_Solver.Services.Stacking
                 }
             }
 
-            // Class 3: mixed-layer chains and mixed-with-homogeneous combinations.
             foreach (var m in mixed)
             {
                 TryAddRepeated(pallet, m, templates, seen);

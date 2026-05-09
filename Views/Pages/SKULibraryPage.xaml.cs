@@ -23,7 +23,7 @@ namespace Stack_Solver.Views.Pages
         private void skuDataGrid_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
         {
             // Cancel generation of hidden columns
-            if (e.PropertyName == nameof(SKU.SkuId) || e.PropertyName == nameof(SKU.Quantity))
+            if (e.PropertyName == nameof(SKU.SkuId) || e.PropertyName == nameof(SKU.Quantity) || e.PropertyName == nameof(SKU.IsSelected))
             {
                 e.Cancel = true;
                 return;

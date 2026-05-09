@@ -35,8 +35,6 @@ namespace Stack_Solver.Services.Stacking
 
         private static bool PassesUtilizationFloor(PalletTemplate t, double palletVolume, double maxWeight)
         {
-            // A heavy, dense template can have low volume utilization while being at weight capacity.
-            // Pass if either volume or weight utilization clears the floor.
             double volumeUtil = palletVolume > 0 ? UsedVolume(t) / palletVolume : 0;
             double weightUtil = maxWeight > 0 ? t.TotalWeight / maxWeight : 0;
             return Math.Max(volumeUtil, weightUtil) >= MinUtilization;

@@ -170,7 +170,7 @@ namespace Stack_Solver.ViewModels.Pages
                     {
                         ct.ThrowIfCancellationRequested();
                         var filtered = LayerMetricsCalculator.FilterLayers(layersSnapshot, options);
-                        var pool = PalletTemplateEnumerator.Enumerate(pallet, filtered, options);
+                        var pool = PalletTemplateEnumerator.Enumerate(pallet, filtered);
                         var pruned = TemplateFilter.Filter(pool, pallet);
                         return CPSATAssignmentService.Assign(pruned, demand, pallet, options, greedyResult, ct);
                     }, ct);
