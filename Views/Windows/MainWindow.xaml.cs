@@ -14,7 +14,8 @@ namespace Stack_Solver.Views.Windows
         public MainWindow(
             MainWindowViewModel viewModel,
             INavigationViewPageProvider navigationViewPageProvider,
-            INavigationService navigationService
+            INavigationService navigationService,
+            ISnackbarService snackbarService
         )
         {
             ViewModel = viewModel;
@@ -26,6 +27,7 @@ namespace Stack_Solver.Views.Windows
             SetPageService(navigationViewPageProvider);
 
             navigationService.SetNavigationControl(RootNavigation);
+            snackbarService.SetSnackbarPresenter(SnackbarPresenter);
             RootNavigation.Navigated += OnRootNavigationNavigated;
         }
 

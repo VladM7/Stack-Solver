@@ -64,7 +64,7 @@
             </ui:Button>
         </StackPanel>
         <ProgressBar Grid.Row ="1" Height="5" Margin="0,4,0,0" IsIndeterminate="True" Visibility="{Binding ViewModel.LayerAnalyzer.IsGenerating, Converter={StaticResource BoolToVisibilityConverter}}"/>
-        <TabControl Grid.Row="2" Grid.Column="1" Margin="0,8,0,0">
+        <TabControl Grid.Row="2" Margin="0,8,0,0">
             <TabItem Header="Settings" HorizontalAlignment="Left" Width="150">
                 <ScrollViewer x:Name="SettingsScrollViewer" Margin="0,8,0,0" VerticalScrollBarVisibility="Auto">
                     <StackPanel x:Name="SettingsStackPanel" Orientation="Vertical" behaviors:ParentScrollBehavior.Enabled="True">

@@ -112,8 +112,7 @@ namespace Stack_Solver.ViewModels.Pages
             _maxSkuOverhang = msg.MaxSkuOverhang;
             _selectedSkus = [.. msg.Skus.Where(s => s.IsSelected && s.Quantity > 0)];
             _generationOptions = new GenerationOptions(msg.SolverTimeLimit, msg.MaxCpsatCandidates, msg.BlfAttempts);
-            if (_viewportController != null)
-                _viewportController.Target = CurrentPalletCenter;
+            _viewportController?.Target = CurrentPalletCenter;
         }
 
         private async Task BuildPalletsAsync(CancellationToken ct)

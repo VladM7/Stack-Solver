@@ -5,6 +5,7 @@ using Stack_Solver.Infrastructure;
 using Stack_Solver.Models;
 using Stack_Solver.Models.Inputs;
 using Stack_Solver.Services;
+using Wpf.Ui;
 
 namespace Stack_Solver.ViewModels.Pages
 {
@@ -16,10 +17,11 @@ namespace Stack_Solver.ViewModels.Pages
         IOptions<PalletDefaultsOptions> palletDefaults,
         IValidator<PalletSettingsDto> settingsValidator,
         IValidator<SkuQuantityDto> skuQuantityValidator,
-        IUserSettingsService userSettings) : ObservableObject
+        IUserSettingsService userSettings,
+        ISnackbarService snackbarService) : ObservableObject
     {
         public PalletBuilderSettingsViewModel Settings { get; } = new PalletBuilderSettingsViewModel(skuRepository, events, genOptions, palletDefaults, settingsValidator, skuQuantityValidator, userSettings);
-        public LayerAnalyzerViewModel LayerAnalyzer { get; } = new LayerAnalyzerViewModel(events, viz);
+        public LayerAnalyzerViewModel LayerAnalyzer { get; } = new LayerAnalyzerViewModel(events, viz, snackbarService);
         public PalletAnalyzerViewModel PalletAnalyzer { get; } = new PalletAnalyzerViewModel(events);
 
         public async Task OnNavigatedToAsync()
