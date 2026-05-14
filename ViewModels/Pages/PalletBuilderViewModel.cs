@@ -22,7 +22,7 @@ namespace Stack_Solver.ViewModels.Pages
     {
         public PalletBuilderSettingsViewModel Settings { get; } = new PalletBuilderSettingsViewModel(skuRepository, events, genOptions, palletDefaults, settingsValidator, skuQuantityValidator, userSettings);
         public LayerAnalyzerViewModel LayerAnalyzer { get; } = new LayerAnalyzerViewModel(events, viz, snackbarService);
-        public PalletAnalyzerViewModel PalletAnalyzer { get; } = new PalletAnalyzerViewModel(events);
+        public PalletAnalyzerViewModel PalletAnalyzer { get; } = new PalletAnalyzerViewModel(events, snackbarService);
 
         public async Task OnNavigatedToAsync()
         {

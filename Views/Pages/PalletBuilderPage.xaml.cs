@@ -20,7 +20,8 @@ namespace Stack_Solver.Views.Pages
             DataContext = this;
             InitializeComponent();
             Loaded += OnLoaded;
-            MainViewPort.MouseLeftButtonDown += MainViewPort_MouseLeftButtonDown;
+            MainViewPortHost.MouseLeftButtonDown += MainViewPort_MouseLeftButtonDown;
+            PalletViewPortHost.MouseLeftButtonDown += PalletViewPort_MouseLeftButtonDown;
         }
 
         private async void OnLoaded(object? sender, RoutedEventArgs e)
@@ -50,6 +51,28 @@ namespace Stack_Solver.Views.Pages
 
             VisualTreeHelper.HitTest(MainViewPort, null, resultCallback, hitParams);
             ViewModel.LayerAnalyzer.UpdateSelectedItem(selected);
+        }
+
+        private void PalletViewPort_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var pos = e.GetPosition(PalletViewPort);
+            var hitParams = new PointHitTestParameters(pos);
+            LayerTypeDisplay? found = null;
+
+            HitTestResultBehavior resultCallback(HitTestResult r)
+            {
+                if (r is RayHitTestResult rayResult
+                    && rayResult.ModelHit is GeometryModel3D geo
+                    && ViewModel.PalletAnalyzer.TryGetLayerTypeForGeometry(geo, out var layerType))
+                {
+                    found = layerType;
+                    return HitTestResultBehavior.Stop;
+                }
+                return HitTestResultBehavior.Continue;
+            }
+
+            VisualTreeHelper.HitTest(PalletViewPort, null, resultCallback, hitParams);
+            ViewModel.PalletAnalyzer.SelectedLayerType = found;
         }
 
         private async void SkuSelectionGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)

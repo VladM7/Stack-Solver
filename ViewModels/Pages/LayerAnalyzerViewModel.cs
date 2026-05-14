@@ -251,10 +251,9 @@ namespace Stack_Solver.ViewModels.Pages
                     OutputText = "No layers after filtering.";
                 }
 
-                LayerGenStats = $"Generated {_allLayers.Count} candidate layers using BLF, Homogeneous, StripFill, Radial{(_useCpsat ? ", CPSAT" : "")}.";
+                LayerGenStats = $"Generated {_allLayers.Count} candidate layers using BLF, Homogeneous, StripFill, Radial{(_useCpsat ? ", CPSAT" : "")}. Showing top 10 by utilization.";
 
                 _events.Publish(new LayersGeneratedMessage(_allLayers));
-                _snackbarService.Show("Generation complete", $"{_allLayers.Count} candidate layers generated.", ControlAppearance.Success, null, TimeSpan.FromSeconds(5));
             }
             catch (OperationCanceledException)
             {
