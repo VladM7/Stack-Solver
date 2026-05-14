@@ -60,6 +60,8 @@ namespace Stack_Solver
                 // Service containing navigation, same as INavigationWindow... but without window
                 services.AddSingleton<INavigationService, NavigationService>();
 
+                services.AddSingleton<ISnackbarService, SnackbarService>();
+
                 // Main window with navigation
                 services.AddSingleton<INavigationWindow, MainWindow>();
                 services.AddSingleton<MainWindowViewModel>();
@@ -81,7 +83,8 @@ namespace Stack_Solver
                     sp.GetRequiredService<IOptions<PalletDefaultsOptions>>(),
                     sp.GetRequiredService<IValidator<PalletSettingsDto>>(),
                     sp.GetRequiredService<IValidator<SkuQuantityDto>>(),
-                    sp.GetRequiredService<IUserSettingsService>()));
+                    sp.GetRequiredService<IUserSettingsService>(),
+                    sp.GetRequiredService<ISnackbarService>()));
                 services.AddSingleton<TruckLoadingPage>();
                 services.AddSingleton<TruckLoadingViewModel>();
                 services.AddSingleton<JobManagerPage>();

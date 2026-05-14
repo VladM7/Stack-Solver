@@ -8,6 +8,8 @@ using System.Collections.ObjectModel;
 using System.Text;
 using System.Windows.Input;
 using System.Windows.Media.Media3D;
+using Wpf.Ui;
+using Wpf.Ui.Controls;
 
 namespace Stack_Solver.ViewModels.Pages
 {
@@ -16,6 +18,7 @@ namespace Stack_Solver.ViewModels.Pages
         private readonly IEventAggregator _events;
         private readonly LayerSceneBuilder _sceneBuilder = new();
         private readonly ILayerVisualizationService _viz;
+        private readonly ISnackbarService _snackbarService;
         private CancellationTokenSource? _sceneBuildCts;
         private CancellationTokenSource? _generationCts;
 
@@ -63,10 +66,11 @@ namespace Stack_Solver.ViewModels.Pages
         private Layer? _optimizedViewLayer;
         private static List<Layer>? _allLayers = [];
 
-        public LayerAnalyzerViewModel(IEventAggregator events, ILayerVisualizationService viz)
+        public LayerAnalyzerViewModel(IEventAggregator events, ILayerVisualizationService viz, ISnackbarService snackbarService)
         {
             _events = events;
             _viz = viz;
+            _snackbarService = snackbarService;
             _events.Subscribe<SettingsChangedMessage>(OnSettingsChanged);
             ZoomCommand = new RelayCommand<double>(Zoom);
             BeginPanCommand = new RelayCommand<Point>(BeginPan);
@@ -204,6 +208,7 @@ namespace Stack_Solver.ViewModels.Pages
                 if (_selectedSkus.Count == 0)
                 {
                     OutputText = "No SKUs selected with quantity greater than 0.";
+                    _snackbarService.Show("Generation failed", "No SKUs selected with quantity > 0.", ControlAppearance.Danger, null, TimeSpan.FromSeconds(5));
                     return;
                 }
 
@@ -224,6 +229,7 @@ namespace Stack_Solver.ViewModels.Pages
                 if (_allLayers == null || _allLayers.Count == 0)
                 {
                     OutputText = "No layers generated.";
+                    _snackbarService.Show("Generation failed", "No layers were generated.", ControlAppearance.Danger, null, TimeSpan.FromSeconds(5));
                     return;
                 }
 
@@ -245,7 +251,7 @@ namespace Stack_Solver.ViewModels.Pages
                     OutputText = "No layers after filtering.";
                 }
 
-                LayerGenStats = $"Generated {_allLayers.Count} candidate layers using BLF, Homogeneous, StripFill, Radial{(_useCpsat ? ", CPSAT" : "")}.";
+                LayerGenStats = $"Generated {_allLayers.Count} candidate layers using BLF, Homogeneous, StripFill, Radial{(_useCpsat ? ", CPSAT" : "")}. Showing top 10 by utilization.";
 
                 _events.Publish(new LayersGeneratedMessage(_allLayers));
             }
@@ -256,6 +262,7 @@ namespace Stack_Solver.ViewModels.Pages
             catch (Exception ex)
             {
                 OutputText = $"Error: {ex.Message}";
+                _snackbarService.Show("Generation failed", ex.Message, ControlAppearance.Danger, null, TimeSpan.FromSeconds(5));
             }
             finally
             {

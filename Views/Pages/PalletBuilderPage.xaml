@@ -64,7 +64,7 @@
             </ui:Button>
         </StackPanel>
         <ProgressBar Grid.Row ="1" Height="5" Margin="0,4,0,0" IsIndeterminate="True" Visibility="{Binding ViewModel.LayerAnalyzer.IsGenerating, Converter={StaticResource BoolToVisibilityConverter}}"/>
-        <TabControl Grid.Row="2" Grid.Column="1" Margin="0,8,0,0">
+        <TabControl Grid.Row="2" Margin="0,8,0,0">
             <TabItem Header="Settings" HorizontalAlignment="Left" Width="150">
                 <ScrollViewer x:Name="SettingsScrollViewer" Margin="0,8,0,0" VerticalScrollBarVisibility="Auto">
                     <StackPanel x:Name="SettingsStackPanel" Orientation="Vertical" behaviors:ParentScrollBehavior.Enabled="True">
@@ -169,6 +169,15 @@
                                 </ui:DataGrid>
                             </StackPanel>
                         </ui:CardExpander>
+                        <ui:CardExpander Header="CP-SAT settings">
+                            <StackPanel Orientation="Vertical">
+                                <ui:CardControl Header="Solver time limit (seconds)">
+                                    <ui:NumberBox x:Name="solverTimeLimitNumberBox"
+                          Value="{Binding ViewModel.Settings.SolverTimeLimit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                          Minimum="1"/>
+                                </ui:CardControl>
+                            </StackPanel>
+                        </ui:CardExpander>
                         <ui:CardExpander Header="Layer generation options">
                             <StackPanel Orientation="Vertical">
                                 <ui:CardControl Header="Number of BLF attempts">
@@ -184,12 +193,6 @@
                                                   Value="{Binding ViewModel.Settings.MaxCpsatCandidates, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                   Minimum="1"
                                                   IsEnabled="{Binding ViewModel.Settings.UseCpsat}" SmallChange="100" LargeChange="1000"/>
-                                </ui:CardControl>
-                                <ui:CardControl Header="CP-SAT solver time limit (seconds)">
-                                    <ui:NumberBox x:Name="solverTimeLimitNumberBox"
-                                                  Value="{Binding ViewModel.Settings.SolverTimeLimit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                  Minimum="1"
-                                                  IsEnabled="{Binding ViewModel.Settings.UseCpsat}" />
                                 </ui:CardControl>
                             </StackPanel>
                         </ui:CardExpander>
@@ -233,21 +236,23 @@
                         <ComboBox x:Name="layersComboBox" Margin="10,0,0,0" VerticalAlignment="Bottom" ItemsSource="{Binding ViewModel.LayerAnalyzer.Layers}" SelectedItem="{Binding ViewModel.LayerAnalyzer.SelectedLayer, Mode=TwoWay}" DisplayMemberPath="Name" IsEnabled="{Binding ViewModel.LayerAnalyzer.HasLayers}"/>
                         <ui:TextBlock Margin="10,0,0,0" Text="{Binding ViewModel.LayerAnalyzer.SelectedItemInfo}" VerticalAlignment="Center" FontFamily="Cascadia Code"/>
                     </StackPanel>
-                    <Viewport3D x:Name="MainViewPort" Grid.Row="2" Grid.Column="1"
-                        xmlns:behaviors="clr-namespace:Stack_Solver.Helpers.Rendering"
-                        behaviors:ViewportBehaviors.ZoomCommand="{Binding ViewModel.LayerAnalyzer.ZoomCommand}"
-                        behaviors:ViewportBehaviors.BeginPanCommand="{Binding ViewModel.LayerAnalyzer.BeginPanCommand}"
-                        behaviors:ViewportBehaviors.PanCommand="{Binding ViewModel.LayerAnalyzer.PanCommand}">
-                        <Viewport3D.Camera>
-                            <PerspectiveCamera x:Name="MainPerspectiveCamera" LookDirection="-1,-1,-1" UpDirection="0,1,0" Position="150,150,150" FieldOfView="60"/>
-                        </Viewport3D.Camera>
-                        <ModelVisual3D x:Name="MainLight">
-                            <ModelVisual3D.Content>
-                                <DirectionalLight Color="White" Direction="-2,-3,-1"/>
-                            </ModelVisual3D.Content>
-                        </ModelVisual3D>
-                        <ModelVisual3D Content="{Binding ViewModel.LayerAnalyzer.Scene}" />
-                    </Viewport3D>
+                    <Grid x:Name="MainViewPortHost" Grid.Row="2" Grid.Column="1" Background="Transparent">
+                        <Viewport3D x:Name="MainViewPort"
+                            xmlns:behaviors="clr-namespace:Stack_Solver.Helpers.Rendering"
+                            behaviors:ViewportBehaviors.ZoomCommand="{Binding ViewModel.LayerAnalyzer.ZoomCommand}"
+                            behaviors:ViewportBehaviors.BeginPanCommand="{Binding ViewModel.LayerAnalyzer.BeginPanCommand}"
+                            behaviors:ViewportBehaviors.PanCommand="{Binding ViewModel.LayerAnalyzer.PanCommand}">
+                            <Viewport3D.Camera>
+                                <PerspectiveCamera x:Name="MainPerspectiveCamera" LookDirection="-1,-1,-1" UpDirection="0,1,0" Position="150,150,150" FieldOfView="60"/>
+                            </Viewport3D.Camera>
+                            <ModelVisual3D x:Name="MainLight">
+                                <ModelVisual3D.Content>
+                                    <DirectionalLight Color="White" Direction="-2,-3,-1"/>
+                                </ModelVisual3D.Content>
+                            </ModelVisual3D>
+                            <ModelVisual3D Content="{Binding ViewModel.LayerAnalyzer.Scene}" />
+                        </Viewport3D>
+                    </Grid>
                     <GridSplitter Grid.Row="2" Grid.Column="0" Width="3" HorizontalAlignment="Right" Height="200"/>
                     <Border Grid.Row="2" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,7,10,7">
                         <StackPanel>
@@ -262,24 +267,30 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
-                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="2*"/>
                     </Grid.ColumnDefinitions>
 
-                    <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.ColumnSpan="2" Margin="0,5,0,5">
+                    <StackPanel Orientation="Horizontal" Margin="0,5,0,5" Grid.ColumnSpan="2" Grid.Row="0">
+                        <ui:SymbolIcon Symbol="Info24" VerticalAlignment="Center"/>
+                        <ui:TextBlock Text="{Binding ViewModel.PalletAnalyzer.PalletGenStats}" Margin="5,0,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,5,0,5">
                         <ui:Button Content="Save Report" Icon="{ui:SymbolIcon Save24}" IsEnabled="False"/>
                     </StackPanel>
-                    <Border Grid.Row="2" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,7,10,7">
+                    <!--<Border Grid.Row="2" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,7,10,7">
                         <StackPanel>
                             <TextBlock Text="Pallet Details" FontWeight="SemiBold" Margin="0,0,0,6"/>
                             <ui:TextBlock Text="{Binding ViewModel.PalletAnalyzer.OutputText}" FontFamily="Cascadia Code" FontSize="14" TextWrapping="Wrap" Margin="0,10,0,10"/>
                         </StackPanel>
-                    </Border>
-                    <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Vertical" Margin="0,7,10,7">
+                    </Border> -->
+                    <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Vertical" Margin="0,7,10,7">
                         <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Margin="0,0,0,6">
                             <ui:DataGrid AutoGenerateColumns="False"
                                          CanUserAddRows="False"
@@ -295,8 +306,6 @@
                                     <DataGridTextColumn Header="Times Used" Binding="{Binding Count}"/>
                                     <DataGridTextColumn Header="# Layers" Binding="{Binding Template.Layers.Count}"/>
                                     <DataGridTextColumn Header="# Boxes" Binding="{Binding Template.TotalBoxCount}"/>
-                                    <DataGridTextColumn Header="Contents" Binding="{Binding Contents}"/>
-                                    <DataGridTextColumn Header="Load Dim." Binding="{Binding LoadDimensions}"/>
                                     <DataGridTextColumn Header="Wght" Binding="{Binding Weight}"/>
                                     <DataGridTextColumn Header="Util" Binding="{Binding Efficiency}"/>
                                 </ui:DataGrid.Columns>
@@ -310,7 +319,8 @@
                                          HeadersVisibility="Column"
                                          ScrollViewer.VerticalScrollBarVisibility="Auto"
                                          BorderThickness="0"
-                                         ItemsSource="{Binding ViewModel.PalletAnalyzer.SelectedLayerTypes}">
+                                         ItemsSource="{Binding ViewModel.PalletAnalyzer.SelectedLayerTypes}"
+                                         SelectedItem="{Binding ViewModel.PalletAnalyzer.SelectedLayerType, Mode=TwoWay}">
                                 <ui:DataGrid.Columns>
                                     <DataGridTextColumn Header="Layer" Binding="{Binding Name}"/>
                                     <DataGridTextColumn Header="Times Used" Binding="{Binding Count}"/>
@@ -320,15 +330,23 @@
                             </ui:DataGrid>
                         </Border>
                     </StackPanel>
-                    <GridSplitter Grid.Row="1" Grid.RowSpan="2" Grid.Column="0" Width="3" HorizontalAlignment="Right" Height="200"/>
-                    <GridSplitter Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Height="3" VerticalAlignment="Top" HorizontalAlignment="Center" Width="200" ResizeDirection="Rows"/>
-                    <StackPanel Orientation="Vertical" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,7,0,0">
+                    <GridSplitter Grid.Row="2" Grid.Column="0" Grid.RowSpan="2" Width="3" HorizontalAlignment="Right" Height="200"/>
+                    <Border Grid.Row="3" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,7,10,7">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Text="Pallet Details" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <ui:TextBlock Text="{Binding ViewModel.PalletAnalyzer.AssignmentDetailsText}" FontFamily="Cascadia Code" FontSize="14" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Border>
+                    <StackPanel Orientation="Vertical" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,7,0,0">
                         <ui:DataGrid AutoGenerateColumns="False" FontSize="14"
                                      CanUserAddRows="False"
                                      CanUserDeleteRows="False"
                                      IsReadOnly="True"
                                      HeadersVisibility="Column"
-                                     ItemsSource="{Binding ViewModel.PalletAnalyzer.Solutions}">
+                                     ItemsSource="{Binding ViewModel.PalletAnalyzer.Solutions}"
+                                     SelectedItem="{Binding ViewModel.PalletAnalyzer.SelectedSolution, Mode=TwoWay}">
                             <ui:DataGrid.Columns>
                                 <DataGridTextColumn Header="Sol. #" Binding="{Binding Number}"/>
                                 <DataGridTextColumn Header="Name" Binding="{Binding Name}"/>
@@ -336,28 +354,29 @@
                                 <DataGridTextColumn Header="# Pallet Types" Binding="{Binding PalletTypes}"/>
                                 <DataGridTextColumn Header="Total Items Packed" Binding="{Binding TotalItemsPacked}"/>
                                 <DataGridTextColumn Header="Eff" Binding="{Binding Efficiency}"/>
-                                <DataGridCheckBoxColumn Binding="{Binding IsActive}"/>
                             </ui:DataGrid.Columns>
                         </ui:DataGrid>
                     </StackPanel>
 
-                    <Viewport3D x:Name="PalletViewPort" Grid.Row="0" Grid.RowSpan="3" Grid.Column="1"
-                                xmlns:rendering="clr-namespace:Stack_Solver.Helpers.Rendering"
-                                rendering:ViewportBehaviors.ZoomCommand="{Binding ViewModel.PalletAnalyzer.ZoomCommand}"
-                                rendering:ViewportBehaviors.BeginPanCommand="{Binding ViewModel.PalletAnalyzer.BeginPanCommand}"
-                                rendering:ViewportBehaviors.PanCommand="{Binding ViewModel.PalletAnalyzer.PanCommand}">
-                        <Viewport3D.Camera>
-                            <PerspectiveCamera x:Name="PalletPerspectiveCamera"
-                                               LookDirection="-1,-1,-1" UpDirection="0,1,0"
-                                               Position="150,150,150" FieldOfView="60"/>
-                        </Viewport3D.Camera>
-                        <ModelVisual3D>
-                            <ModelVisual3D.Content>
-                                <DirectionalLight Color="White" Direction="-2,-3,-1"/>
-                            </ModelVisual3D.Content>
-                        </ModelVisual3D>
-                        <ModelVisual3D Content="{Binding ViewModel.PalletAnalyzer.Scene}"/>
-                    </Viewport3D>
+                    <Grid x:Name="PalletViewPortHost" Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" Background="Transparent">
+                        <Viewport3D x:Name="PalletViewPort"
+                                    xmlns:rendering="clr-namespace:Stack_Solver.Helpers.Rendering"
+                                    rendering:ViewportBehaviors.ZoomCommand="{Binding ViewModel.PalletAnalyzer.ZoomCommand}"
+                                    rendering:ViewportBehaviors.BeginPanCommand="{Binding ViewModel.PalletAnalyzer.BeginPanCommand}"
+                                    rendering:ViewportBehaviors.PanCommand="{Binding ViewModel.PalletAnalyzer.PanCommand}">
+                            <Viewport3D.Camera>
+                                <PerspectiveCamera x:Name="PalletPerspectiveCamera"
+                                                   LookDirection="-1,-1,-1" UpDirection="0,1,0"
+                                                   Position="150,150,150" FieldOfView="60"/>
+                            </Viewport3D.Camera>
+                            <ModelVisual3D>
+                                <ModelVisual3D.Content>
+                                    <DirectionalLight Color="White" Direction="-2,-3,-1"/>
+                                </ModelVisual3D.Content>
+                            </ModelVisual3D>
+                            <ModelVisual3D Content="{Binding ViewModel.PalletAnalyzer.Scene}"/>
+                        </Viewport3D>
+                    </Grid>
                 </Grid>
             </TabItem>
         </TabControl>

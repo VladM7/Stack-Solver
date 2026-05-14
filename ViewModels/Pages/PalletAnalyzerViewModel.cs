@@ -5,9 +5,13 @@ using Stack_Solver.Models.Assignment;
 using Stack_Solver.Models.Layering;
 using Stack_Solver.Models.Supports;
 using Stack_Solver.Services;
+using Stack_Solver.Services.Stacking;
+using Wpf.Ui;
+using Wpf.Ui.Controls;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Media3D;
 
 namespace Stack_Solver.ViewModels.Pages
@@ -31,7 +35,7 @@ namespace Stack_Solver.ViewModels.Pages
         private bool _isBuilding;
 
         [ObservableProperty]
-        private string _outputText = "Click 'Generate' to start.";
+        private string _palletGenStats = "Click on 'Generate' to start solution generation.";
 
         [ObservableProperty]
         private ObservableCollection<TemplateAssignmentDisplay> _assignments = [];
@@ -51,15 +55,29 @@ namespace Stack_Solver.ViewModels.Pages
         [ObservableProperty]
         private ObservableCollection<SolutionDisplay> _solutions = [];
 
+        [ObservableProperty]
+        private SolutionDisplay? _selectedSolution;
+
+        [ObservableProperty]
+        private string _assignmentDetailsText = string.Empty;
+
+        [ObservableProperty]
+        private LayerTypeDisplay? _selectedLayerType;
+
+        private readonly List<Model3DGroup> _layerHighlights = [];
+
         public Model3DGroup Scene { get; } = new();
         public ViewportController? ViewportController => _viewportController;
         public ICommand ZoomCommand { get; }
         public ICommand BeginPanCommand { get; }
         public ICommand PanCommand { get; }
 
-        public PalletAnalyzerViewModel(IEventAggregator events)
+        private readonly ISnackbarService _snackbarService;
+
+        public PalletAnalyzerViewModel(IEventAggregator events, ISnackbarService snackbarService)
         {
             _events = events;
+            _snackbarService = snackbarService;
             _events.Subscribe<LayersGeneratedMessage>(OnLayersGenerated);
             _events.Subscribe<SettingsChangedMessage>(OnSettingsChanged);
             ZoomCommand = new RelayCommand<double>(delta => _viewportController?.Zoom(delta));
@@ -90,7 +108,6 @@ namespace Stack_Solver.ViewModels.Pages
             HasResults = false;
             Assignments.Clear();
             Solutions.Clear();
-            OutputText = $"{_availableLayers.Count} candidate layers ready. Building pallets...";
 
             _buildCts?.Cancel();
             _buildCts?.Dispose();
@@ -108,15 +125,14 @@ namespace Stack_Solver.ViewModels.Pages
             _maxSkuOverhang = msg.MaxSkuOverhang;
             _selectedSkus = [.. msg.Skus.Where(s => s.IsSelected && s.Quantity > 0)];
             _generationOptions = new GenerationOptions(msg.SolverTimeLimit, msg.MaxCpsatCandidates, msg.BlfAttempts);
-            if (_viewportController != null)
-                _viewportController.Target = CurrentPalletCenter;
+            _viewportController?.Target = CurrentPalletCenter;
         }
 
         private async Task BuildPalletsAsync(CancellationToken ct)
         {
             if (_availableLayers.Count == 0 || _selectedSkus.Count == 0)
             {
-                OutputText = _availableLayers.Count == 0
+                PalletGenStats = _availableLayers.Count == 0
                     ? "No layers available."
                     : "No SKUs selected with quantity > 0.";
                 return;
@@ -136,51 +152,68 @@ namespace Stack_Solver.ViewModels.Pages
                 var skus = _selectedSkus.ToList();
                 var layersSnapshot = _availableLayers.ToList();
 
-                var result = await Task.Run(() =>
+                var greedyResult = await Task.Run(() =>
                 {
                     ct.ThrowIfCancellationRequested();
                     var filtered = LayerMetricsCalculator.FilterLayers(layersSnapshot, options);
-                    return GreedyAssignmentService.Assign(filtered, demand, pallet);
+                    var greedy = GreedyAssignmentService.Assign(filtered, demand, pallet);
+                    if (!greedy.HasLeftovers) return greedy;
+
+                    var leftoverSkus = BuildLeftoverSkus(skus, greedy.Leftovers);
+                    if (leftoverSkus.Count == 0) return greedy;
+                    var tailLayers = LayerGenerator.Generate(leftoverSkus, pallet, options, ct: ct);
+                    if (tailLayers.Count == 0) return greedy;
+                    var tailOptions = new GenerationOptions(options.MaxSolverTime, options.MaxCPSATCandidates, options.BLFAttempts)
+                    {
+                        MaxLayerStability = options.MaxLayerStability,
+                        PerSkuTopLayerFraction = 1.0
+                    };
+                    var tailFiltered = LayerMetricsCalculator.FilterLayers(tailLayers, tailOptions);
+                    if (tailFiltered.Count == 0) return greedy;
+                    return MergeResults(greedy, GreedyAssignmentService.Assign(tailFiltered, greedy.Leftovers, pallet));
                 }, ct);
 
                 ct.ThrowIfCancellationRequested();
 
-                if (result.HasLeftovers)
+                AssignmentResult? cpsatResult = null;
+                try
                 {
-                    var tailInput = result;
-                    result = await Task.Run(() =>
+                    cpsatResult = await Task.Run(() =>
                     {
-                        var leftoverSkus = BuildLeftoverSkus(skus, tailInput.Leftovers);
-                        if (leftoverSkus.Count == 0) return tailInput;
-                        var tailLayers = LayerGenerator.Generate(leftoverSkus, pallet, options, ct: ct);
-                        if (tailLayers.Count == 0) return tailInput;
-                        var tailOptions = new GenerationOptions(options.MaxSolverTime, options.MaxCPSATCandidates, options.BLFAttempts)
-                        {
-                            MaxLayerStability = options.MaxLayerStability,
-                            PerSkuTopLayerFraction = 1.0
-                        };
-                        var filtered = LayerMetricsCalculator.FilterLayers(tailLayers, tailOptions);
-                        if (filtered.Count == 0) return tailInput;
-                        return MergeResults(tailInput, GreedyAssignmentService.Assign(filtered, tailInput.Leftovers, pallet));
+                        ct.ThrowIfCancellationRequested();
+                        var filtered = LayerMetricsCalculator.FilterLayers(layersSnapshot, options);
+                        var pool = PalletTemplateEnumerator.Enumerate(pallet, filtered);
+                        var pruned = TemplateFilter.Filter(pool, pallet);
+                        return CPSATAssignmentService.Assign(pruned, demand, pallet, options, greedyResult, ct);
                     }, ct);
                 }
+                catch (OperationCanceledException) { throw; }
+                catch { /* CP-SAT is best-effort; greedy result still shown */ }
 
                 ct.ThrowIfCancellationRequested();
 
-                int index = 1;
-                foreach (var (template, count) in result.Assignments)
-                    Assignments.Add(new TemplateAssignmentDisplay(template, count, skus, index++, _palletLength, _palletWidth, _palletHeight));
+                Solutions.Clear();
+                if (cpsatResult != null && cpsatResult.Assignments.Count > 0)
+                    Solutions.Add(new SolutionDisplay(Solutions.Count + 1, "CP-SAT", cpsatResult, skus, _palletLength, _palletWidth, _palletHeight));
+                if (greedyResult.Assignments.Count > 0)
+                    Solutions.Add(new SolutionDisplay(Solutions.Count + 1, "Greedy", greedyResult, skus, _palletLength, _palletWidth, _palletHeight));
 
-                HasResults = Assignments.Count > 0;
-                SelectedAssignment = Assignments.FirstOrDefault();
+                HasResults = Solutions.Count > 0;
                 if (HasResults)
-                    Solutions.Add(new SolutionDisplay(1, result));
-                OutputText = BuildSummaryText(result, skus);
+                {
+                    SelectedSolution = Solutions[0];
+                    PalletGenStats = $"Generated {Solutions.Count} solutions.";
+                    _snackbarService.Show("Generation complete",
+                        $"{_availableLayers.Count} candidate layers and {Solutions.Count} final {(Solutions.Count == 1 ? "solution" : "solutions")} generated.",
+                        ControlAppearance.Success, null, TimeSpan.FromSeconds(5));
+                }
+                else
+                    PalletGenStats = "No assignments produced.";
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                OutputText = $"Error: {ex.Message}";
+                PalletGenStats = $"Error: {ex.Message}";
             }
             finally
             {
@@ -188,11 +221,68 @@ namespace Stack_Solver.ViewModels.Pages
             }
         }
 
+        partial void OnSelectedSolutionChanged(SolutionDisplay? value)
+        {
+            Assignments.Clear();
+
+            if (value == null)
+            {
+                SelectedAssignment = null;
+                return;
+            }
+
+            int idx = 1;
+            foreach (var (template, count) in value.Result.Assignments)
+                Assignments.Add(new TemplateAssignmentDisplay(template, count, value.Skus, idx++, value.PalletLength, value.PalletWidth, value.PalletHeight));
+
+            SelectedAssignment = Assignments.FirstOrDefault();
+        }
+
+        partial void OnSelectedLayerTypeChanged(LayerTypeDisplay? value)
+        {
+            foreach (var h in _layerHighlights)
+                Scene.Children.Remove(h);
+            _layerHighlights.Clear();
+
+            if (value == null) return;
+
+            double inflate = 0.1;
+            var fillBrush = new SolidColorBrush(Color.FromArgb(40, 255, 255, 0));
+
+            foreach (var (layerId, y, height) in _sceneBuilder.LayerPositions)
+            {
+                if (layerId != value.LayerId) continue;
+                var origin = new Point3D(-inflate / 2.0, y - inflate / 2.0, -inflate / 2.0);
+                var highlight = GeometryCreator.CreateBoxWithEdges(
+                    origin,
+                    _palletLength + inflate,
+                    height + inflate,
+                    _palletWidth + inflate,
+                    fillBrush,
+                    Colors.Yellow,
+                    0.6);
+                Scene.Children.Add(highlight);
+                _layerHighlights.Add(highlight);
+            }
+        }
+
+        public bool TryGetLayerTypeForGeometry(GeometryModel3D geo, out LayerTypeDisplay? layerType)
+        {
+            layerType = null;
+            if (!_sceneBuilder.TryGetLayerIdForGeometry(geo, out var layerId)) return false;
+            layerType = SelectedLayerTypes.FirstOrDefault(lt => lt.LayerId == layerId);
+            return layerType != null;
+        }
+
         partial void OnSelectedAssignmentChanged(TemplateAssignmentDisplay? value)
         {
+            SelectedLayerType = null;
+
             SelectedLayerTypes = value != null
                 ? new ObservableCollection<LayerTypeDisplay>(value.LayerTypes)
                 : [];
+
+            AssignmentDetailsText = value != null ? BuildAssignmentText(value) : string.Empty;
 
             if (value != null && _viewportController != null)
             {
@@ -255,23 +345,24 @@ namespace Stack_Solver.ViewModels.Pages
                 })];
         }
 
-        private static string BuildSummaryText(AssignmentResult result, List<SKU> skus)
+        private string BuildAssignmentText(TemplateAssignmentDisplay assignment)
         {
-            var skuMap = skus.ToDictionary(s => s.SkuId, s => s.Name, StringComparer.Ordinal);
+            var t = assignment.Template;
+            int cargoHeight = (int)Math.Round(t.TotalHeight);
+            int totalHeight = _palletHeight + cargoHeight;
+
             var sb = new StringBuilder();
-            sb.AppendLine($"Total pallets: {result.TotalPallets}");
-            sb.AppendLine($"Distinct templates: {result.Assignments.Count}");
-            //if (result.HasLeftovers)
-            //{
-            //    sb.AppendLine();
-            //    sb.AppendLine("Leftover boxes:");
-            //    foreach (var (skuId, count) in result.Leftovers)
-            //        sb.AppendLine($"  {skuMap.GetValueOrDefault(skuId, skuId)}: {count}");
-            //}
-            //else
-            //{
-            //    sb.AppendLine("All boxes packed.");
-            //}
+            sb.AppendLine($"{assignment.Name}  (x{assignment.Count} {(assignment.Count == 1 ? "pallet" : "pallets")})");
+            sb.AppendLine();
+            sb.AppendLine($"Load dimensions: {_palletLength}x{_palletWidth}x{totalHeight} cm");
+            sb.AppendLine($"Cargo height: {cargoHeight} cm");
+            sb.AppendLine($"Weight: {t.TotalWeight:N0} kg");
+            sb.AppendLine($"Boxes: {t.TotalBoxCount} per pallet");
+            sb.AppendLine($"Utilization: {t.AverageLayerUtilization:F3}");
+            sb.AppendLine($"Contents: {assignment.Contents}");
+            sb.AppendLine();
+            sb.AppendLine("==================");
+            sb.AppendLine("Full details are included in the PDF report.");
             return sb.ToString();
         }
     }
@@ -312,6 +403,7 @@ namespace Stack_Solver.ViewModels.Pages
 
     public class LayerTypeDisplay(Layer layer, int count, IReadOnlyDictionary<string, string> skuNames)
     {
+        public string LayerId { get; } = layer.Id;
         public string Name { get; } = layer.Name;
         public int Count { get; } = count;
         public string Contents { get; } = string.Join(", ", layer.Items
@@ -320,20 +412,36 @@ namespace Stack_Solver.ViewModels.Pages
         public string Utilization { get; } = layer.Metadata.Utilization.ToString("P0");
     }
 
-    public class SolutionDisplay
+    public partial class SolutionDisplay : ObservableObject
     {
         public int Number { get; }
         public string Name { get; }
+        public AssignmentResult Result { get; }
+        public IReadOnlyList<SKU> Skus { get; }
+        public int PalletLength { get; }
+        public int PalletWidth { get; }
+        public int PalletHeight { get; }
         public int TotalPallets { get; }
         public int PalletTypes { get; }
         public int TotalItemsPacked { get; }
         public string Efficiency { get; }
-        public bool IsActive { get; set; } = true;
 
-        public SolutionDisplay(int number, AssignmentResult result)
+        public SolutionDisplay(
+            int number,
+            string name,
+            AssignmentResult result,
+            IReadOnlyList<SKU> skus,
+            int palletLength,
+            int palletWidth,
+            int palletHeight)
         {
             Number = number;
-            Name = "Greedy";
+            Name = name;
+            Result = result;
+            Skus = skus;
+            PalletLength = palletLength;
+            PalletWidth = palletWidth;
+            PalletHeight = palletHeight;
             TotalPallets = result.TotalPallets;
             PalletTypes = result.Assignments.Count;
             TotalItemsPacked = result.Assignments.Sum(a => a.Template.TotalBoxCount * a.Count);

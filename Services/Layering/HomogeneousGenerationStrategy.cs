@@ -76,7 +76,7 @@ namespace Stack_Solver.Services.Layering
             string description = $"homogeneous {variant.Sku.Name} ({orientation}) {nx}x{ny}";
 
             var metadata = new LayerMetadata(utilization, variant.Sku.Height, description);
-            var layer = new Layer($"hom_grid_{variant.Sku.Name}", placements, metadata);
+            var layer = new Layer($"hom_grid_{variant.Sku.Name}_{orientation}", placements, metadata);
             layer.Geometry = LayerGeometryBuilder.Build(layer, supportSurface);
             layer.Metrics = LayerMetricsCalculator.Compute(layer, supportSurface);
             return layer;
