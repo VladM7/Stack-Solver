@@ -14,6 +14,10 @@ namespace Microsoft.Extensions.DependencyInjection
     {
         public static IServiceCollection AddInfrastructure(this IServiceCollection services)
         {
+            // No SQLitePCLRaw bundle is referenced, so the native provider must be
+            // registered explicitly before any SQLite-backed context is used.
+            SQLitePCL.raw.SetProvider(new SQLitePCL.SQLite3Provider_e_sqlite3());
+
             services.AddDbContextFactory<ApplicationDbContext>(options =>
             {
                 options.UseSqlite($"Data Source={AppPaths.DatabaseFile}");

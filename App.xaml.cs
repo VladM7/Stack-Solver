@@ -1,5 +1,4 @@
 ﻿using FluentValidation;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -11,7 +10,6 @@ using Stack_Solver.Infrastructure;
 using Stack_Solver.Models;
 using Stack_Solver.Models.Inputs;
 using Stack_Solver.Services;
-using Stack_Solver.Validation;
 using Stack_Solver.ViewModels.Pages;
 using Stack_Solver.ViewModels.Windows;
 using Stack_Solver.Views.Pages;
@@ -110,7 +108,6 @@ namespace Stack_Solver
         private async void OnStartup(object sender, StartupEventArgs e)
         {
             Log.Information("Application starting");
-            SQLitePCL.raw.SetProvider(new SQLitePCL.SQLite3Provider_e_sqlite3());
 
             await _host.StartAsync();
             Log.Information("Host started");
