@@ -34,8 +34,8 @@ namespace Stack_Solver.Views.Pages
 
             ViewModel.Results.PropertyChanged += Results_PropertyChanged;
             if (MainPerspectiveCamera is PerspectiveCamera pc)
-                pc.Changed += (_, _) => UpdatePalletDimLabels();
-            MainViewPort.SizeChanged += (_, _) => UpdatePalletDimLabels();
+                pc.Changed += (_, _) => UpdateSceneLabels();
+            MainViewPort.SizeChanged += (_, _) => UpdateSceneLabels();
 
             ConstrainToHostHeight();
         }
@@ -100,19 +100,16 @@ namespace Stack_Solver.Views.Pages
 
         private void Results_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(ResultsViewModel.PalletDimLabels))
-                UpdatePalletDimLabels();
+            if (e.PropertyName == nameof(ResultsViewModel.SceneLabels))
+                UpdateSceneLabels();
         }
 
-        private void UpdatePalletDimLabels()
+        private void UpdateSceneLabels()
         {
             PalletLabelCanvas.Children.Clear();
             if (MainPerspectiveCamera is not PerspectiveCamera cam) return;
 
-            // Dimension labels only make sense for the full pallet stack, not a single layer.
-            if (ViewModel.Results.IsLayerLevel) return;
-
-            var labels = ViewModel.Results.PalletDimLabels;
+            var labels = ViewModel.Results.SceneLabels;
             if (labels.Count == 0) return;
 
             double vpW = MainViewPort.ActualWidth;
@@ -150,39 +147,50 @@ namespace Stack_Solver.Views.Pages
             var pos = e.GetPosition(MainViewPort);
             var hitParams = new PointHitTestParameters(pos);
             var results = ViewModel.Results;
+            bool drill = e.ClickCount == 2;
 
-            if (results.IsLayerLevel)
+            // Find the first hit geometry that maps to something selectable at this level.
+            GeometryModel3D? Hit(Func<GeometryModel3D, bool> maps)
             {
-                PositionedItem? selected = null;
+                GeometryModel3D? hit = null;
                 HitTestResultBehavior callback(HitTestResult r)
                 {
-                    if (r is RayHitTestResult ray && ray.ModelHit is GeometryModel3D geo
-                        && results.TryGetItemFromGeometry(geo, out var item))
+                    if (r is RayHitTestResult ray && ray.ModelHit is GeometryModel3D geo && maps(geo))
                     {
-                        selected = item;
+                        hit = geo;
                         return HitTestResultBehavior.Stop;
                     }
                     return HitTestResultBehavior.Continue;
                 }
                 VisualTreeHelper.HitTest(MainViewPort, null, callback, hitParams);
-                results.SelectBox(selected);
+                return hit;
             }
-            else
+
+            switch (results.Level)
             {
-                LayerTypeDisplay? found = null;
-                HitTestResultBehavior callback(HitTestResult r)
+                case DrillLevel.Layer:
                 {
-                    if (r is RayHitTestResult ray && ray.ModelHit is GeometryModel3D geo
-                        && results.TryGetLayerTypeForGeometry(geo, out var layerType))
-                    {
-                        found = layerType;
-                        return HitTestResultBehavior.Stop;
-                    }
-                    return HitTestResultBehavior.Continue;
+                    PositionedItem? item = null;
+                    Hit(g => results.TryGetItemFromGeometry(g, out item));
+                    results.SelectBox(item); // null => deselect
+                    break;
                 }
-                VisualTreeHelper.HitTest(MainViewPort, null, callback, hitParams);
-                if (found != null)
-                    results.SelectedLayerType = found;
+                case DrillLevel.Pallet:
+                {
+                    LayerTypeDisplay? layer = null;
+                    Hit(g => results.TryGetLayerTypeForGeometry(g, out layer));
+                    results.SelectedLayerType = layer; // null => deselect
+                    if (drill && layer != null) results.ViewLayerCommand.Execute(layer);
+                    break;
+                }
+                default: // Solution
+                {
+                    TemplateAssignmentDisplay? assignment = null;
+                    Hit(g => results.TryGetAssignmentForGeometry(g, out assignment));
+                    results.SelectedAssignment = assignment; // null => deselect
+                    if (drill && assignment != null) results.ViewPalletCommand.Execute(assignment);
+                    break;
+                }
             }
         }
 
@@ -213,6 +221,15 @@ namespace Stack_Solver.Views.Pages
         private void SkuCheckBox_Click(object sender, RoutedEventArgs e)
         {
             ViewModel.Settings.NotifySelectionChanged();
+        }
+
+        private void PalletTypesGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is DataGrid { SelectedItem: TemplateAssignmentDisplay assignment }
+                && ViewModel.Results.ViewPalletCommand.CanExecute(assignment))
+            {
+                ViewModel.Results.ViewPalletCommand.Execute(assignment);
+            }
         }
 
         private void LayersGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)

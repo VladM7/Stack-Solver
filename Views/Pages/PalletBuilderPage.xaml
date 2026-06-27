@@ -283,8 +283,8 @@
                 <StackPanel Orientation="Horizontal">
                     <ui:Button Icon="{ui:SymbolIcon ArrowLeft24}" Appearance="Transparent" Padding="6" Margin="0,0,8,0"
                                Command="{Binding ViewModel.Results.BackCommand}"
-                               Visibility="{Binding ViewModel.Results.IsLayerLevel, Converter={StaticResource BoolToVisibilityConverter}}"
-                               ToolTip="Back to pallet" />
+                               Visibility="{Binding ViewModel.Results.CanGoBack, Converter={StaticResource BoolToVisibilityConverter}}"
+                               ToolTip="Back" />
                     <ItemsControl ItemsSource="{Binding ViewModel.Results.Breadcrumbs}" VerticalAlignment="Center">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -332,12 +332,21 @@
 
                     <Border Grid.Row="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Margin="0,0,0,8">
                         <DockPanel>
-                            <TextBlock DockPanel.Dock="Top" Text="Pallet types" FontWeight="SemiBold" Margin="8,6,8,4" />
+                            <Grid DockPanel.Dock="Top" Margin="8,6,8,4">
+                                <TextBlock Text="Pallet types" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <ui:Button HorizontalAlignment="Right" Content="Open" Icon="{ui:SymbolIcon Open24}" Padding="8,2"
+                                           Command="{Binding ViewModel.Results.ViewPalletCommand}"
+                                           CommandParameter="{Binding ViewModel.Results.SelectedAssignment}"
+                                           IsEnabled="{Binding ViewModel.Results.HasSelectedAssignment}"
+                                           ToolTip="Open the selected pallet type" />
+                            </Grid>
                             <ui:DataGrid AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                                          IsReadOnly="True" HeadersVisibility="Column" BorderThickness="0"
                                          ScrollViewer.VerticalScrollBarVisibility="Auto"
                                          ItemsSource="{Binding ViewModel.Results.Assignments}"
-                                         SelectedItem="{Binding ViewModel.Results.SelectedAssignment, Mode=TwoWay}">
+                                         SelectedItem="{Binding ViewModel.Results.SelectedAssignment, Mode=TwoWay}"
+                                         MouseDoubleClick="PalletTypesGrid_MouseDoubleClick"
+                                         ToolTip="Double-click a pallet type to open it">
                                 <ui:DataGrid.Columns>
                                     <DataGridTextColumn Header="Pallet" Binding="{Binding Name}" Width="*" />
                                     <DataGridTextColumn Header="×" Binding="{Binding Count}" Width="Auto" />
@@ -352,7 +361,7 @@
                         <DockPanel>
                             <Grid DockPanel.Dock="Top" Margin="8,6,8,4">
                                 <TextBlock Text="Layers" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                <ui:Button HorizontalAlignment="Right" Content="Inspect" Icon="{ui:SymbolIcon Eye24}" Padding="8,2"
+                                <ui:Button HorizontalAlignment="Right" Content="Open" Icon="{ui:SymbolIcon Open24}" Padding="8,2"
                                            Command="{Binding ViewModel.Results.ViewLayerCommand}"
                                            CommandParameter="{Binding ViewModel.Results.SelectedLayerType}"
                                            IsEnabled="{Binding ViewModel.Results.HasSelectedLayer}"
@@ -413,8 +422,7 @@
                             </Viewport3D>
                             <Canvas x:Name="PalletLabelCanvas" IsHitTestVisible="False" ClipToBounds="True" />
                         </Grid>
-                        <Border Grid.Row="1" Background="{DynamicResource ControlFillColorDefaultBrush}" Padding="8,4"
-                                Visibility="{Binding ViewModel.Results.IsLayerLevel, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Border Grid.Row="1" Background="{DynamicResource ControlFillColorDefaultBrush}" Padding="8,4">
                             <StackPanel Orientation="Horizontal">
                                 <ui:SymbolIcon Symbol="Cursor24" VerticalAlignment="Center" Width="16" Height="16" />
                                 <ui:TextBlock Margin="6,0,0,0" VerticalAlignment="Center" FontFamily="Cascadia Code" FontSize="13"

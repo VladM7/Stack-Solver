@@ -18,6 +18,7 @@ namespace Stack_Solver.ViewModels.Pages
 {
     public enum DrillLevel
     {
+        Solution,
         Pallet,
         Layer
     }
@@ -35,11 +36,18 @@ namespace Stack_Solver.ViewModels.Pages
 
         private readonly PalletSceneBuilder _palletSceneBuilder = new();
         private readonly LayerSceneBuilder _layerSceneBuilder = new();
-        private readonly List<Model3DGroup> _layerHighlights = [];
+        private readonly WarehouseSceneBuilder _warehouseSceneBuilder = new();
+        private readonly List<Model3DGroup> _sceneHighlights = [];
+
+        private const int WarehouseDetailThreshold = 60;
 
         private CancellationTokenSource? _generationCts;
         private CancellationTokenSource? _sceneCts;
         private ViewportController? _viewportController;
+
+        // Set while a level transition is mutating selection state, so the selection change
+        // handlers don't re-interpret programmatic changes as user-driven navigation.
+        private bool _isNavigating;
 
         // ── Settings snapshot (kept in sync via SettingsChangedMessage) ──────────────
         private int _palletLength, _palletWidth, _palletHeight;
@@ -60,7 +68,7 @@ namespace Stack_Solver.ViewModels.Pages
         private string _genStats = "Click Generate to build a solution.";
 
         [ObservableProperty]
-        private DrillLevel _level = DrillLevel.Pallet;
+        private DrillLevel _level = DrillLevel.Solution;
 
         [ObservableProperty]
         private ObservableCollection<SolutionDisplay> _solutions = [];
@@ -93,10 +101,20 @@ namespace Stack_Solver.ViewModels.Pages
         private ObservableCollection<BreadcrumbItem> _breadcrumbs = [];
 
         public Model3DGroup Scene { get; } = new();
-        public IReadOnlyList<LabelInfo> PalletDimLabels => _palletSceneBuilder.DimLabels;
         public ViewportController? ViewportController => _viewportController;
 
+        /// <summary>Floating labels for the current scene: type labels (Solution), dimensions (Pallet), none (Layer).</summary>
+        public IReadOnlyList<LabelInfo> SceneLabels => Level switch
+        {
+            DrillLevel.Solution => _warehouseSceneBuilder.TypeLabels,
+            DrillLevel.Pallet => _palletSceneBuilder.DimLabels,
+            _ => []
+        };
+
         public bool IsLayerLevel => Level == DrillLevel.Layer;
+        public bool CanGoBack => Level != DrillLevel.Solution;
+        public bool HasSelectedAssignment => SelectedAssignment != null;
+        public bool HasSelectedLayer => SelectedLayerType != null;
 
         public ICommand ZoomCommand { get; }
         public ICommand BeginPanCommand { get; }
@@ -158,6 +176,7 @@ namespace Stack_Solver.ViewModels.Pages
             IsGenerating = true;
             HasResults = false;
             Solutions.Clear();
+            SelectedSolution = null;
             Assignments.Clear();
             SelectedLayerTypes = [];
             SelectedAssignment = null;
@@ -300,117 +319,201 @@ namespace Stack_Solver.ViewModels.Pages
             return result;
         }
 
-        // ── Drill-down: solution -> pallet type ──────────────────────────────────────
+        // ── Drill-down: solution → pallet type → layer ───────────────────────────────
         partial void OnSelectedSolutionChanged(SolutionDisplay? value)
         {
             Assignments.Clear();
-            if (value == null)
-            {
-                SelectedAssignment = null;
-                return;
-            }
-
-            int idx = 1;
-            foreach (var (template, count) in value.Result.Assignments)
-                Assignments.Add(new TemplateAssignmentDisplay(template, count, value.Skus, idx++, value.PalletLength, value.PalletWidth, value.PalletHeight));
-
-            SelectedAssignment = Assignments.FirstOrDefault();
-        }
-
-        partial void OnSelectedAssignmentChanged(TemplateAssignmentDisplay? value)
-        {
-            SelectedLayerType = null;
-            Level = DrillLevel.Pallet;
-
-            SelectedLayerTypes = value != null
-                ? new ObservableCollection<LayerTypeDisplay>(value.LayerTypes)
-                : [];
-
-            DetailTitle = value != null ? $"Pallet {value.Name}" : string.Empty;
-            DetailText = value != null ? BuildAssignmentText(value) : string.Empty;
-            SelectedItemInfo = string.Empty;
-
-            RebuildBreadcrumbs();
-
             if (value != null)
             {
-                FramePallet(value.Template);
-                RenderPalletSceneAsync(value.Template);
+                int idx = 1;
+                foreach (var (template, count) in value.Result.Assignments)
+                    Assignments.Add(new TemplateAssignmentDisplay(template, count, value.Skus, idx++, value.PalletLength, value.PalletWidth, value.PalletHeight));
             }
-            else
-            {
-                Scene.Children.Clear();
-            }
+            EnterSolutionLevel();
         }
 
-        public bool HasSelectedLayer => SelectedLayerType != null;
+        // Selection handlers: at the current level a selection is a *preview*; a level
+        // below it is *navigation*. Programmatic changes during a transition are ignored
+        // via _isNavigating so they don't recurse.
+        partial void OnSelectedAssignmentChanged(TemplateAssignmentDisplay? value)
+        {
+            OnPropertyChanged(nameof(HasSelectedAssignment));
+            if (_isNavigating) return;
 
-        // ── Pallet level: highlight a layer band when its row/box is selected ────────
+            if (Level == DrillLevel.Solution)
+                PreviewAssignment(value);
+            else if (value != null)
+                EnterPalletLevel(value);
+            else
+                EnterSolutionLevel();
+        }
+
         partial void OnSelectedLayerTypeChanged(LayerTypeDisplay? value)
         {
             OnPropertyChanged(nameof(HasSelectedLayer));
+            if (_isNavigating) return;
 
             if (Level == DrillLevel.Layer)
             {
-                // Already inspecting a layer: selecting another swaps the inspected layer.
-                if (value != null) EnterLayerLevel(value);
-                return;
+                if (value != null) EnterLayerLevel(value); // swap inspected layer
             }
-
-            ClearLayerHighlights();
-            if (value == null) return;
-
-            const double inflate = 0.1;
-            var fillBrush = new SolidColorBrush(Color.FromArgb(40, 255, 255, 0));
-            foreach (var (layerId, y, height) in _palletSceneBuilder.LayerPositions)
+            else if (Level == DrillLevel.Pallet)
             {
-                if (layerId != value.LayerId) continue;
-                var origin = new Point3D(-inflate / 2.0, y - inflate / 2.0, -inflate / 2.0);
-                var highlight = GeometryCreator.CreateBoxWithEdges(
-                    origin, _palletLength + inflate, height + inflate, _palletWidth + inflate,
-                    fillBrush, Colors.Yellow, 0.6);
-                Scene.Children.Add(highlight);
-                _layerHighlights.Add(highlight);
+                PreviewLayer(value);
             }
         }
 
-        // ── Drill into a single layer ────────────────────────────────────────────────
-        [RelayCommand]
-        private void ViewLayer(LayerTypeDisplay? layerType)
+        // ── Level transitions ────────────────────────────────────────────────────────
+        private void EnterSolutionLevel()
         {
-            if (layerType?.Layer == null) return;
-            SelectedLayerType = layerType;
-            EnterLayerLevel(layerType);
+            _isNavigating = true;
+            try
+            {
+                Level = DrillLevel.Solution;
+                SelectedLayerType = null;
+                SelectedAssignment = null;
+                SelectedLayerTypes = [];
+                ClearHighlights();
+                DetailTitle = SelectedSolution != null ? $"Solution ({SelectedSolution.Name})" : "Solution";
+                DetailText = SelectedSolution != null ? BuildSolutionText(SelectedSolution) : string.Empty;
+                SelectedItemInfo = PlaceholderForLevel();
+                RebuildBreadcrumbs();
+            }
+            finally { _isNavigating = false; }
+
+            RenderWarehouseSceneAsync();
+        }
+
+        private void EnterPalletLevel(TemplateAssignmentDisplay assignment)
+        {
+            _isNavigating = true;
+            try
+            {
+                Level = DrillLevel.Pallet;
+                SelectedAssignment = assignment;
+                SelectedLayerType = null;
+                SelectedLayerTypes = new ObservableCollection<LayerTypeDisplay>(assignment.LayerTypes);
+                ClearHighlights();
+                DetailTitle = $"Pallet ({assignment.Name})";
+                DetailText = BuildAssignmentText(assignment);
+                SelectedItemInfo = PlaceholderForLevel();
+                RebuildBreadcrumbs();
+                FramePallet(assignment.Template);
+            }
+            finally { _isNavigating = false; }
+
+            RenderPalletSceneAsync(assignment.Template);
         }
 
         private void EnterLayerLevel(LayerTypeDisplay layerType)
         {
-            ClearLayerHighlights();
-            Level = DrillLevel.Layer;
-            SelectedItemInfo = string.Empty;
-            DetailTitle = $"Layer {layerType.Name}";
-            DetailText = BuildLayerText(layerType.Layer);
-            RebuildBreadcrumbs();
-            FrameLayer();
+            _isNavigating = true;
+            try
+            {
+                Level = DrillLevel.Layer;
+                SelectedLayerType = layerType;
+                ClearHighlights();
+                DetailTitle = $"Layer ({layerType.Name})";
+                DetailText = BuildLayerText(layerType.Layer);
+                SelectedItemInfo = PlaceholderForLevel();
+                RebuildBreadcrumbs();
+                FrameLayer();
+            }
+            finally { _isNavigating = false; }
+
             RenderLayerSceneAsync(layerType.Layer);
         }
 
         [RelayCommand]
-        private void Back() => BackToPalletLevel();
-
-        private void BackToPalletLevel()
+        private void ViewPallet(TemplateAssignmentDisplay? assignment)
         {
-            if (SelectedAssignment == null) return;
-            Level = DrillLevel.Pallet;
-            SelectedItemInfo = string.Empty;
-            DetailTitle = $"Pallet {SelectedAssignment.Name}";
-            DetailText = BuildAssignmentText(SelectedAssignment);
-            RebuildBreadcrumbs();
-            FramePallet(SelectedAssignment.Template);
-            RenderPalletSceneAsync(SelectedAssignment.Template);
+            if (assignment != null) EnterPalletLevel(assignment);
         }
 
+        [RelayCommand]
+        private void ViewLayer(LayerTypeDisplay? layerType)
+        {
+            if (layerType?.Layer != null) EnterLayerLevel(layerType);
+        }
+
+        [RelayCommand]
+        private void Back()
+        {
+            if (Level == DrillLevel.Layer && SelectedAssignment != null)
+                EnterPalletLevel(SelectedAssignment);
+            else if (Level == DrillLevel.Pallet)
+                EnterSolutionLevel();
+        }
+
+        // ── Preview highlights (selection at the current level) ──────────────────────
+        private void PreviewAssignment(TemplateAssignmentDisplay? value)
+        {
+            ClearHighlights();
+            if (value == null) { SelectedItemInfo = PlaceholderForLevel(); return; }
+
+            const double inflate = 3.0;
+            var fill = new SolidColorBrush(Color.FromArgb(36, 255, 255, 0));
+            foreach (var block in _warehouseSceneBuilder.Blocks)
+            {
+                if (block.TemplateId != value.Template.Id) continue;
+                var origin = new Point3D(block.Origin.X - inflate / 2.0, block.Origin.Y - inflate / 2.0, block.Origin.Z - inflate / 2.0);
+                var hi = GeometryCreator.CreateBoxWithEdges(origin, block.SizeX + inflate, block.SizeY + inflate, block.SizeZ + inflate, fill, Colors.Yellow, 0.8);
+                Scene.Children.Add(hi);
+                _sceneHighlights.Add(hi);
+            }
+            SelectedItemInfo = AssignmentInfoLine(value);
+        }
+
+        private void PreviewLayer(LayerTypeDisplay? value)
+        {
+            ClearHighlights();
+            if (value == null) { SelectedItemInfo = PlaceholderForLevel(); return; }
+
+            const double inflate = 0.1;
+            var fill = new SolidColorBrush(Color.FromArgb(40, 255, 255, 0));
+            foreach (var (layerId, y, height) in _palletSceneBuilder.LayerPositions)
+            {
+                if (layerId != value.LayerId) continue;
+                var origin = new Point3D(-inflate / 2.0, y - inflate / 2.0, -inflate / 2.0);
+                var hi = GeometryCreator.CreateBoxWithEdges(origin, _palletLength + inflate, height + inflate, _palletWidth + inflate, fill, Colors.Yellow, 0.6);
+                Scene.Children.Add(hi);
+                _sceneHighlights.Add(hi);
+            }
+            SelectedItemInfo = LayerInfoLine(value);
+        }
+
+        private string PlaceholderForLevel() => Level switch
+        {
+            DrillLevel.Solution => "No pallet selected",
+            DrillLevel.Pallet => "No layer selected",
+            _ => "No box selected"
+        };
+
+        private static string AssignmentInfoLine(TemplateAssignmentDisplay a)
+            => $"{a.Name}  ×{a.Count}  ·  {a.Template.TotalBoxCount} boxes  ·  {a.Contents}";
+
+        private static string LayerInfoLine(LayerTypeDisplay l)
+            => $"{l.Name}  ×{l.Count}  ·  {l.Contents}";
+
         // ── Scene rendering ──────────────────────────────────────────────────────────
+        private async void RenderWarehouseSceneAsync()
+        {
+            _sceneCts?.Cancel();
+            _sceneCts?.Dispose();
+            _sceneCts = new CancellationTokenSource();
+            var ct = _sceneCts.Token;
+
+            var types = Assignments.Select(a => (a.Template, a.Count, a.Name)).ToList();
+            try
+            {
+                await _warehouseSceneBuilder.BuildAsync(Scene, types, _palletLength, _palletWidth, _palletHeight, WarehouseDetailThreshold, ct);
+                _viewportController?.ResetView(_warehouseSceneBuilder.ContentCenter, _warehouseSceneBuilder.FrameDistance);
+                OnPropertyChanged(nameof(SceneLabels));
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { DetailText = $"Scene build error: {ex.Message}"; }
+        }
+
         private async void RenderPalletSceneAsync(PalletTemplate template)
         {
             _sceneCts?.Cancel();
@@ -420,7 +523,7 @@ namespace Stack_Solver.ViewModels.Pages
             try
             {
                 await _palletSceneBuilder.BuildAsync(Scene, template, _palletLength, _palletWidth, _palletHeight, ct);
-                OnPropertyChanged(nameof(PalletDimLabels));
+                OnPropertyChanged(nameof(SceneLabels));
             }
             catch (OperationCanceledException) { }
             catch (Exception ex) { DetailText = $"Scene build error: {ex.Message}"; }
@@ -435,7 +538,7 @@ namespace Stack_Solver.ViewModels.Pages
             try
             {
                 await _layerSceneBuilder.BuildAsync(Scene, layer, _palletLength, _palletWidth, _palletHeight, ct);
-                OnPropertyChanged(nameof(PalletDimLabels));
+                OnPropertyChanged(nameof(SceneLabels));
             }
             catch (OperationCanceledException) { }
             catch (Exception ex) { DetailText = $"Scene build error: {ex.Message}"; }
@@ -470,6 +573,14 @@ namespace Stack_Solver.ViewModels.Pages
             return layerType != null;
         }
 
+        public bool TryGetAssignmentForGeometry(GeometryModel3D geo, out TemplateAssignmentDisplay? assignment)
+        {
+            assignment = null;
+            if (!_warehouseSceneBuilder.TryGetTemplateIdForGeometry(geo, out var id)) return false;
+            assignment = Assignments.FirstOrDefault(a => a.Template.Id == id);
+            return assignment != null;
+        }
+
         /// <summary>Apply a box selection from a viewport hit-test (Layer level).</summary>
         public void SelectBox(PositionedItem? item) => UpdateSelectedItem(item);
 
@@ -483,7 +594,7 @@ namespace Stack_Solver.ViewModels.Pages
             }
             else
             {
-                SelectedItemInfo = string.Empty;
+                SelectedItemInfo = PlaceholderForLevel();
                 _viz.HighlightItem(Scene, null, _palletHeight);
             }
         }
@@ -494,21 +605,22 @@ namespace Stack_Solver.ViewModels.Pages
             Breadcrumbs.Clear();
             if (SelectedSolution == null) return;
 
+            bool atSolution = Level == DrillLevel.Solution;
             bool atLayer = Level == DrillLevel.Layer;
 
             Breadcrumbs.Add(new BreadcrumbItem(
                 SelectedSolution.Name,
-                isCurrent: SelectedAssignment == null,
+                isCurrent: atSolution,
                 showSeparator: false,
-                new RelayCommand(BackToPalletLevel)));
+                new RelayCommand(EnterSolutionLevel)));
 
-            if (SelectedAssignment != null)
+            if (!atSolution && SelectedAssignment != null)
             {
                 Breadcrumbs.Add(new BreadcrumbItem(
                     SelectedAssignment.Name,
                     isCurrent: !atLayer,
                     showSeparator: true,
-                    new RelayCommand(BackToPalletLevel)));
+                    new RelayCommand(() => { if (SelectedAssignment != null) EnterPalletLevel(SelectedAssignment); })));
             }
 
             if (atLayer && SelectedLayerType != null)
@@ -519,20 +631,36 @@ namespace Stack_Solver.ViewModels.Pages
                     showSeparator: true,
                     null));
             }
-
-            OnPropertyChanged(nameof(IsLayerLevel));
         }
 
-        partial void OnLevelChanged(DrillLevel value) => OnPropertyChanged(nameof(IsLayerLevel));
-
-        private void ClearLayerHighlights()
+        partial void OnLevelChanged(DrillLevel value)
         {
-            foreach (var h in _layerHighlights)
+            OnPropertyChanged(nameof(IsLayerLevel));
+            OnPropertyChanged(nameof(CanGoBack));
+            OnPropertyChanged(nameof(SceneLabels));
+        }
+
+        private void ClearHighlights()
+        {
+            foreach (var h in _sceneHighlights)
                 Scene.Children.Remove(h);
-            _layerHighlights.Clear();
+            _sceneHighlights.Clear();
         }
 
         // ── Text builders ────────────────────────────────────────────────────────────
+        private string BuildSolutionText(SolutionDisplay s)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Total pallets: {s.TotalPallets}");
+            sb.AppendLine($"Pallet types: {s.PalletTypes}");
+            sb.AppendLine($"Items packed: {s.TotalItemsPacked}");
+            sb.AppendLine($"Avg. utilization: {s.Efficiency}");
+            sb.AppendLine();
+            foreach (var a in Assignments)
+                sb.AppendLine($"  {a.Name}  ×{a.Count}  —  {a.Contents}");
+            return sb.ToString();
+        }
+
         private string BuildAssignmentText(TemplateAssignmentDisplay assignment)
         {
             var t = assignment.Template;
@@ -540,8 +668,6 @@ namespace Stack_Solver.ViewModels.Pages
             int totalHeight = _palletHeight + cargoHeight;
 
             var sb = new StringBuilder();
-            sb.AppendLine($"{assignment.Name}  (×{assignment.Count} {(assignment.Count == 1 ? "pallet" : "pallets")})");
-            sb.AppendLine();
             sb.AppendLine($"Load dimensions: {_palletLength}×{_palletWidth}×{totalHeight} cm");
             sb.AppendLine($"Cargo height: {cargoHeight} cm");
             sb.AppendLine($"Weight: {t.TotalWeight:N0} kg");
