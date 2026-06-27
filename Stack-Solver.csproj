@@ -23,6 +23,14 @@
     <EmbeddedResource Remove="Tests\**" />
     <None Remove="Tests\**" />
     <Page Remove="Tests\**" />
+    <Compile Remove="Stack-Solver.Core\**" />
+    <EmbeddedResource Remove="Stack-Solver.Core\**" />
+    <None Remove="Stack-Solver.Core\**" />
+    <Page Remove="Stack-Solver.Core\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="Stack-Solver.Core\Stack-Solver.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -72,7 +80,6 @@
 
   <ItemGroup>
     <Folder Include="Assets\Images\" />
-    <Folder Include="Services\Stacking\" />
   </ItemGroup>
 
   <ItemGroup>

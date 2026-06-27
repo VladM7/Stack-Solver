@@ -65,7 +65,7 @@ namespace Stack_Solver.Services
                     }
                 }
                 // Store rectangle in pallet coordinates (origin bottom-left)
-                geometry.ItemRectangles.Add(new Rect(item.X, item.Y, xSpan, ySpan));
+                geometry.ItemRectangles.Add(new RectD(item.X, item.Y, xSpan, ySpan));
             }
 
             layer.Geometry = geometry;
