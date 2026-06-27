@@ -1,0 +1,18 @@
+<Project>
+
+  <!-- Repo-wide versioning. MinVer derives the version from the latest `v*` git tag
+       (tag v1.2.3 => assembly/file version 1.2.3). Untagged commits get a
+       0.0.0-alpha.N prerelease so local/CI builds always have a sane version.
+       The MSIX package version is stamped separately by the release workflow,
+       since the Store requires a 4-part version with the 4th segment fixed at 0. -->
+  <PropertyGroup>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+  </PropertyGroup>
+
+  <!-- MinVer only supports SDK-style projects, so skip the legacy .wapproj packaging project
+       (which derives its version from the appxmanifest, stamped by the release workflow). -->
+  <ItemGroup Condition="'$(MSBuildProjectExtension)' != '.wapproj'">
+    <PackageReference Include="MinVer" Version="6.0.0" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>
