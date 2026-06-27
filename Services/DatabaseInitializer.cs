@@ -15,7 +15,10 @@ namespace Stack_Solver.Services
         {
             logger.LogInformation("Initializing database");
             await using var db = await factory.CreateDbContextAsync(ct);
-            await db.Database.EnsureCreatedAsync(ct);
+            // Apply any pending EF Core migrations. This both creates the database on first run
+            // and upgrades an existing user's database in-place on app updates, preserving data.
+            // (Do not use EnsureCreated here — it cannot evolve an existing schema.)
+            await db.Database.MigrateAsync(ct);
             logger.LogInformation("Database initialization completed");
         }
     }
