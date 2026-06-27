@@ -11,7 +11,7 @@ updates:
       time: "03:00"
       timezone: "Etc/UTC"
     open-pull-requests-limit: 10
-    target-branch: "overhaul"
+    target-branch: "dev"
     rebase-strategy: "auto"
     groups:
       minor-and-patch:
@@ -28,7 +28,7 @@ updates:
       time: "03:30"
       timezone: "Etc/UTC"
     open-pull-requests-limit: 10
-    target-branch: "overhaul"
+    target-branch: "dev"
     rebase-strategy: "auto"
     groups:
       actions:

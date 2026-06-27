@@ -2,9 +2,9 @@ name: CodeQL
 
 on:
   push:
-    branches: [ main, overhaul ]
+    branches: [ main, dev ]
   pull_request:
-    branches: [ main, overhaul ]
+    branches: [ main, dev ]
   schedule:
     - cron: '0 3 * * 1'
   workflow_dispatch:

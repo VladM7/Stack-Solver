@@ -1,0 +1,5 @@
+# Code owners for Stack-Solver.
+# These owners are requested for review automatically on every PR,
+# and (with branch protection) are required approvers for protected branches.
+
+* @VladM7
