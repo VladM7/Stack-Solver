@@ -1,7 +1,9 @@
 ﻿using FluentValidation;
+using Stack_Solver.Helpers.Rendering;
 using Stack_Solver.Models;
 using Stack_Solver.Models.Layering;
 using Stack_Solver.ViewModels.Pages;
+using System.ComponentModel;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -31,6 +33,55 @@ namespace Stack_Solver.Views.Pages
                 ViewModel.LayerAnalyzer.AttachCamera(cam);
             if (ViewModel.PalletAnalyzer.ViewportController == null && PalletPerspectiveCamera is PerspectiveCamera palletCam)
                 ViewModel.PalletAnalyzer.AttachCamera(palletCam);
+
+            ViewModel.PalletAnalyzer.PropertyChanged += PalletAnalyzer_PropertyChanged;
+            if (PalletPerspectiveCamera is PerspectiveCamera pc)
+                pc.Changed += (_, _) => UpdatePalletDimLabels();
+            PalletViewPort.SizeChanged += (_, _) => UpdatePalletDimLabels();
+        }
+
+        private void PalletAnalyzer_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(PalletAnalyzerViewModel.PalletDimLabels))
+                UpdatePalletDimLabels();
+        }
+
+        private void UpdatePalletDimLabels()
+        {
+            PalletLabelCanvas.Children.Clear();
+            if (PalletPerspectiveCamera is not PerspectiveCamera cam) return;
+
+            var labels = ViewModel.PalletAnalyzer.PalletDimLabels;
+            if (labels.Count == 0) return;
+
+            double vpW = PalletViewPort.ActualWidth;
+            double vpH = PalletViewPort.ActualHeight;
+
+            foreach (var label in labels)
+            {
+                var pt = ViewportProjection.ProjectToScreen(label.Position, cam, vpW, vpH);
+                if (pt is null) continue;
+
+                var tb = new TextBlock
+                {
+                    Text = label.Text,
+                    Foreground = Brushes.White,
+                    FontSize = 11,
+                    FontFamily = new FontFamily("Cascadia Code"),
+                    FontWeight = FontWeights.SemiBold,
+                };
+                var border = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromArgb(200, 20, 20, 20)),
+                    CornerRadius = new CornerRadius(3),
+                    Padding = new Thickness(5, 2, 5, 2),
+                    Child = tb,
+                };
+                border.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                Canvas.SetLeft(border, pt.Value.X - border.DesiredSize.Width / 2);
+                Canvas.SetTop(border, pt.Value.Y - border.DesiredSize.Height / 2);
+                PalletLabelCanvas.Children.Add(border);
+            }
         }
 
         private void MainViewPort_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

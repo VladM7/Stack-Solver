@@ -32,8 +32,11 @@ namespace Stack_Solver.Helpers.Rendering
 
         private static void OnMouseWheel(object sender, MouseWheelEventArgs e)
         {
-            if (sender is Viewport3D vp)
-                GetZoomCommand(vp)?.Execute(Convert.ToDouble(e.Delta));
+            if (sender is Viewport3D vp && GetZoomCommand(vp) is { } cmd)
+            {
+                cmd.Execute(Convert.ToDouble(e.Delta));
+                e.Handled = true;
+            }
         }
 
         private static void OnMouseDown(object sender, MouseButtonEventArgs e)

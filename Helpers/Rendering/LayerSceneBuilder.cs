@@ -69,6 +69,7 @@ namespace Stack_Solver.Helpers.Rendering
                             }
                         }
                     }
+
                 }
 
                 TryFreezeRecursive(g);
@@ -90,14 +91,12 @@ namespace Stack_Solver.Helpers.Rendering
             var palletBrush = new SolidColorBrush(Color.FromRgb(160, 120, 80));
             target.Children.Add(GeometryCreator.CreateBoxWithEdges(new Point3D(0, 0, 0), palletLength, palletHeight, palletWidth, palletBrush, Colors.Black, 0.4));
 
-            double maxItemHeight = 0;
             foreach (var item in layer.Items)
             {
                 var sku = item.SkuType;
                 double boxLength = item.Rotated ? sku.Width : sku.Length;
                 double boxWidth = item.Rotated ? sku.Length : sku.Width;
                 double boxHeight = sku.Height;
-                if (boxHeight > maxItemHeight) maxItemHeight = boxHeight;
                 var origin = new Point3D(item.X, palletHeight, item.Y);
                 var brush = GetBrushForSku(sku.SkuId);
                 var boxGroup = GeometryCreator.CreateBoxWithEdges(origin, boxLength, boxHeight, boxWidth, brush, Colors.Black, 0.25);
@@ -112,6 +111,7 @@ namespace Stack_Solver.Helpers.Rendering
                         }
                     }
                 }
+
             }
         }
 

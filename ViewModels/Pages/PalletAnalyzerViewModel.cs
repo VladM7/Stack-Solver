@@ -6,13 +6,13 @@ using Stack_Solver.Models.Layering;
 using Stack_Solver.Models.Supports;
 using Stack_Solver.Services;
 using Stack_Solver.Services.Stacking;
-using Wpf.Ui;
-using Wpf.Ui.Controls;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using Wpf.Ui;
+using Wpf.Ui.Controls;
 
 namespace Stack_Solver.ViewModels.Pages
 {
@@ -67,6 +67,7 @@ namespace Stack_Solver.ViewModels.Pages
         private readonly List<Model3DGroup> _layerHighlights = [];
 
         public Model3DGroup Scene { get; } = new();
+        public IReadOnlyList<LabelInfo> PalletDimLabels => _sceneBuilder.DimLabels;
         public ViewportController? ViewportController => _viewportController;
         public ICommand ZoomCommand { get; }
         public ICommand BeginPanCommand { get; }
@@ -308,6 +309,7 @@ namespace Stack_Solver.ViewModels.Pages
             try
             {
                 await _sceneBuilder.BuildAsync(Scene, template, _palletLength, _palletWidth, _palletHeight, ct);
+                OnPropertyChanged(nameof(PalletDimLabels));
             }
             catch (OperationCanceledException) { }
         }
@@ -360,7 +362,6 @@ namespace Stack_Solver.ViewModels.Pages
             sb.AppendLine($"Boxes: {t.TotalBoxCount} per pallet");
             sb.AppendLine($"Utilization: {t.AverageLayerUtilization:F3}");
             sb.AppendLine($"Contents: {assignment.Contents}");
-            sb.AppendLine();
             sb.AppendLine("==================");
             sb.AppendLine("Full details are included in the PDF report.");
             return sb.ToString();

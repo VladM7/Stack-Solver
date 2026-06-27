@@ -1,6 +1,7 @@
 using Stack_Solver.Models.Supports;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using System.Collections.Generic;
 
 namespace Stack_Solver.Helpers.Rendering
 {
@@ -11,11 +12,13 @@ namespace Stack_Solver.Helpers.Rendering
 
         private Dictionary<GeometryModel3D, string> _geometryToLayerId = [];
         private IReadOnlyList<(string LayerId, double Y, double Height)> _layerPositions = [];
+        private List<LabelInfo> _dimLabels = [];
 
         public bool TryGetLayerIdForGeometry(GeometryModel3D geo, out string layerId)
             => _geometryToLayerId.TryGetValue(geo, out layerId!);
 
         public IReadOnlyList<(string LayerId, double Y, double Height)> LayerPositions => _layerPositions;
+        public IReadOnlyList<LabelInfo> DimLabels => _dimLabels;
 
         public async Task BuildAsync(
             Model3DGroup target,
@@ -70,8 +73,50 @@ namespace Stack_Solver.Helpers.Rendering
                     currentY += layer.Metadata.Height;
                 }
 
+                // Dimension annotations ─────────────────────────────────────────────────
+                double totalHeight = currentY;
+                const double off = 15.0;
+                const double tick = 6.0;
+                var dimColor = Color.FromRgb(230, 230, 230);
+                var extColor = Color.FromRgb(150, 150, 150);
+
+                // Length (along X): dim line sits in front of the pallet (negative Z)
+                GeometryCreator.CreateDimAnnotation(g,
+                    lineStart: new Point3D(0, palletHeight / 2.0, -off),
+                    lineEnd:   new Point3D(palletLength, palletHeight / 2.0, -off),
+                    tickDir: new Vector3D(0, 0, 1), tickLen: tick,
+                    objStart: new Point3D(0, palletHeight / 2.0, 0),
+                    objEnd:   new Point3D(palletLength, palletHeight / 2.0, 0),
+                    dimColor, extColor);
+
+                // Width (along Z): dim line to the right of the pallet (positive X)
+                GeometryCreator.CreateDimAnnotation(g,
+                    lineStart: new Point3D(palletLength + off, palletHeight / 2.0, 0),
+                    lineEnd:   new Point3D(palletLength + off, palletHeight / 2.0, palletWidth),
+                    tickDir: new Vector3D(1, 0, 0), tickLen: tick,
+                    objStart: new Point3D(palletLength, palletHeight / 2.0, 0),
+                    objEnd:   new Point3D(palletLength, palletHeight / 2.0, palletWidth),
+                    dimColor, extColor);
+
+                // Load height (along Y): dim line further right, spans full stack
+                GeometryCreator.CreateDimAnnotation(g,
+                    lineStart: new Point3D(palletLength + off * 2, 0, 0),
+                    lineEnd:   new Point3D(palletLength + off * 2, totalHeight, 0),
+                    tickDir: new Vector3D(1, 0, 0), tickLen: tick,
+                    objStart: new Point3D(palletLength, 0, 0),
+                    objEnd:   new Point3D(palletLength, totalHeight, 0),
+                    dimColor, extColor);
+
+                var localLabels = new List<LabelInfo>
+                {
+                    new(new Point3D(palletLength / 2.0, palletHeight / 2.0, -off),          $"{palletLength} cm"),
+                    new(new Point3D(palletLength + off, palletHeight / 2.0, palletWidth / 2.0), $"{palletWidth} cm"),
+                    new(new Point3D(palletLength + off * 2, totalHeight / 2.0, 0),           $"{(int)Math.Round(totalHeight)} cm"),
+                };
+                // ────────────────────────────────────────────────────────────────────────
+
                 TryFreezeRecursive(g);
-                return (Group: g, Mapping: mapping, Positions: positions);
+                return (Group: g, Mapping: mapping, Positions: positions, Labels: localLabels);
             }, ct).ConfigureAwait(true);
 
             ct.ThrowIfCancellationRequested();
@@ -80,6 +125,7 @@ namespace Stack_Solver.Helpers.Rendering
                 target.Children.Add(child);
             _geometryToLayerId = tempGroup.Mapping;
             _layerPositions = tempGroup.Positions;
+            _dimLabels = tempGroup.Labels;
         }
 
         private Brush GetBrushForSku(string skuId)

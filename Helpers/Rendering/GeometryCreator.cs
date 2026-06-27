@@ -77,7 +77,34 @@ namespace Stack_Solver.Helpers.Rendering
             return group;
         }
 
-        private static void AddEdgePrism(Model3DGroup parent, Point3D p0, Point3D p1, Color edgeColor, double thickness)
+        /// <summary>
+        /// Draws a dimension annotation: main line, perpendicular end ticks, and optional thin extension
+        /// lines from object-boundary points to the line endpoints.
+        /// </summary>
+        public static void CreateDimAnnotation(
+            Model3DGroup target,
+            Point3D lineStart, Point3D lineEnd,
+            Vector3D tickDir, double tickLen,
+            Point3D? objStart = null, Point3D? objEnd = null,
+            Color? dimColor = null, Color? extColor = null,
+            double dimThickness = 0.5, double extThickness = 0.2)
+        {
+            var dColor = dimColor ?? Colors.White;
+            var eColor = extColor ?? Color.FromRgb(160, 160, 160);
+
+            AddEdgePrism(target, lineStart, lineEnd, dColor, dimThickness);
+
+            var td = tickDir; td.Normalize();
+            AddEdgePrism(target, lineStart - td * (tickLen / 2), lineStart + td * (tickLen / 2), dColor, dimThickness);
+            AddEdgePrism(target, lineEnd - td * (tickLen / 2), lineEnd + td * (tickLen / 2), dColor, dimThickness);
+
+            if (objStart.HasValue)
+                AddEdgePrism(target, objStart.Value, lineStart, eColor, extThickness);
+            if (objEnd.HasValue)
+                AddEdgePrism(target, objEnd.Value, lineEnd, eColor, extThickness);
+        }
+
+        internal static void AddEdgePrism(Model3DGroup parent, Point3D p0, Point3D p1, Color edgeColor, double thickness)
         {
             Vector3D dir = p1 - p0;
             double length = dir.Length;
