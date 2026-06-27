@@ -27,10 +27,15 @@
     <EmbeddedResource Remove="Stack-Solver.Core\**" />
     <None Remove="Stack-Solver.Core\**" />
     <Page Remove="Stack-Solver.Core\**" />
+    <Compile Remove="Stack-Solver.Infrastructure\**" />
+    <EmbeddedResource Remove="Stack-Solver.Infrastructure\**" />
+    <None Remove="Stack-Solver.Infrastructure\**" />
+    <Page Remove="Stack-Solver.Infrastructure\**" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="Stack-Solver.Core\Stack-Solver.Core.csproj" />
+    <ProjectReference Include="Stack-Solver.Infrastructure\Stack-Solver.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
