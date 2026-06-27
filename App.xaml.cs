@@ -49,6 +49,10 @@ namespace Stack_Solver
             {
                 services.AddNavigationViewPageProvider();
 
+                // Domain (Core) and persistence (Infrastructure) registrations.
+                services.AddCore(context.Configuration);
+                services.AddInfrastructure();
+
                 services.AddHostedService<ApplicationHostService>();
 
                 // Theme manipulation
@@ -73,7 +77,6 @@ namespace Stack_Solver
                 services.AddSingleton<SKULibraryPage>();
                 services.AddSingleton<SKULibraryViewModel>();
                 services.AddSingleton<PalletBuilderPage>();
-                services.AddSingleton<IUserSettingsService, UserSettingsService>();
 
                 services.AddSingleton<PalletBuilderViewModel>(sp => new PalletBuilderViewModel(
                     sp.GetRequiredService<ISkuRepository>(),
@@ -90,22 +93,7 @@ namespace Stack_Solver
                 services.AddSingleton<JobManagerPage>();
                 services.AddSingleton<JobManagerViewModel>();
 
-                services.AddSingleton<IEventAggregator, EventAggregator>();
                 services.AddSingleton<ILayerVisualizationService, LayerVisualizationService>();
-
-                services.AddValidatorsFromAssemblyContaining<SkuInputDtoValidator>();
-
-                services.AddDbContextFactory<ApplicationDbContext>(options =>
-                {
-                    options.UseSqlite($"Data Source={AppPaths.DatabaseFile}");
-                });
-
-                services.AddSingleton<ISkuRepository, SkuRepository>();
-                services.AddSingleton<DatabaseInitializer>();
-
-                // Bind options from host configuration
-                services.Configure<GenerationOptions>(context.Configuration.GetSection("LayerGeneration"));
-                services.Configure<PalletDefaultsOptions>(context.Configuration.GetSection("PalletDefaults"));
             }).Build();
 
         /// <summary>
