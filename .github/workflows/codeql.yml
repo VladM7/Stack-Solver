@@ -43,14 +43,14 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: csharp
+          build-mode: manual
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
-
-      - name: Manual build fallback
-        if: failure()
+      - name: Build (each csproj)
         shell: pwsh
         run: |
+          # Build the .csproj projects directly. Autobuild/the .slnx pull in
+          # Package\Stack-Solver.Package.wapproj, which needs a Windows SDK that
+          # isn't on the CodeQL runner (APPX3217). CodeQL only needs the C# code.
           $projects = Get-ChildItem -Recurse -Filter *.csproj -File
           if (-not $projects) { Write-Host "No csproj files found"; exit 1 }
           foreach ($p in $projects) {
