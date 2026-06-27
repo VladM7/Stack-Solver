@@ -15,7 +15,7 @@
         public bool[,] OccupancyGrid { get; } = new bool[width, length];
         public int[,] ItemIndexGrid { get; } = CreateItemIndexGrid(width, length);
 
-        public List<Rect> ItemRectangles { get; } = [];
+        public List<RectD> ItemRectangles { get; } = [];
 
         private static int[,] CreateItemIndexGrid(int width, int length)
         {

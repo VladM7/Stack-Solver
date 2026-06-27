@@ -23,6 +23,19 @@
     <EmbeddedResource Remove="Tests\**" />
     <None Remove="Tests\**" />
     <Page Remove="Tests\**" />
+    <Compile Remove="Stack-Solver.Core\**" />
+    <EmbeddedResource Remove="Stack-Solver.Core\**" />
+    <None Remove="Stack-Solver.Core\**" />
+    <Page Remove="Stack-Solver.Core\**" />
+    <Compile Remove="Stack-Solver.Infrastructure\**" />
+    <EmbeddedResource Remove="Stack-Solver.Infrastructure\**" />
+    <None Remove="Stack-Solver.Infrastructure\**" />
+    <Page Remove="Stack-Solver.Infrastructure\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="Stack-Solver.Core\Stack-Solver.Core.csproj" />
+    <ProjectReference Include="Stack-Solver.Infrastructure\Stack-Solver.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,17 +45,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FluentValidation" Version="12.1.1" />
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
-    <PackageReference Include="Google.OrTools" Version="9.15.6755" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="10.0.9" />
-    <PackageReference Include="SQLitePCLRaw.provider.e_sqlite3" Version="2.1.11" />
-    <PackageReference Include="SourceGear.sqlite3" Version="3.50.4.5" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.9">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="WPF-UI" Version="4.2.1" />
     <PackageReference Include="WPF-UI.DependencyInjection" Version="4.2.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.7" />
@@ -72,7 +74,6 @@
 
   <ItemGroup>
     <Folder Include="Assets\Images\" />
-    <Folder Include="Services\Stacking\" />
   </ItemGroup>
 
   <ItemGroup>

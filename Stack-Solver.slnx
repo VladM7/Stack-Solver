@@ -1,4 +1,6 @@
 <Solution>
+  <Project Path="Stack-Solver.Core/Stack-Solver.Core.csproj" />
+  <Project Path="Stack-Solver.Infrastructure/Stack-Solver.Infrastructure.csproj" />
   <Project Path="Stack-Solver.csproj" />
   <Project Path="Package/Stack-Solver.Package.wapproj" Type="C7167F0D-BC9F-4E6E-AFE1-012C56B48DB5">
     <!-- The packaging project only builds for a concrete architecture; map the

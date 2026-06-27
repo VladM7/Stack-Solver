@@ -5,11 +5,6 @@ using System.Text.Json;
 
 namespace Stack_Solver.Infrastructure
 {
-    public interface IUserSettingsService
-    {
-        Task SaveAsync(PalletDefaultsOptions palletDefaults, GenerationOptions genOptions);
-    }
-
     public class UserSettingsService : IUserSettingsService
     {
         private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
