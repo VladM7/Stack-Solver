@@ -1,0 +1,113 @@
+name: Release (MSIX)
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version MAJOR.MINOR.PATCH (e.g. 1.2.3), used for manual runs'
+        required: true
+
+permissions:
+  contents: write   # needed to create the GitHub Release
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    name: Build MSIX
+    runs-on: windows-latest
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # MinVer needs full history + tags
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          if ('${{ github.ref_type }}' -eq 'tag') {
+            $v = '${{ github.ref_name }}'.TrimStart('v')
+          } else {
+            $v = '${{ github.event.inputs.version }}'
+          }
+          if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "Version '$v' must be MAJOR.MINOR.PATCH" }
+          # MSIX needs a 4-part version; the Store reserves the 4th (revision) segment, keep it 0.
+          "version=$v"        >> $env:GITHUB_OUTPUT
+          "appxversion=$v.0"  >> $env:GITHUB_OUTPUT
+          Write-Host "Version $v (Appx $v.0)"
+
+      - name: Stamp manifest version
+        shell: pwsh
+        run: |
+          $path = 'Package/Package.appxmanifest'
+          (Get-Content $path -Raw) -replace 'Version="\d+\.\d+\.\d+\.\d+"', 'Version="${{ steps.ver.outputs.appxversion }}"' |
+            Set-Content $path -NoNewline
+
+      - name: Build MSIX (StoreUpload)
+        shell: pwsh
+        run: |
+          msbuild Package/Stack-Solver.Package.wapproj `
+            /restore `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /p:AppxBundlePlatforms=x64 `
+            /p:UapAppxPackageBuildMode=StoreUpload `
+            /p:AppxBundle=Always `
+            /p:AppxPackageSigningEnabled=false `
+            /p:Version=${{ steps.ver.outputs.version }}
+
+      - name: Locate package
+        id: pkg
+        shell: pwsh
+        run: |
+          $upload = Get-ChildItem -Recurse -Filter *.msixupload | Select-Object -First 1
+          if (-not $upload) { throw "No .msixupload was produced" }
+          "path=$($upload.FullName)" >> $env:GITHUB_OUTPUT
+          Write-Host "Package: $($upload.FullName)"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: msix-${{ steps.ver.outputs.version }}
+          path: ${{ steps.pkg.outputs.path }}
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.pkg.outputs.path }}
+          generate_release_notes: true
+
+      # --- Optional: auto-submit to the Microsoft Store -------------------------------
+      # Prereqs: an Azure AD app associated in Partner Center, and these repo secrets:
+      #   STORE_TENANT_ID, STORE_CLIENT_ID, STORE_CLIENT_SECRET, STORE_PRODUCT_ID
+      # Recommended: gate this behind a GitHub Environment ("production") with a required reviewer.
+      # - name: Install Microsoft Store Developer CLI
+      #   run: dotnet tool install --global MSStore.CLI
+      # - name: Submit to Store
+      #   shell: pwsh
+      #   env:
+      #     STORE_TENANT_ID: ${{ secrets.STORE_TENANT_ID }}
+      #     STORE_CLIENT_ID: ${{ secrets.STORE_CLIENT_ID }}
+      #     STORE_CLIENT_SECRET: ${{ secrets.STORE_CLIENT_SECRET }}
+      #     STORE_PRODUCT_ID: ${{ secrets.STORE_PRODUCT_ID }}
+      #   run: |
+      #     msstore reconfigure --tenantId $env:STORE_TENANT_ID --clientId $env:STORE_CLIENT_ID --clientSecret $env:STORE_CLIENT_SECRET
+      #     msstore publish "${{ steps.pkg.outputs.path }}" --productId $env:STORE_PRODUCT_ID

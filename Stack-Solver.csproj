@@ -10,6 +10,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Stack_Solver</RootNamespace>
 	<EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- Required so the MSIX packaging project can publish the app self-contained for the Store. -->
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>
@@ -74,8 +76,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include=".github\copilot-instructions.md" />
+    <None Include=".github\CODEOWNERS" />
     <None Include=".github\dependabot.yml" />
+    <None Include=".github\FUNDING.yml" />
+    <None Include=".github\pull_request_template.md" />
     <None Include=".github\workflows\codeql.yml" />
     <None Include=".github\workflows\dependency-review.yml" />
     <None Include=".github\workflows\build-test.yml" />
