@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Stack_Solver.Helpers.Rendering;
 using Stack_Solver.Models;
 using Stack_Solver.Models.Layering;
@@ -23,39 +23,100 @@ namespace Stack_Solver.Views.Pages
             InitializeComponent();
             Loaded += OnLoaded;
             MainViewPortHost.MouseLeftButtonDown += MainViewPort_MouseLeftButtonDown;
-            PalletViewPortHost.MouseLeftButtonDown += PalletViewPort_MouseLeftButtonDown;
         }
 
         private async void OnLoaded(object? sender, RoutedEventArgs e)
         {
             await ViewModel.OnNavigatedToAsync();
-            if (ViewModel.LayerAnalyzer.ViewportController == null && MainPerspectiveCamera is PerspectiveCamera cam)
-                ViewModel.LayerAnalyzer.AttachCamera(cam);
-            if (ViewModel.PalletAnalyzer.ViewportController == null && PalletPerspectiveCamera is PerspectiveCamera palletCam)
-                ViewModel.PalletAnalyzer.AttachCamera(palletCam);
 
-            ViewModel.PalletAnalyzer.PropertyChanged += PalletAnalyzer_PropertyChanged;
-            if (PalletPerspectiveCamera is PerspectiveCamera pc)
+            if (ViewModel.Results.ViewportController == null && MainPerspectiveCamera is PerspectiveCamera cam)
+                ViewModel.Results.AttachCamera(cam);
+
+            ViewModel.Results.PropertyChanged += Results_PropertyChanged;
+            if (MainPerspectiveCamera is PerspectiveCamera pc)
                 pc.Changed += (_, _) => UpdatePalletDimLabels();
-            PalletViewPort.SizeChanged += (_, _) => UpdatePalletDimLabels();
+            MainViewPort.SizeChanged += (_, _) => UpdatePalletDimLabels();
+
+            ConstrainToHostHeight();
         }
 
-        private void PalletAnalyzer_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        // The page is hosted inside the NavigationView's scroll viewer, which would otherwise
+        // let the whole page scroll. Pin the page to the visible viewport height so the results
+        // column fills the app height and the setup rail scrolls within itself.
+        private ScrollViewer? _hostScrollViewer;
+
+        private void ConstrainToHostHeight()
         {
-            if (e.PropertyName == nameof(PalletAnalyzerViewModel.PalletDimLabels))
+            _hostScrollViewer = FindAncestor<ScrollViewer>(this);
+            if (_hostScrollViewer is null) return;
+
+            _hostScrollViewer.SizeChanged += (_, _) => ApplyHostHeight();
+            ApplyHostHeight();
+            Dispatcher.BeginInvoke(new Action(ApplyHostHeight), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        private void ApplyHostHeight()
+        {
+            if (_hostScrollViewer is null) return;
+            double h = _hostScrollViewer.ViewportHeight;
+            RootGrid.MaxHeight = h > 0 ? h : double.PositiveInfinity;
+        }
+
+        private static T? FindAncestor<T>(DependencyObject start) where T : DependencyObject
+        {
+            var parent = VisualTreeHelper.GetParent(start);
+            while (parent is not null)
+            {
+                if (parent is T match) return match;
+                parent = VisualTreeHelper.GetParent(parent);
+            }
+            return null;
+        }
+
+        private bool _settingsCollapsed;
+        private GridLength _expandedRailWidth = new(340);
+
+        private void ToggleSettings_Click(object sender, RoutedEventArgs e)
+        {
+            _settingsCollapsed = !_settingsCollapsed;
+
+            if (_settingsCollapsed)
+            {
+                // Remember the (possibly user-resized) width, then shrink the column to the strip.
+                _expandedRailWidth = SettingsColumn.Width;
+                SettingsColumn.MinWidth = 0;
+                SettingsColumn.Width = GridLength.Auto;
+            }
+            else
+            {
+                SettingsColumn.MinWidth = 240;
+                SettingsColumn.Width = _expandedRailWidth;
+            }
+
+            SettingsRail.Visibility = _settingsCollapsed ? Visibility.Collapsed : Visibility.Visible;
+            RailSplitter.Visibility = _settingsCollapsed ? Visibility.Collapsed : Visibility.Visible;
+            ExpandStrip.Visibility = _settingsCollapsed ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void Results_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ResultsViewModel.PalletDimLabels))
                 UpdatePalletDimLabels();
         }
 
         private void UpdatePalletDimLabels()
         {
             PalletLabelCanvas.Children.Clear();
-            if (PalletPerspectiveCamera is not PerspectiveCamera cam) return;
+            if (MainPerspectiveCamera is not PerspectiveCamera cam) return;
 
-            var labels = ViewModel.PalletAnalyzer.PalletDimLabels;
+            // Dimension labels only make sense for the full pallet stack, not a single layer.
+            if (ViewModel.Results.IsLayerLevel) return;
+
+            var labels = ViewModel.Results.PalletDimLabels;
             if (labels.Count == 0) return;
 
-            double vpW = PalletViewPort.ActualWidth;
-            double vpH = PalletViewPort.ActualHeight;
+            double vpW = MainViewPort.ActualWidth;
+            double vpH = MainViewPort.ActualHeight;
 
             foreach (var label in labels)
             {
@@ -88,42 +149,41 @@ namespace Stack_Solver.Views.Pages
         {
             var pos = e.GetPosition(MainViewPort);
             var hitParams = new PointHitTestParameters(pos);
-            PositionedItem? selected = null;
+            var results = ViewModel.Results;
 
-            HitTestResultBehavior resultCallback(HitTestResult r)
+            if (results.IsLayerLevel)
             {
-                if (r is RayHitTestResult rayResult && rayResult.ModelHit is GeometryModel3D geo && ViewModel.LayerAnalyzer.TryGetItemFromGeometry(geo, out var item))
+                PositionedItem? selected = null;
+                HitTestResultBehavior callback(HitTestResult r)
                 {
-                    selected = item;
-                    return HitTestResultBehavior.Stop;
+                    if (r is RayHitTestResult ray && ray.ModelHit is GeometryModel3D geo
+                        && results.TryGetItemFromGeometry(geo, out var item))
+                    {
+                        selected = item;
+                        return HitTestResultBehavior.Stop;
+                    }
+                    return HitTestResultBehavior.Continue;
                 }
-                return HitTestResultBehavior.Continue;
+                VisualTreeHelper.HitTest(MainViewPort, null, callback, hitParams);
+                results.SelectBox(selected);
             }
-
-            VisualTreeHelper.HitTest(MainViewPort, null, resultCallback, hitParams);
-            ViewModel.LayerAnalyzer.UpdateSelectedItem(selected);
-        }
-
-        private void PalletViewPort_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            var pos = e.GetPosition(PalletViewPort);
-            var hitParams = new PointHitTestParameters(pos);
-            LayerTypeDisplay? found = null;
-
-            HitTestResultBehavior resultCallback(HitTestResult r)
+            else
             {
-                if (r is RayHitTestResult rayResult
-                    && rayResult.ModelHit is GeometryModel3D geo
-                    && ViewModel.PalletAnalyzer.TryGetLayerTypeForGeometry(geo, out var layerType))
+                LayerTypeDisplay? found = null;
+                HitTestResultBehavior callback(HitTestResult r)
                 {
-                    found = layerType;
-                    return HitTestResultBehavior.Stop;
+                    if (r is RayHitTestResult ray && ray.ModelHit is GeometryModel3D geo
+                        && results.TryGetLayerTypeForGeometry(geo, out var layerType))
+                    {
+                        found = layerType;
+                        return HitTestResultBehavior.Stop;
+                    }
+                    return HitTestResultBehavior.Continue;
                 }
-                return HitTestResultBehavior.Continue;
+                VisualTreeHelper.HitTest(MainViewPort, null, callback, hitParams);
+                if (found != null)
+                    results.SelectedLayerType = found;
             }
-
-            VisualTreeHelper.HitTest(PalletViewPort, null, resultCallback, hitParams);
-            ViewModel.PalletAnalyzer.SelectedLayerType = found;
         }
 
         private async void SkuSelectionGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
@@ -153,6 +213,15 @@ namespace Stack_Solver.Views.Pages
         private void SkuCheckBox_Click(object sender, RoutedEventArgs e)
         {
             ViewModel.Settings.NotifySelectionChanged();
+        }
+
+        private void LayersGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is DataGrid { SelectedItem: LayerTypeDisplay layerType }
+                && ViewModel.Results.ViewLayerCommand.CanExecute(layerType))
+            {
+                ViewModel.Results.ViewLayerCommand.Execute(layerType);
+            }
         }
 
         private void TopHelpButton_Click(object sender, RoutedEventArgs e)
