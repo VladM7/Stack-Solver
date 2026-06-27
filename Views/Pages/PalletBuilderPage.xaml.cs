@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Stack_Solver.Helpers.Rendering;
 using Stack_Solver.Models;
 using Stack_Solver.Models.Layering;
@@ -23,39 +23,97 @@ namespace Stack_Solver.Views.Pages
             InitializeComponent();
             Loaded += OnLoaded;
             MainViewPortHost.MouseLeftButtonDown += MainViewPort_MouseLeftButtonDown;
-            PalletViewPortHost.MouseLeftButtonDown += PalletViewPort_MouseLeftButtonDown;
         }
 
         private async void OnLoaded(object? sender, RoutedEventArgs e)
         {
             await ViewModel.OnNavigatedToAsync();
-            if (ViewModel.LayerAnalyzer.ViewportController == null && MainPerspectiveCamera is PerspectiveCamera cam)
-                ViewModel.LayerAnalyzer.AttachCamera(cam);
-            if (ViewModel.PalletAnalyzer.ViewportController == null && PalletPerspectiveCamera is PerspectiveCamera palletCam)
-                ViewModel.PalletAnalyzer.AttachCamera(palletCam);
 
-            ViewModel.PalletAnalyzer.PropertyChanged += PalletAnalyzer_PropertyChanged;
-            if (PalletPerspectiveCamera is PerspectiveCamera pc)
-                pc.Changed += (_, _) => UpdatePalletDimLabels();
-            PalletViewPort.SizeChanged += (_, _) => UpdatePalletDimLabels();
+            if (ViewModel.Results.ViewportController == null && MainPerspectiveCamera is PerspectiveCamera cam)
+                ViewModel.Results.AttachCamera(cam);
+
+            ViewModel.Results.PropertyChanged += Results_PropertyChanged;
+            if (MainPerspectiveCamera is PerspectiveCamera pc)
+                pc.Changed += (_, _) => UpdateSceneLabels();
+            MainViewPort.SizeChanged += (_, _) => UpdateSceneLabels();
+
+            ConstrainToHostHeight();
         }
 
-        private void PalletAnalyzer_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        // The page is hosted inside the NavigationView's scroll viewer, which would otherwise
+        // let the whole page scroll. Pin the page to the visible viewport height so the results
+        // column fills the app height and the setup rail scrolls within itself.
+        private ScrollViewer? _hostScrollViewer;
+
+        private void ConstrainToHostHeight()
         {
-            if (e.PropertyName == nameof(PalletAnalyzerViewModel.PalletDimLabels))
-                UpdatePalletDimLabels();
+            _hostScrollViewer = FindAncestor<ScrollViewer>(this);
+            if (_hostScrollViewer is null) return;
+
+            _hostScrollViewer.SizeChanged += (_, _) => ApplyHostHeight();
+            ApplyHostHeight();
+            Dispatcher.BeginInvoke(new Action(ApplyHostHeight), System.Windows.Threading.DispatcherPriority.Loaded);
         }
 
-        private void UpdatePalletDimLabels()
+        private void ApplyHostHeight()
+        {
+            if (_hostScrollViewer is null) return;
+            double h = _hostScrollViewer.ViewportHeight;
+            RootGrid.MaxHeight = h > 0 ? h : double.PositiveInfinity;
+        }
+
+        private static T? FindAncestor<T>(DependencyObject start) where T : DependencyObject
+        {
+            var parent = VisualTreeHelper.GetParent(start);
+            while (parent is not null)
+            {
+                if (parent is T match) return match;
+                parent = VisualTreeHelper.GetParent(parent);
+            }
+            return null;
+        }
+
+        private bool _settingsCollapsed;
+        private GridLength _expandedRailWidth = new(340);
+
+        private void ToggleSettings_Click(object sender, RoutedEventArgs e)
+        {
+            _settingsCollapsed = !_settingsCollapsed;
+
+            if (_settingsCollapsed)
+            {
+                // Remember the (possibly user-resized) width, then shrink the column to the strip.
+                _expandedRailWidth = SettingsColumn.Width;
+                SettingsColumn.MinWidth = 0;
+                SettingsColumn.Width = GridLength.Auto;
+            }
+            else
+            {
+                SettingsColumn.MinWidth = 240;
+                SettingsColumn.Width = _expandedRailWidth;
+            }
+
+            SettingsRail.Visibility = _settingsCollapsed ? Visibility.Collapsed : Visibility.Visible;
+            RailSplitter.Visibility = _settingsCollapsed ? Visibility.Collapsed : Visibility.Visible;
+            ExpandStrip.Visibility = _settingsCollapsed ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void Results_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ResultsViewModel.SceneLabels))
+                UpdateSceneLabels();
+        }
+
+        private void UpdateSceneLabels()
         {
             PalletLabelCanvas.Children.Clear();
-            if (PalletPerspectiveCamera is not PerspectiveCamera cam) return;
+            if (MainPerspectiveCamera is not PerspectiveCamera cam) return;
 
-            var labels = ViewModel.PalletAnalyzer.PalletDimLabels;
+            var labels = ViewModel.Results.SceneLabels;
             if (labels.Count == 0) return;
 
-            double vpW = PalletViewPort.ActualWidth;
-            double vpH = PalletViewPort.ActualHeight;
+            double vpW = MainViewPort.ActualWidth;
+            double vpH = MainViewPort.ActualHeight;
 
             foreach (var label in labels)
             {
@@ -88,42 +146,52 @@ namespace Stack_Solver.Views.Pages
         {
             var pos = e.GetPosition(MainViewPort);
             var hitParams = new PointHitTestParameters(pos);
-            PositionedItem? selected = null;
+            var results = ViewModel.Results;
+            bool drill = e.ClickCount == 2;
 
-            HitTestResultBehavior resultCallback(HitTestResult r)
+            // Find the first hit geometry that maps to something selectable at this level.
+            GeometryModel3D? Hit(Func<GeometryModel3D, bool> maps)
             {
-                if (r is RayHitTestResult rayResult && rayResult.ModelHit is GeometryModel3D geo && ViewModel.LayerAnalyzer.TryGetItemFromGeometry(geo, out var item))
+                GeometryModel3D? hit = null;
+                HitTestResultBehavior callback(HitTestResult r)
                 {
-                    selected = item;
-                    return HitTestResultBehavior.Stop;
+                    if (r is RayHitTestResult ray && ray.ModelHit is GeometryModel3D geo && maps(geo))
+                    {
+                        hit = geo;
+                        return HitTestResultBehavior.Stop;
+                    }
+                    return HitTestResultBehavior.Continue;
                 }
-                return HitTestResultBehavior.Continue;
+                VisualTreeHelper.HitTest(MainViewPort, null, callback, hitParams);
+                return hit;
             }
 
-            VisualTreeHelper.HitTest(MainViewPort, null, resultCallback, hitParams);
-            ViewModel.LayerAnalyzer.UpdateSelectedItem(selected);
-        }
-
-        private void PalletViewPort_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            var pos = e.GetPosition(PalletViewPort);
-            var hitParams = new PointHitTestParameters(pos);
-            LayerTypeDisplay? found = null;
-
-            HitTestResultBehavior resultCallback(HitTestResult r)
+            switch (results.Level)
             {
-                if (r is RayHitTestResult rayResult
-                    && rayResult.ModelHit is GeometryModel3D geo
-                    && ViewModel.PalletAnalyzer.TryGetLayerTypeForGeometry(geo, out var layerType))
+                case DrillLevel.Layer:
                 {
-                    found = layerType;
-                    return HitTestResultBehavior.Stop;
+                    PositionedItem? item = null;
+                    Hit(g => results.TryGetItemFromGeometry(g, out item));
+                    results.SelectBox(item); // null => deselect
+                    break;
                 }
-                return HitTestResultBehavior.Continue;
+                case DrillLevel.Pallet:
+                {
+                    LayerTypeDisplay? layer = null;
+                    Hit(g => results.TryGetLayerTypeForGeometry(g, out layer));
+                    results.SelectedLayerType = layer; // null => deselect
+                    if (drill && layer != null) results.ViewLayerCommand.Execute(layer);
+                    break;
+                }
+                default: // Solution
+                {
+                    TemplateAssignmentDisplay? assignment = null;
+                    Hit(g => results.TryGetAssignmentForGeometry(g, out assignment));
+                    results.SelectedAssignment = assignment; // null => deselect
+                    if (drill && assignment != null) results.ViewPalletCommand.Execute(assignment);
+                    break;
+                }
             }
-
-            VisualTreeHelper.HitTest(PalletViewPort, null, resultCallback, hitParams);
-            ViewModel.PalletAnalyzer.SelectedLayerType = found;
         }
 
         private async void SkuSelectionGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
@@ -153,6 +221,24 @@ namespace Stack_Solver.Views.Pages
         private void SkuCheckBox_Click(object sender, RoutedEventArgs e)
         {
             ViewModel.Settings.NotifySelectionChanged();
+        }
+
+        private void PalletTypesGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is DataGrid { SelectedItem: TemplateAssignmentDisplay assignment }
+                && ViewModel.Results.ViewPalletCommand.CanExecute(assignment))
+            {
+                ViewModel.Results.ViewPalletCommand.Execute(assignment);
+            }
+        }
+
+        private void LayersGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is DataGrid { SelectedItem: LayerTypeDisplay layerType }
+                && ViewModel.Results.ViewLayerCommand.CanExecute(layerType))
+            {
+                ViewModel.Results.ViewLayerCommand.Execute(layerType);
+            }
         }
 
         private void TopHelpButton_Click(object sender, RoutedEventArgs e)
