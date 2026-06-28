@@ -22,7 +22,8 @@ namespace Stack_Solver.Views.Pages
             DataContext = this;
             InitializeComponent();
             Loaded += OnLoaded;
-            MainViewPortHost.MouseLeftButtonDown += MainViewPort_MouseLeftButtonDown;
+            MainViewPortHost.MouseLeftButtonDown += MainViewPortHost_MouseLeftButtonDown;
+            MainViewPortHost.MouseLeftButtonUp += MainViewPortHost_MouseLeftButtonUp;
         }
 
         private async void OnLoaded(object? sender, RoutedEventArgs e)
@@ -142,12 +143,31 @@ namespace Stack_Solver.Views.Pages
             }
         }
 
-        private void MainViewPort_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        // A left-drag rotates the camera; a left-click selects. We only select if the pointer barely
+        // moved between press and release, so rotating no longer changes the selection.
+        private Point _pointerDownPos;
+        private int _pointerDownClickCount;
+        private const double ClickMoveThreshold = 5.0;
+
+        private void MainViewPortHost_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _pointerDownPos = e.GetPosition(MainViewPort);
+            _pointerDownClickCount = e.ClickCount;
+        }
+
+        private void MainViewPortHost_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             var pos = e.GetPosition(MainViewPort);
+            var movement = pos - _pointerDownPos;
+            if (movement.Length > ClickMoveThreshold) return; // treated as a rotate, not a click
+
+            SelectAtPointer(pos, drill: _pointerDownClickCount == 2);
+        }
+
+        private void SelectAtPointer(Point pos, bool drill)
+        {
             var hitParams = new PointHitTestParameters(pos);
             var results = ViewModel.Results;
-            bool drill = e.ClickCount == 2;
 
             // Find the first hit geometry that maps to something selectable at this level.
             GeometryModel3D? Hit(Func<GeometryModel3D, bool> maps)
