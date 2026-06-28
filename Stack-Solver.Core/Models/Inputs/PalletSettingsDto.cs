@@ -6,6 +6,7 @@ namespace Stack_Solver.Models.Inputs
         public int PalletWidth { get; set; }
         public double PalletHeight { get; set; }
         public bool UseCpsat { get; set; }
+        public bool UseBranchAndPrice { get; set; }
         public int MaxCpsatCandidates { get; set; }
         public int BlfAttempts { get; set; }
         public int SolverTimeLimit { get; set; }

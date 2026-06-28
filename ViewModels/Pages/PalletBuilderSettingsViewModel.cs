@@ -37,6 +37,9 @@ namespace Stack_Solver.ViewModels.Pages
         private bool _useCpsat;
 
         [ObservableProperty]
+        private bool _useBranchAndPrice;
+
+        [ObservableProperty]
         private int _maxCpsatCandidates;
 
         [ObservableProperty]
@@ -195,6 +198,7 @@ namespace Stack_Solver.ViewModels.Pages
         partial void OnPalletWidthChanged(int value) => PublishSettingsChanged();
         partial void OnPalletHeightChanged(double value) => PublishSettingsChanged();
         partial void OnUseCpsatChanged(bool value) => PublishSettingsChanged();
+        partial void OnUseBranchAndPriceChanged(bool value) => PublishSettingsChanged();
         partial void OnMaxCpsatCandidatesChanged(int value) => PublishSettingsChanged();
         partial void OnBlfAttemptsChanged(int value) => PublishSettingsChanged();
         partial void OnSolverTimeLimitChanged(int value) => PublishSettingsChanged();
@@ -209,6 +213,7 @@ namespace Stack_Solver.ViewModels.Pages
                 PalletWidth = PalletWidth,
                 PalletHeight = PalletHeight,
                 UseCpsat = UseCpsat,
+                UseBranchAndPrice = UseBranchAndPrice,
                 MaxCpsatCandidates = MaxCpsatCandidates,
                 BlfAttempts = BlfAttempts,
                 SolverTimeLimit = SolverTimeLimit,
@@ -224,7 +229,7 @@ namespace Stack_Solver.ViewModels.Pages
             }
             _events.Publish(new SettingsChangedMessage(
                 PalletLength, PalletWidth, PalletHeight,
-                UseCpsat, MaxCpsatCandidates, BlfAttempts, SolverTimeLimit,
+                UseCpsat, UseBranchAndPrice, MaxCpsatCandidates, BlfAttempts, SolverTimeLimit,
                 MaxStackHeight, MaxStackWeight, MaxSkuOverhang,
                 [.. Skus]));
 
@@ -337,6 +342,7 @@ namespace Stack_Solver.ViewModels.Pages
         int PalletWidth,
         double PalletHeight,
         bool UseCpsat,
+        bool UseBranchAndPrice,
         int MaxCpsatCandidates,
         int BlfAttempts,
         int SolverTimeLimit,
