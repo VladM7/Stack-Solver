@@ -67,22 +67,51 @@ namespace Stack_Solver.Helpers.Rendering
                 var palletBrush = new SolidColorBrush(Color.FromRgb(160, 120, 80));
                 palletBrush.Freeze();
 
-                double cursorX = 0;
-                double maxDepth = 0, maxHeight = 0;
+                // Pass 1: size each type's block (a square-ish grid of its own pallets).
+                var typeBlocks = new List<(PalletTemplate Template, int Count, string Name,
+                    int Cols, double BlockWidth, double BlockDepth, double LoadHeight, Color Color)>();
                 int typeIndex = 0;
-
                 foreach (var (template, count, name) in types)
                 {
                     int n = Math.Max(0, count);
                     if (n == 0) { typeIndex++; continue; }
-                    ct.ThrowIfCancellationRequested();
 
                     int cols = (int)Math.Ceiling(Math.Sqrt(n));
                     int rows = (int)Math.Ceiling(n / (double)cols);
-                    double blockWidth = cols * cellX - gap;
-                    double blockDepth = rows * cellZ - gap;
-                    double loadHeight = palletHeight + template.TotalHeight;
-                    var typeColor = TypePalette[typeIndex % TypePalette.Length];
+                    typeBlocks.Add((template, n, name, cols, cols * cellX - gap, rows * cellZ - gap,
+                        palletHeight + template.TotalHeight, TypePalette[typeIndex % TypePalette.Length]));
+                    typeIndex++;
+                }
+
+                // Shelf-pack the blocks into a roughly square footprint. The camera can only zoom and
+                // rotate (no pan), so a compact 2D arrangement frames far better than a single long row.
+                double totalArea = typeBlocks.Sum(b => (b.BlockWidth + aisle) * (b.BlockDepth + aisle));
+                double maxBlockWidth = typeBlocks.Count == 0 ? 0 : typeBlocks.Max(b => b.BlockWidth);
+                double targetWidth = Math.Max(Math.Sqrt(totalArea), maxBlockWidth);
+
+                var placements = new (double Ox, double Oz)[typeBlocks.Count];
+                double cursorX = 0, cursorZ = 0, rowDepth = 0, usedWidth = 0;
+                for (int b = 0; b < typeBlocks.Count; b++)
+                {
+                    double bw = typeBlocks[b].BlockWidth;
+                    if (cursorX > 0 && cursorX + bw > targetWidth)
+                    {
+                        cursorX = 0;
+                        cursorZ += rowDepth + aisle;
+                        rowDepth = 0;
+                    }
+                    placements[b] = (cursorX, cursorZ);
+                    cursorX += bw + aisle;
+                    rowDepth = Math.Max(rowDepth, typeBlocks[b].BlockDepth);
+                    usedWidth = Math.Max(usedWidth, cursorX - aisle);
+                }
+
+                // Pass 2: build geometry at each block's packed origin.
+                for (int b = 0; b < typeBlocks.Count; b++)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var (template, n, name, cols, blockWidth, blockDepth, loadHeight, typeColor) = typeBlocks[b];
+                    var (originX, originZ) = placements[b];
 
                     // Every instance of this type has identical box layout, so compute the culling
                     // mask (and gather box params) once in pallet-local coordinates and reuse it.
@@ -112,8 +141,8 @@ namespace Stack_Solver.Helpers.Rendering
                     {
                         ct.ThrowIfCancellationRequested();
                         int col = i % cols, row = i / cols;
-                        double ox = cursorX + col * cellX;
-                        double oz = row * cellZ;
+                        double ox = originX + col * cellX;
+                        double oz = originZ + row * cellZ;
 
                         // pallet base
                         AddMapped(g, map, template.Id, GeometryCreator.CreateBoxWithEdges(
@@ -137,18 +166,15 @@ namespace Stack_Solver.Helpers.Rendering
                         }
                     }
 
-                    labels.Add(new LabelInfo(new Point3D(cursorX + blockWidth / 2, loadHeight + 12, blockDepth / 2), $"{name}  ×{n}"));
-                    blocks.Add(new WarehouseBlock(template.Id, new Point3D(cursorX, 0, 0), blockWidth, loadHeight, blockDepth));
-
-                    maxDepth = Math.Max(maxDepth, blockDepth);
-                    maxHeight = Math.Max(maxHeight, loadHeight);
-                    cursorX += blockWidth + aisle;
-                    typeIndex++;
+                    labels.Add(new LabelInfo(new Point3D(originX + blockWidth / 2, loadHeight + 12, originZ + blockDepth / 2), $"{name}  ×{n}"));
+                    blocks.Add(new WarehouseBlock(template.Id, new Point3D(originX, 0, originZ), blockWidth, loadHeight, blockDepth));
                 }
 
-                double totalWidth = Math.Max(cursorX - aisle, palletLength);
-                var center = new Point3D(totalWidth / 2.0, maxHeight / 2.0, maxDepth / 2.0);
-                double distance = Math.Sqrt(totalWidth * totalWidth + maxDepth * maxDepth + maxHeight * maxHeight) * 1.1 + Math.Max(totalWidth, maxDepth) * 0.2;
+                double totalWidth = Math.Max(usedWidth, palletLength);
+                double totalDepth = Math.Max(cursorZ + rowDepth, palletWidth);
+                double maxHeight = typeBlocks.Count == 0 ? palletHeight : typeBlocks.Max(b => b.LoadHeight);
+                var center = new Point3D(totalWidth / 2.0, maxHeight / 2.0, totalDepth / 2.0);
+                double distance = Math.Sqrt(totalWidth * totalWidth + totalDepth * totalDepth + maxHeight * maxHeight) * 1.1 + Math.Max(totalWidth, totalDepth) * 0.2;
 
                 TryFreezeRecursive(g);
                 return (Group: g, Map: map, Labels: labels, Blocks: blocks, Center: center, Distance: distance);
