@@ -82,11 +82,25 @@ namespace Stack_Solver.Services.BranchAndPrice
 
             var placeableDemand = seed.PlaceableSkus.ToDictionary(s => s, s => demand[s], StringComparer.Ordinal);
 
+            // Augment with the minimal residual layers (one r_i-box partial per SKU whose
+            // demand isn't a whole multiple of its grid, none on divisible demand) so every
+            // placeable box tiles exactly inside the certified search — see
+            // ResidualLayerGenerator. This replaces the old post-search greedy mop-up, so the
+            // returned pallet count is a proven optimum whenever the search completes.
+            var searchLayers = ResidualLayerGenerator.Augment(layers, placeableDemand, pallet);
+
             var timeBudget = TimeSpan.FromSeconds(options.MaxSolverTime > 0 ? options.MaxSolverTime : 30);
 
             ct.ThrowIfCancellationRequested();
             using var search = new BranchAndPriceSearch(
-                layers, seed.PlaceableSkus, placeableDemand, seed.Columns, pallet, DefaultNodeBudget, timeBudget, ct);
+                searchLayers, seed.PlaceableSkus, placeableDemand, seed.Columns, pallet, DefaultNodeBudget, timeBudget, ct);
+
+            // Strong constructive incumbent: places every placeable box up front, so a
+            // budget-limited search never returns short and ⌈LP bound⌉ certification can fire.
+            var incumbent = LayerPackingHeuristic.Pack(searchLayers, placeableDemand, pallet);
+            if (incumbent != null)
+                search.SeedIncumbent(incumbent);
+
             search.Run();
 
             double bound = double.IsInfinity(search.RootBound) ? 0 : search.RootBound;
@@ -95,40 +109,16 @@ namespace Stack_Solver.Services.BranchAndPrice
                 .Select(c => (c.Column.Template, c.Count))
                 .ToList();
 
-            // Any sub-layer remainder B&P could not tile with full layers is placed on extra
-            // pallets by a fast filler-aware greedy pass, so every placeable box ends up
-            // somewhere (see FillerLayerGenerator). Feeding fillers into the optimizer itself
-            // would explode the pricing search, so they are confined to this mop-up step.
-            var placeableLeftovers = search.OptimalLeftovers.Where(kvp => kvp.Value > 0)
+            // Leftovers are only the honest minimum remainder the model could not tile —
+            // genuinely unplaceable SKUs, plus (if the budget was hit) any untiled placeable
+            // demand. With the residual layers present a completed search leaves none.
+            var leftovers = search.OptimalLeftovers.Where(kvp => kvp.Value > 0)
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.Ordinal);
-            bool remainderPlaced = false;
-            if (placeableLeftovers.Count > 0)
-            {
-                ct.ThrowIfCancellationRequested();
-                var fillerLayers = FillerLayerGenerator.Augment(layers, pallet);
-                var remainder = GreedyAssignmentService.Assign(fillerLayers, placeableLeftovers, pallet);
-                if (remainder.Assignments.Count > 0)
-                {
-                    assignments.AddRange(remainder.Assignments.Select(a => (a.Template, a.Count)));
-                    remainderPlaced = true;
-                }
-                placeableLeftovers = remainder.Leftovers.Where(kvp => kvp.Value > 0)
-                    .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.Ordinal);
-            }
-
-            var merged = assignments
-                .GroupBy(a => BnpColumn.BuildSignature(a.Template), StringComparer.Ordinal)
-                .Select(g => (g.First().Template, Count: g.Sum(a => a.Count)))
-                .ToList();
-
-            var leftovers = new Dictionary<string, int>(placeableLeftovers, StringComparer.Ordinal);
             foreach (var (sku, count) in UnplaceableLeftovers(demand, seed.UnplaceableSkus))
                 leftovers[sku] = count;
 
-            // Appending heuristic remainder pallets means the total is no longer a proven optimum.
-            bool certified = search.ProvedOptimal && !remainderPlaced;
             return new BranchAndPriceSolution(
-                new AssignmentResult { Assignments = merged, Leftovers = leftovers }, bound, certified);
+                new AssignmentResult { Assignments = assignments, Leftovers = leftovers }, bound, search.ProvedOptimal);
         }
 
         /// <summary>Runs root-node column generation and returns the LP optimum and final pool.</summary>

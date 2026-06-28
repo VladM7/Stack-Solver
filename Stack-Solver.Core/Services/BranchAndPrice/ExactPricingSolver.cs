@@ -49,10 +49,19 @@ namespace Stack_Solver.Services.BranchAndPrice
             var cands = BuildCandidates(duals);
             if (cands.Count == 0) return null;
 
-            double density = 0;
-            foreach (var c in cands) density = Math.Max(density, c.Value / c.Height);
+            // Admissible value densities for the optimistic completion bound: every candidate
+            // satisfies value ≤ heightDensity·height and value ≤ weightDensity·weight, so the
+            // extra value reachable in the remaining height/weight is bounded by the smaller of
+            // heightDensity·remainingHeight and weightDensity·remainingWeight (a fractional-knapsack
+            // bound on two resources). A zero-weight layer makes the weight side non-binding (∞).
+            double heightDensity = 0, weightDensity = 0;
+            foreach (var c in cands)
+            {
+                heightDensity = Math.Max(heightDensity, c.Value / c.Height);
+                weightDensity = Math.Max(weightDensity, c.Weight > 0 ? c.Value / c.Weight : double.PositiveInfinity);
+            }
 
-            var ctx = new SearchContext(cands, _rules, density, NodeBudget, forbidden);
+            var ctx = new SearchContext(cands, _rules, heightDensity, weightDensity, NodeBudget, forbidden);
             for (int i = 0; i < cands.Count; i++)
             {
                 ctx.Descend(i);
@@ -83,8 +92,13 @@ namespace Stack_Solver.Services.BranchAndPrice
                 cands.Add(new Cand(layer, value, layer.Metadata.Height, layer.Metrics.TotalWeight));
             }
             // Non-increasing weight makes weight tiers contiguous so the equal-weight
-            // tie-break (by index) canonicalises permutations.
-            cands.Sort(static (a, b) => b.Weight.CompareTo(a.Weight));
+            // tie-break (by index) canonicalises permutations; within a tier, higher value
+            // first so strong stacks (and tighter pruning bounds) are reached earlier.
+            cands.Sort(static (a, b) =>
+            {
+                int byWeight = b.Weight.CompareTo(a.Weight);
+                return byWeight != 0 ? byWeight : b.Value.CompareTo(a.Value);
+            });
             return cands;
         }
 
@@ -94,7 +108,8 @@ namespace Stack_Solver.Services.BranchAndPrice
         {
             private readonly List<Cand> _cands;
             private readonly PricingRules _rules;
-            private readonly double _density;
+            private readonly double _heightDensity;
+            private readonly double _weightDensity;
             private readonly int _availH;
             private readonly IReadOnlySet<string>? _forbidden;
             private long _budget;
@@ -110,11 +125,12 @@ namespace Stack_Solver.Services.BranchAndPrice
             public List<int> BestStack { get; } = [];
             public bool BudgetExhausted { get; private set; }
 
-            public SearchContext(List<Cand> cands, PricingRules rules, double density, long budget, IReadOnlySet<string>? forbidden)
+            public SearchContext(List<Cand> cands, PricingRules rules, double heightDensity, double weightDensity, long budget, IReadOnlySet<string>? forbidden)
             {
                 _cands = cands;
                 _rules = rules;
-                _density = density;
+                _heightDensity = heightDensity;
+                _weightDensity = weightDensity;
                 _budget = budget;
                 _availH = rules.AvailHeight;
                 _forbidden = forbidden;
@@ -147,8 +163,11 @@ namespace Stack_Solver.Services.BranchAndPrice
                     BestStack.AddRange(_stack);
                 }
 
-                // Optimistic bound: fill the remaining height at the best value density.
-                double bound = _value + _density * (_availH - _usedHeight);
+                // Optimistic bound: fill the remaining height and weight at the best value
+                // densities, taking the binding (smaller) of the two resource limits.
+                double bound = _value + Math.Min(
+                    _heightDensity * (_availH - _usedHeight),
+                    _weightDensity * (_rules.MaxWeight - _usedWeight));
                 if (bound > BestValue + Epsilon)
                 {
                     for (int j = 0; j < _cands.Count; j++)

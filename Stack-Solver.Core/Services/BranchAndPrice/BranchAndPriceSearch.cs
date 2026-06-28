@@ -74,12 +74,48 @@ namespace Stack_Solver.Services.BranchAndPrice
         /// <summary>True only when the returned solution is a proven optimum.</summary>
         public bool ProvedOptimal => _completed && _allCertified && _best != null;
 
+        /// <summary>
+        /// Seeds a starting integer incumbent (e.g. from <see cref="LayerPackingHeuristic"/>) so
+        /// the search has an upper bound to prune against and never returns short on timeout.
+        /// Columns are added to the pool/RMP so the tree can also reach this solution.
+        /// </summary>
+        public void SeedIncumbent(IReadOnlyList<(BnpColumn Column, int Count)> columns)
+        {
+            ArgumentNullException.ThrowIfNull(columns);
+            if (columns.Count == 0) return;
+
+            var added = new List<BnpColumn>();
+            foreach (var (col, _) in columns)
+                if (_pool.TryAdd(col)) added.Add(col);
+            if (added.Count > 0) _rmp.AddColumns(added);
+
+            _best = columns.Select(c => (c.Column, c.Count)).Where(c => c.Count > 0).ToList();
+            _bestObjective = columns.Sum(c => c.Count);
+            _bestLeftovers = new Dictionary<string, int>(StringComparer.Ordinal);
+        }
+
         public void Run()
         {
             var root = SolveNode();
             RootBound = root.Feasible ? root.Primal.Sum(p => p.Value) : double.PositiveInfinity;
             RootCertified = root.Certified;
+
+            // ⌈LP bound⌉ certification: the integer pallet optimum is ≥ the certified LP bound,
+            // and integral when all placeable demand tiles (it does, with residual layers). So an
+            // incumbent matching ⌈RootBound⌉ — with no leftover at the root or in the incumbent —
+            // is already provably optimal; skip the tree.
+            if (_best != null && RootCertified && root.Feasible
+                && AllZero(root.Leftovers) && AllZero(_bestLeftovers)
+                && _bestObjective <= Math.Ceiling(RootBound - IntTol) + IntTol)
+                return;
+
             BranchAndBound(root);
+        }
+
+        private static bool AllZero(IReadOnlyDictionary<string, int> leftovers)
+        {
+            foreach (var v in leftovers.Values) if (v > 0) return false;
+            return true;
         }
 
         private void BranchAndBound(NodeSolve node)

@@ -391,15 +391,14 @@ Mirror the existing `Tests/Stack-Solver.Tests/Services` layout.
    the UI; the existing Cancel button still interrupts via the cancellation token. SKU
    placeability and the leftovers warning are already handled inside the algorithm (leftovers
    flow to the existing leftovers UI).
-   - **Filler remainder placement.** Per the user's "always place everything" preference, any
-     sub-layer remainder B&P can't tile with full layers (e.g. 2 boxes left of 500) is placed
-     on extra, possibly sparse, pallets by a fast filler-aware greedy pass
-     (`FillerLayerGenerator` adds 1/2/4/… box partial layers; the mop-up uses
-     `GreedyAssignmentService`). Fillers are deliberately **kept out of the optimizer** —
-     feeding them in explodes the pricing search — so only genuinely unplaceable SKUs (too
-     big/heavy) remain as leftovers. Appending a heuristic remainder pallet marks the result
-     uncertified.
-6. **Stabilization, perf tuning, full test suite, docs.** *(medium)*
+   - **Filler remainder placement (milestone 5; superseded by milestone 6).** Originally any
+     sub-layer remainder B&P couldn't tile (e.g. 2 boxes left of 500) was placed on extra
+     sparse pallets by a post-search filler-aware greedy pass (`FillerLayerGenerator` +
+     `GreedyAssignmentService`), which left the result uncertified. **Milestone 6 replaced this
+     entirely** — the residual is now tiled inside the certified optimization (§14).
+6. ✅ **Certified residual placement + perf tuning** *(medium–large)* — **Done.** Folded the
+   residual into the optimizer so the *whole* solution is a proven optimum (the greedy mop-up
+   is gone). Detailed plan and outcome in §14.
 
 Milestone 2 is the point of diminishing risk: if effort runs out there, the result is
 already strictly better than today's capped enumerate-then-CP-SAT path.
@@ -422,3 +421,117 @@ already strictly better than today's capped enumerate-then-CP-SAT path.
 
 - `Google.OrTools` 9.15 (already referenced) — provides GLOP via
   `Google.OrTools.LinearSolver`. **No new package required.**
+
+---
+
+## 14. Milestone 6 — certified residual placement (detailed plan)
+
+### 14.1 Goal and the problem with milestone 5's residual
+
+Milestone 5 places every box, but the sub-layer remainder is mopped up **after** the
+search by a filler-aware `GreedyAssignmentService` pass, so the returned solution is marked
+`LowerBoundCertified = false` whenever that pass fires. Two distinct shortcomings:
+
+1. **Not proven optimal.** The greedy remainder pallet is appended outside the model, so
+   B&P cannot prove the total pallet count is minimal — and in fact it usually isn't: the
+   remainder is dropped on a *new* sparse pallet instead of being stacked onto a partial
+   pallet (or combined with another SKU's remainder) that the optimizer already built.
+2. **It exists only because the optimizer can't see partial layers.** With full-grid layers
+   only, a remainder `r < N` has no column to enter, so the search reports it as leftover.
+
+The user's requirement: the residual must be handled **inside** the certified optimization,
+so a placeable instance returns `LowerBoundCertified = true` with zero leftover.
+
+### 14.2 Key insight — the minimal, optimal filler set
+
+The earlier "fillers explode the pricer" result (a 2-pallet 144/240 instance → 31 s) came
+from `FillerLayerGenerator` adding **powers-of-two fillers (1, 2, 4, …) for every SKU** —
+including SKUs whose demand is already layer-divisible (144 = 9·16, `r = 0`), which need no
+filler at all yet still bloated the layer set and the branching tree.
+
+The correct filler set is far smaller and is *optimal by construction*:
+
+- For SKU `i` with grid capacity `N_i`, write `d_i = q_i·N_i + r_i`, `0 ≤ r_i < N_i`.
+- **All layers of SKU `i` have the same height** `h_i` regardless of how many boxes they
+  carry (a partial layer is as tall as a full one). So minimizing pallets ≈ minimizing total
+  layer-height, which means **minimizing the number of layers** per SKU.
+- The fewest layers that sum to exactly `d_i` is `q_i` full layers **plus one partial layer
+  of exactly `r_i` boxes** (only when `r_i > 0`). Any other composition uses ≥ as many
+  layers → never fewer pallets.
+
+Therefore the model needs **at most one extra layer per SKU — a partial layer of exactly
+`r_i` boxes — and none when `r_i = 0`.** This:
+
+- is **zero overhead on layer-divisible instances** (the 144/240 blow-up disappears by
+  construction — no fillers are added);
+- makes the augmented layer set's optimum the **true global optimum** over all
+  homogeneous-layer packings (cross-SKU sharing of leftover pallet height is already handled
+  by the pricer stacking different SKUs' layers — full *or* the single partial — on one
+  pallet, subject to the existing support/weight checks);
+- needs **no power-of-two composition** — the integer demand-equality (`Σ a·x + l = d`, no
+  overshoot possible since `l ≥ 0`) forces each `r_i` partial to be used exactly once.
+
+### 14.3 Implementation steps (as built)
+
+**6a — Minimal exact-size residual layers. ✅**
+`FillerLayerGenerator` (powers-of-two for every SKU) was replaced by `ResidualLayerGenerator`:
+for each placeable SKU whose `r_i = d_i mod N_i > 0` it adds **one** homogeneous partial layer
+of exactly `r_i` boxes (cloned-SKU + `HomogeneousGenerationStrategy`, which computes geometry
+and metrics). `N_i` is the densest fitting homogeneous layer's box count. Output:
+`layers ∪ {one r_i partial per remainder SKU}` — **zero added on layer-divisible demand**, so
+the old 144/240 blow-up cannot recur.
+
+**6b — Fold residual layers into the search; delete the mop-up. ✅**
+`BranchAndPriceAssignmentService.Solve` builds the augmented layer set once up front and passes
+it into `BranchAndPriceSearch`. The post-search `Augment` + `GreedyAssignmentService` block and
+the `remainderPlaced` flag are gone; certification flows directly from `search.ProvedOptimal`.
+On divisible instances the augmented set equals the original, so behaviour is unchanged.
+
+**6c — Pricer-bound hardening. ✅**
+`ExactPricingSolver`'s optimistic-completion bound is now a two-resource fractional-knapsack
+bound — `min(heightDensity·remainingHeight, weightDensity·remainingWeight)` (admissible; a
+zero-weight layer makes the weight side non-binding). Candidates are additionally ordered by
+value within each weight tier so strong stacks and tighter bounds are reached earlier. Both
+changes keep the search exhaustive (still certifying) while pruning more.
+
+**6d — Stronger incumbent + ⌈bound⌉ certification. ✅ (aggregate-count branching deferred).**
+`LayerPackingHeuristic` tiles each demand into its minimal layer multiset (full layers + the
+single `r_i` partial) and first-fits them into pallets (full layers before partials, so a
+partial never supports a full layer). This **constructive incumbent** is seeded into the search
+(`SeedIncumbent`), guaranteeing every placeable box is placed up front. Combined with a new
+**⌈LP bound⌉ certification** — the integer pallet optimum is `≥ ⌈certified LP bound⌉`, so an
+incumbent matching it (with zero leftover at the root and in the incumbent) is provably optimal
+and the tree is skipped — this certifies the common homogeneous case instantly. The user's
+500/50/50 case now certifies in ~0.13 s (was a 30 s timeout returning 499/500).
+  - *Deferred:* explicit branch-on-`Σ x_t` cardinality branching. The constructive incumbent +
+    ⌈bound⌉ certification subsume its need on the realistic (equal/near-equal layer height)
+    instances, where the LP bound rounds up to the integer optimum. The existing single-column
+    bound-branching remains the fallback for any rounding-gap instance, bounded by the node/time
+    budget. Revisit only if a heterogeneous-height instance is found that neither certifies via
+    the bound nor finishes branching in budget.
+
+**6e — Graceful degradation (unchanged contract). ✅**
+Because the constructive incumbent is always seeded, a budget-limited solve now returns it
+(every placeable box placed) with `LowerBoundCertified = false`, instead of returning short.
+Strictly better than milestone 5 — the remainder rides optimal pallets, not an appended sparse
+one.
+
+### 14.4 Tests
+
+- **Certified remainder.** The milestone-5 21-box case (`Solve_SubLayerRemainder_…`) now
+  asserts `LowerBoundCertified = true`, zero leftover, and the remainder stacked onto the
+  existing pallet (so **1** pallet, not 2).
+- **Cross-SKU remainder sharing.** Two SKUs each with a small remainder whose partial layers
+  fit on one shared pallet → proven optimum combines them.
+- **No regression on divisible demand.** 144 / 240 (and 153) instances add zero fillers and
+  stay fast + certified (guard against the old blow-up).
+- **500/50/50 end-to-end.** All 600 placed, certified within budget.
+- **Bound sandwich + determinism** retained; unplaceable SKUs still leftover (certified).
+
+### 14.5 Risks
+
+| Risk | Mitigation |
+| --- | --- |
+| One partial layer per SKU still slows the pricer on many-SKU instances | Minimal set (often zero); pricer-bound hardening (6c); fillers only for remainder SKUs. |
+| Partial layer can't support a full layer above it | Correct, not a bug — the support check forces partials to the top of a stack; the optimizer handles it. |
+| Tree still times out on huge demand | Dive incumbent + aggregate-count branching (6d); graceful uncertified incumbent (6e), no regression. |
