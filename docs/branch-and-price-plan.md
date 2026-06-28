@@ -61,9 +61,13 @@ These were decided during planning and define the algorithm's behavior:
      homogeneous pallet). Leftovers are therefore only possible for *physically
      unplaceable* SKUs, which are handled by an up-front feasibility check (§4.2), not by
      the optimizer.
-2. **Demand is a hard equality.** You have exactly `d_i` boxes, cannot place more than you
-   have, and can always place all placeable boxes — so `Σ_t a_{t,i}·x_t = d_i`. No
-   leftover slack variable in the model.
+2. **Demand is an equality with big-M leftover slack** (revised in milestone 4 — see §11.4).
+   The model is `Σ_t a_{t,i}·x_t + l_i = d_i`, `l_i ≥ 0`, with `l_i` penalised by a big-M
+   cost larger than any pallet count. *Originally* this was a pure equality with no slack —
+   but branch-and-price needs every node to stay feasible after a column is forbidden
+   (otherwise pricing has no duals and would require Farkas dual rays). The slack provides
+   that, and the leftover `l_i` is exactly the honest minimum remainder; big-M drives it to
+   zero whenever the demand is tileable.
 3. **Unplaceable SKUs are reported as leftovers with a warning** (not a hard validation
    error). Generation proceeds for the rest; the unplaceable SKUs appear in
    `AssignmentResult.Leftovers` and surface in the existing leftovers UI.
@@ -83,16 +87,17 @@ Over a current subset `R` of columns (templates), solved with **GLOP** (the LP s
 `Google.OrTools`, which exposes dual values; CP-SAT cannot):
 
 ```
-minimize    Σ_{t∈R} x_t
-subject to  Σ_{t∈R} a_{t,i}·x_t = d_i      ∀ placeable SKU i      (dual π_i, free sign)
-            x_t ≥ 0
+minimize    Σ_{t∈R} x_t  +  M · Σ_i l_i
+subject to  Σ_{t∈R} a_{t,i}·x_t + l_i = d_i      ∀ placeable SKU i      (dual π_i, free sign)
+            x_t ≥ 0,  0 ≤ l_i ≤ d_i
 ```
 
 - `x_t` — number of pallets of template `t` (continuous in the RMP, integer in the IP).
 - `a_{t,i}` — count of SKU `i` in template `t`.
 - `d_i` — exact demand for SKU `i` (placeable SKUs only).
-- `π_i` — dual price of the demand constraint for SKU `i` (unrestricted in sign, because
-  the constraint is an equality).
+- `l_i` — leftover (unmet) units of SKU `i`; `M = Σ_i d_i + 1` so leftovers are eliminated
+  before any pallet is traded. (Added in milestone 4; see §2.2.)
+- `π_i` — dual price of the demand constraint for SKU `i` (free sign; bounded above by `M`).
 
 ### 3.2 Pricing subproblem
 
@@ -358,7 +363,24 @@ Mirror the existing `Tests/Stack-Solver.Tests/Services` layout.
    `Solve`. Covered by `ExactPricingSolverTests`. **Caveat:** the equal-weight permutation
    tie-break is exact only when support is symmetric within an equal-weight group (true for
    full-coverage layers); if the node budget is hit the bound is reported uncertified.
-4. **Ryan–Foster branching** → provable integer optimality. *(large, highest risk)*
+4. ✅ **Branching → provable integer optimality.** *(large, highest risk)* — **Done**, with
+   two design changes forced by what branching exposed:
+   - **Bound-branching, not Ryan–Foster.** Columns carry SKU multiplicities and `x_t` are
+     general integers (not 0/1 set-partitioning), so the search branches by bounding a
+     fractional column variable (`BranchAndPriceSearch`). Both pricers are forbidden-column
+     aware (`forbidden` signature set) so a forbidden column is never regenerated and the
+     exact bound stays valid; bounds are saved/restored on backtrack and the pool is shared.
+   - **Big-M leftover slack in the master.** Pure equality made forbidding-branches
+     infeasible (and recovering would need Farkas dual rays, which GLOP doesn't expose
+     cleanly). Adding penalized leftover slack (`l_i`, cost > any pallet count) keeps every
+     node feasible, so pricing always has valid duals; leftovers emerge as the honest
+     minimum remainder. This also unified leftovers and **removed the greedy residual
+     fallback** from milestone 2.
+   - Covered by `BranchAndBoundTests` (fractional root → proven optimum; non-tileable
+     remainder → minimum leftover then minimum pallets). **Caveats:** bound-branching trees
+     grow fast on large demands (the node budget caps them and reports the result
+     uncertified if hit); proven optimality needs both the tree and every node's exact
+     pricing to finish within budget.
 5. **Integration**: SKU placeability + leftovers warning, UI selector, settings, defaults.
    *(medium)*
 6. **Stabilization, perf tuning, full test suite, docs.** *(medium)*

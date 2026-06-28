@@ -8,25 +8,29 @@ namespace Stack_Solver.Services.BranchAndPrice
 {
     /// <summary>
     /// Assigns pallet templates to demand by branch-and-price (Dantzig–Wolfe decomposition
-    /// with delayed column generation). Single objective: minimize the total number of
-    /// pallets, with demand enforced as an equality in the LP. Physically unplaceable SKUs
-    /// — and any sub-layer remainder that no available layer can tile — are reported as
-    /// leftovers.
+    /// with delayed column generation, embedded in branch-and-bound). Objective: minimize the
+    /// pallet count, with big-M leftover slack so the master is always feasible. Physically
+    /// unplaceable SKUs — and any remainder that no column can tile — are reported as
+    /// leftovers; the big-M penalty drives leftovers to their minimum before trading pallets.
     ///
-    /// <para><b>Status:</b> milestones 1–2 are implemented: the GLOP restricted master, the
-    /// homogeneous seed pool, dual extraction, the heuristic pricing loop (column
-    /// generation at the root), and an integer incumbent obtained by rounding the LP and
-    /// greedily packing the residual. Exact pricing and branch-and-bound (provable
-    /// optimality) arrive in later milestones.</para>
+    /// <para>Pipeline: GLOP restricted master (<see cref="RestrictedMasterProblem"/>),
+    /// homogeneous seed (<see cref="ColumnSeeder"/>), heuristic + exact pricing
+    /// (<see cref="PricingSolver"/>, <see cref="ExactPricingSolver"/>), and branch-and-bound
+    /// over fractional column variables (<see cref="BranchAndPriceSearch"/>). The result is a
+    /// proven optimum when the search and every node's exact pricing complete within budget;
+    /// otherwise the best solution found, with <see cref="BranchAndPriceSolution.LowerBoundCertified"/>
+    /// false. <see cref="GenerateColumns"/> exposes root-only column generation.</para>
     /// </summary>
     public static class BranchAndPriceAssignmentService
     {
         private const int DefaultMaxIterations = 500;
+        private const long DefaultNodeBudget = 50_000;
 
         /// <summary>
-        /// Runs root-node column generation and returns the best integer incumbent found by
-        /// rounding the LP optimum and packing the residual, with leftovers for unplaceable
-        /// SKUs and any untileable remainder.
+        /// Runs branch-and-price and returns the integer assignment: a proven minimum-pallet
+        /// solution when the exact-equality master is feasible and the search completes,
+        /// otherwise the best incumbent found. Unplaceable SKUs (and, on the fallback path,
+        /// any untileable remainder) are reported as leftovers.
         /// </summary>
         public static AssignmentResult Assign(
             IReadOnlyList<Layer> layers,
@@ -48,8 +52,9 @@ namespace Stack_Solver.Services.BranchAndPrice
         }
 
         /// <summary>
-        /// Full root solve: runs column generation, builds the integer incumbent, and returns
-        /// it together with the certified LP lower bound and optimality gap.
+        /// Full branch-and-price solve. Runs the branch-and-bound search; on success returns
+        /// the proven optimum, otherwise the milestone-2 incumbent (which allows leftovers).
+        /// Always reports the root LP lower bound and whether the result is a certified optimum.
         /// </summary>
         public static BranchAndPriceSolution Solve(
             IReadOnlyList<Layer> layers,
@@ -67,12 +72,34 @@ namespace Stack_Solver.Services.BranchAndPrice
             if (layers.Count == 0 || demand.Count == 0)
                 return new BranchAndPriceSolution(new AssignmentResult { Leftovers = ToLeftovers(demand) }, 0, false);
 
-            ct.ThrowIfCancellationRequested();
-            var cg = RunColumnGeneration(layers, demand, pallet, ct);
-            var result = BuildIncumbent(cg, demand, layers, pallet);
+            var seed = ColumnSeeder.Seed(layers, demand, pallet);
+            if (seed.PlaceableSkus.Count == 0)
+            {
+                // Nothing can be palletized — trivially optimal with everything left over.
+                return new BranchAndPriceSolution(
+                    new AssignmentResult { Leftovers = UnplaceableLeftovers(demand, seed.UnplaceableSkus) }, 0, true);
+            }
 
-            double bound = double.IsNaN(cg.Objective) ? 0 : cg.Objective;
-            return new BranchAndPriceSolution(result, bound, cg.BoundCertified);
+            var placeableDemand = seed.PlaceableSkus.ToDictionary(s => s, s => demand[s], StringComparer.Ordinal);
+
+            ct.ThrowIfCancellationRequested();
+            using var search = new BranchAndPriceSearch(
+                layers, seed.PlaceableSkus, placeableDemand, seed.Columns, pallet, DefaultNodeBudget, ct);
+            search.Run();
+
+            double bound = double.IsInfinity(search.RootBound) ? 0 : search.RootBound;
+
+            var assignments = (search.OptimalColumns ?? [])
+                .Select(c => (c.Column.Template, c.Count))
+                .ToList();
+
+            // Leftovers = untileable remainder (slack in the master) + unplaceable SKUs.
+            var leftovers = new Dictionary<string, int>(search.OptimalLeftovers, StringComparer.Ordinal);
+            foreach (var (sku, count) in UnplaceableLeftovers(demand, seed.UnplaceableSkus))
+                leftovers[sku] = count;
+
+            var result = new AssignmentResult { Assignments = assignments, Leftovers = leftovers };
+            return new BranchAndPriceSolution(result, bound, search.ProvedOptimal);
         }
 
         /// <summary>Runs root-node column generation and returns the LP optimum and final pool.</summary>
@@ -162,64 +189,13 @@ namespace Stack_Solver.Services.BranchAndPrice
                 seed.UnplaceableSkus);
         }
 
-        /// <summary>
-        /// Constructs an integer assignment: take ⌊x_t⌋ of each LP column (never exceeding
-        /// remaining demand) to lay down the full pallets the relaxation favours — including
-        /// mixed columns the greedy stacker would miss — then pack whatever remains with the
-        /// greedy layer-stacker, which can build partial pallets down to layer granularity.
-        /// Any sub-layer remainder, plus the unplaceable SKUs, becomes the leftovers.
-        /// </summary>
-        private static AssignmentResult BuildIncumbent(
-            ColumnGenerationResult cg,
-            IReadOnlyDictionary<string, int> demand,
-            IReadOnlyList<Layer> layers,
-            Pallet pallet)
+        private static Dictionary<string, int> UnplaceableLeftovers(
+            IReadOnlyDictionary<string, int> demand, IReadOnlyList<string> unplaceable)
         {
-            var remaining = cg.PlaceableSkus.ToDictionary(s => s, s => demand[s], StringComparer.Ordinal);
-            var assignments = new List<(PalletTemplate Template, int Count)>();
-
-            foreach (var (column, value) in cg.Primal)
-            {
-                int copies = Math.Min((int)Math.Floor(value + 1e-9), MaxCopies(column, remaining));
-                if (copies <= 0) continue;
-                assignments.Add((column.Template, copies));
-                Apply(column, copies, remaining);
-            }
-
-            // Residual: greedy layer-stacking handles granularity the LP columns cannot.
-            var residual = GreedyAssignmentService.Assign(layers, remaining, pallet);
-            assignments.AddRange(residual.Assignments);
-
-            var merged = assignments
-                .GroupBy(a => BnpColumn.BuildSignature(a.Template), StringComparer.Ordinal)
-                .Select(g => (g.First().Template, Count: g.Sum(a => a.Count)))
-                .ToList();
-
-            var leftovers = new Dictionary<string, int>(residual.Leftovers, StringComparer.Ordinal);
-            foreach (var sku in cg.UnplaceableSkus)
+            var leftovers = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var sku in unplaceable)
                 if (demand.TryGetValue(sku, out int d) && d > 0) leftovers[sku] = d;
-
-            return new AssignmentResult { Assignments = merged, Leftovers = leftovers };
-        }
-
-        /// <summary>Largest number of copies of <paramref name="column"/> that fits remaining demand.</summary>
-        private static int MaxCopies(BnpColumn column, IReadOnlyDictionary<string, int> remaining)
-        {
-            int max = int.MaxValue;
-            foreach (var (sku, count) in column.SkuCounts)
-            {
-                if (count <= 0) continue;
-                int avail = remaining.GetValueOrDefault(sku);
-                max = Math.Min(max, avail / count);
-            }
-            return max == int.MaxValue ? 0 : max;
-        }
-
-        private static void Apply(BnpColumn column, int copies, Dictionary<string, int> remaining)
-        {
-            foreach (var (sku, count) in column.SkuCounts)
-                if (remaining.ContainsKey(sku))
-                    remaining[sku] -= count * copies;
+            return leftovers;
         }
 
         /// <summary>

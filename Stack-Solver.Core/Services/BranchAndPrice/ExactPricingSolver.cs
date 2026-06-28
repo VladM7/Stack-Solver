@@ -36,7 +36,11 @@ namespace Stack_Solver.Services.BranchAndPrice
         /// <summary>True iff the most recent <see cref="FindBestColumn"/> explored the whole tree.</summary>
         public bool LastSearchExhaustive { get; private set; }
 
-        public BnpColumn? FindBestColumn(IReadOnlyDictionary<string, double> duals)
+        /// <param name="duals">Demand-constraint duals π_i.</param>
+        /// <param name="forbidden">Column signatures barred by branching; never returned, but still traversed as prefixes.</param>
+        public BnpColumn? FindBestColumn(
+            IReadOnlyDictionary<string, double> duals,
+            IReadOnlySet<string>? forbidden = null)
         {
             ArgumentNullException.ThrowIfNull(duals);
             LastSearchExhaustive = true;
@@ -48,7 +52,7 @@ namespace Stack_Solver.Services.BranchAndPrice
             double density = 0;
             foreach (var c in cands) density = Math.Max(density, c.Value / c.Height);
 
-            var ctx = new SearchContext(cands, _rules, density, NodeBudget);
+            var ctx = new SearchContext(cands, _rules, density, NodeBudget, forbidden);
             for (int i = 0; i < cands.Count; i++)
             {
                 ctx.Descend(i);
@@ -92,6 +96,7 @@ namespace Stack_Solver.Services.BranchAndPrice
             private readonly PricingRules _rules;
             private readonly double _density;
             private readonly int _availH;
+            private readonly IReadOnlySet<string>? _forbidden;
             private long _budget;
 
             private readonly List<int> _stack = [];                                 // candidate indices, bottom→top
@@ -105,13 +110,14 @@ namespace Stack_Solver.Services.BranchAndPrice
             public List<int> BestStack { get; } = [];
             public bool BudgetExhausted { get; private set; }
 
-            public SearchContext(List<Cand> cands, PricingRules rules, double density, long budget)
+            public SearchContext(List<Cand> cands, PricingRules rules, double density, long budget, IReadOnlySet<string>? forbidden)
             {
                 _cands = cands;
                 _rules = rules;
                 _density = density;
                 _budget = budget;
                 _availH = rules.AvailHeight;
+                _forbidden = forbidden;
             }
 
             public void Descend(int i)
@@ -134,7 +140,7 @@ namespace Stack_Solver.Services.BranchAndPrice
 
                 Push(i, c);
 
-                if (_value > BestValue)
+                if (_value > BestValue && !IsForbidden())
                 {
                     BestValue = _value;
                     BestStack.Clear();
@@ -153,6 +159,23 @@ namespace Stack_Solver.Services.BranchAndPrice
                 }
 
                 Pop(c);
+            }
+
+            private bool IsForbidden()
+            {
+                if (_forbidden == null || _forbidden.Count == 0) return false;
+                return _forbidden.Contains(CurrentSignature());
+            }
+
+            // Signature of the current stack, matching BnpColumn.BuildSignature (per-item SKU
+            // counts aggregated over all layers, ordered by SKU id).
+            private string CurrentSignature()
+            {
+                var counts = new SortedDictionary<string, int>(StringComparer.Ordinal);
+                foreach (int idx in _stack)
+                    foreach (var item in _cands[idx].Layer.Items)
+                        counts[item.SkuType.SkuId] = counts.GetValueOrDefault(item.SkuType.SkuId) + 1;
+                return string.Join("|", counts.Select(kvp => $"{kvp.Key}:{kvp.Value}"));
             }
 
             private int DistinctAfter(Layer layer)

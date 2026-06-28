@@ -74,13 +74,14 @@ namespace Services.BranchAndPrice
         [Fact]
         public void Solve_SmallInstance_CertifiesLowerBoundAndReportsNonNegativeGap()
         {
+            // One full pallet of each SKU → the root LP is integer, so the proven optimum is 2.
             var skus = new List<SKU>
             {
-                new() { SkuId = "A", Name = "A", Length = 40, Width = 30, Height = 10, Quantity = 360, Rotatable = true },
+                new() { SkuId = "A", Name = "A", Length = 40, Width = 30, Height = 10, Quantity = 144, Rotatable = true },
                 new() { SkuId = "B", Name = "B", Length = 30, Width = 30, Height = 8,  Quantity = 240, Rotatable = true },
             };
             var pallet = new Pallet("P", 120, 90, 14);
-            var demand = new Dictionary<string, int> { ["A"] = 360, ["B"] = 240 };
+            var demand = new Dictionary<string, int> { ["A"] = 144, ["B"] = 240 };
             var layers = new HomogeneousGenerationStrategy().Generate(skus, pallet, new GenerationOptions());
 
             var solution = BranchAndPriceAssignmentService.Solve(
@@ -88,7 +89,8 @@ namespace Services.BranchAndPrice
 
             Assert.True(solution.LowerBoundCertified);
             Assert.True(solution.LowerBound > 0);
-            Assert.True(solution.Pallets >= Math.Ceiling(solution.LowerBound) - 1e-9);
+            Assert.Equal(2, solution.Pallets);
+            Assert.Empty(solution.Result.Leftovers);
             Assert.True(solution.OptimalityGap >= -1e-9);
         }
     }

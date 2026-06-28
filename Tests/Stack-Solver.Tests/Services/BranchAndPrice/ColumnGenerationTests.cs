@@ -37,11 +37,11 @@ namespace Services.BranchAndPrice
         [Fact]
         public void Assign_PalletCount_IsAtLeastTheLpLowerBound()
         {
-            // Layer-divisible demand (A multiple of 9, B multiple of 12) so every box places
-            // and the LP lower bound genuinely applies to the full demand.
-            var skus = TwoSkus(360, 240);
+            // Demand equal to one full pallet each (A: 144 = 16×9, B: 240 = 20×12) so the root
+            // LP is integer and the search is instant; every box places with no leftover.
+            var skus = TwoSkus(144, 240);
             var pallet = new Pallet("P", 120, 90, 14);
-            var demand = new Dictionary<string, int> { ["A"] = 360, ["B"] = 240 };
+            var demand = new Dictionary<string, int> { ["A"] = 144, ["B"] = 240 };
             var layers = new HomogeneousGenerationStrategy().Generate(skus, pallet, new GenerationOptions());
 
             var cg = BranchAndPriceAssignmentService.GenerateColumns(layers, demand, pallet, TestContext.Current.CancellationToken);

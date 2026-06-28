@@ -37,9 +37,12 @@ namespace Stack_Solver.Services.BranchAndPrice
 
         /// <summary>
         /// Returns up to <see cref="MaxColumns"/> distinct improving columns (dual value &gt; 1),
-        /// highest value first. Empty when none is found.
+        /// highest value first. Columns whose signature is in <paramref name="forbidden"/>
+        /// (forbidden by a branching constraint) are never returned. Empty when none is found.
         /// </summary>
-        public IReadOnlyList<BnpColumn> FindColumns(IReadOnlyDictionary<string, double> duals)
+        public IReadOnlyList<BnpColumn> FindColumns(
+            IReadOnlyDictionary<string, double> duals,
+            IReadOnlySet<string>? forbidden = null)
         {
             ArgumentNullException.ThrowIfNull(duals);
             if (_rules.AvailHeight <= 0) return [];
@@ -57,7 +60,7 @@ namespace Stack_Solver.Services.BranchAndPrice
             {
                 foreach (var st in beam)
                     if (st.Value > 1.0 + ReducedCostEpsilon)
-                        Record(best, st);
+                        Record(best, st, forbidden);
 
                 if (depth == MaxLayersPerTemplate - 1) break;
 
@@ -105,9 +108,10 @@ namespace Stack_Solver.Services.BranchAndPrice
             return _rules.TransitionValid(st.TopLayer, cand.Layer);
         }
 
-        private static void Record(Dictionary<string, (BnpColumn, double)> best, StackState st)
+        private static void Record(Dictionary<string, (BnpColumn, double)> best, StackState st, IReadOnlySet<string>? forbidden)
         {
             var column = new BnpColumn(PalletTemplate.FromLayers(st.Layers));
+            if (forbidden != null && forbidden.Contains(column.Signature)) return;
             if (!best.TryGetValue(column.Signature, out var existing) || st.Value > existing.Item2)
                 best[column.Signature] = (column, st.Value);
         }

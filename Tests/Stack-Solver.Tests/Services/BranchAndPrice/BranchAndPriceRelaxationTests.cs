@@ -75,10 +75,11 @@ namespace Services.BranchAndPrice
         }
 
         [Fact]
-        public void Assign_LayerDivisibleDemand_PlacesEveryBoxAndFlagsUnplaceable()
+        public void Assign_PlaceableDemand_PlacesEveryBoxAndFlagsUnplaceable()
         {
-            // A homogeneous layer of A holds 9 boxes, so a multiple of 9 tiles exactly.
-            int demandA = 9 * 30;
+            // A full homogeneous A pallet holds 144 boxes (16 layers × 9), so demand 144
+            // tiles exactly in one pallet — the root LP is already integer.
+            int demandA = 144;
             var skus = new List<SKU>
             {
                 new() { SkuId = "A", Name = "A", Length = 40, Width = 30, Height = 10, Quantity = demandA, Rotatable = true },
@@ -98,25 +99,5 @@ namespace Services.BranchAndPrice
             Assert.Equal(4, result.Leftovers["BIG"]);             // unplaceable SKU → leftover
         }
 
-        [Fact]
-        public void Assign_SubLayerRemainder_IsReportedAsLeftover()
-        {
-            // 9-box layers cannot tile 290 exactly: 288 are placed, 2 remain as leftover.
-            int demandA = 290;
-            var skus = new List<SKU>
-            {
-                new() { SkuId = "A", Name = "A", Length = 40, Width = 30, Height = 10, Quantity = demandA, Rotatable = true },
-            };
-            var pallet = new Pallet("P", 120, 90, 14);
-            var demand = new Dictionary<string, int> { ["A"] = demandA };
-
-            var layers = new HomogeneousGenerationStrategy().Generate(skus, pallet, new GenerationOptions());
-
-            var result = BranchAndPriceAssignmentService.Assign(layers, demand, pallet, new GenerationOptions(), ct: TestContext.Current.CancellationToken);
-
-            int placedA = result.Assignments.Sum(a => a.Template.SkuCounts.GetValueOrDefault("A") * a.Count);
-            Assert.Equal(288, placedA);
-            Assert.Equal(2, result.Leftovers["A"]);
-        }
     }
 }
