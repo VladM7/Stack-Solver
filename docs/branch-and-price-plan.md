@@ -339,9 +339,15 @@ Mirror the existing `Tests/Stack-Solver.Tests/Services` layout.
    `BranchAndPriceAssignmentService.SolveRelaxation` / provisional `Assign`. Covered by
    `BranchAndPriceRelaxationTests` (analytic objective + duals, unplaceable SKUs, baseline
    incumbent). Not yet wired to the UI (milestone 5).
-2. **Heuristic pricer + column generation, root node only**, integer solution by LP
-   rounding. Removes enumerator caps, eliminates spurious leftovers — **first shippable,
-   high-value increment**. *(large)*
+2. ✅ **Heuristic pricer + column generation, root node only**, integer solution by LP
+   rounding. *(large)* — **Done.** Implemented `PricingSolver` (beam-search heuristic
+   respecting height/weight/weight-ordering/support/distinct-SKU caps), the root
+   column-generation loop in `RunColumnGeneration`, and `BuildIncumbent` (⌊LP⌋ full pallets
+   + greedy layer-stacker for the residual). Covered by `PricingSolverTests` and
+   `ColumnGenerationTests`. **Note:** with only full-grid layers available, exact demand
+   cannot always be tiled, so a sub-layer remainder is reported as a leftover (same
+   semantics as the existing greedy); the LP stays pure-equality and feasible. Heuristic
+   pricer caps stacks at 6 layers (matching the enumerator) — the exact pricer lifts this.
 3. **Exact pricer** → true LP lower bounds and optimality-gap reporting. *(medium)*
 4. **Ryan–Foster branching** → provable integer optimality. *(large, highest risk)*
 5. **Integration**: SKU placeability + leftovers warning, UI selector, settings, defaults.
