@@ -7,6 +7,7 @@ using Stack_Solver.Models.Supports;
 using Stack_Solver.Services;
 using Stack_Solver.Services.Stacking;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Text;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -161,6 +162,10 @@ namespace Stack_Solver.ViewModels.Pages
             _generationOptions = new GenerationOptions(msg.SolverTimeLimit, msg.MaxCpsatCandidates, msg.BlfAttempts);
             if (_viewportController != null)
                 _viewportController.Target = CurrentPalletCenter;
+
+            // Displayed results no longer reflect the current settings.
+            if (HasResults && !IsGenerating)
+                GenStats = "Settings changed. Re-generate to view updated results.";
         }
 
         // ── Generation: layers + solutions in one pass ───────────────────────────────
@@ -187,6 +192,7 @@ namespace Stack_Solver.ViewModels.Pages
             SelectedItemInfo = string.Empty;
             Breadcrumbs.Clear();
             GenStats = "Generating...";
+            var stopwatch = Stopwatch.StartNew();
 
             try
             {
@@ -231,7 +237,8 @@ namespace Stack_Solver.ViewModels.Pages
                 HasResults = Solutions.Count > 0;
                 if (HasResults)
                 {
-                    GenStats = $"{allLayers.Count} candidate layers · {Solutions.Count} {(Solutions.Count == 1 ? "solution" : "solutions")}.";
+                    stopwatch.Stop();
+                    GenStats = $"{Solutions.Count} {(Solutions.Count == 1 ? "solution" : "solutions")} generated in {stopwatch.ElapsedMilliseconds} ms.";
                     SelectedSolution = Solutions[0];
                     _snackbarService.Show("Generation complete",
                         $"{allLayers.Count} candidate layers and {Solutions.Count} final {(Solutions.Count == 1 ? "solution" : "solutions")} generated.",
