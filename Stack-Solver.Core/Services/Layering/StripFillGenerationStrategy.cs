@@ -47,7 +47,6 @@ namespace Stack_Solver.Services.Layering
             }
 
             var selectedLayers = LayerCandidateHelper.SelectBestBySkuCounts(candidateLayers);
-            LayerMetricsCalculator.ComputeCompatibility(selectedLayers);
             return selectedLayers;
         }
 

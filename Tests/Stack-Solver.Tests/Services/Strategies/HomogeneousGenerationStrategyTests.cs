@@ -73,8 +73,6 @@ namespace Services.Strategies
             Assert.Equal(0.0, rotated.Metrics.TotalWeight, 5);
             Assert.Single(rotated.Metrics.UsedSkuTypes);
             Assert.Contains("A", rotated.Metrics.UsedSkuTypes);
-            Assert.Contains(rotated.Id, normal.Metrics.CompatibleTopLayerIds);
-            Assert.DoesNotContain(normal.Id, rotated.Metrics.CompatibleTopLayerIds);
         }
 
         [Fact]

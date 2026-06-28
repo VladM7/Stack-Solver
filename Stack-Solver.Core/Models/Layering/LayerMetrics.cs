@@ -18,7 +18,5 @@ namespace Stack_Solver.Models.Layering
         public double TotalWeight { get; set; }
 
         public IReadOnlyCollection<string> UsedSkuTypes { get; set; } = [];
-
-        public IReadOnlyCollection<string> CompatibleTopLayerIds { get; set; } = [];
     }
 }

@@ -122,9 +122,7 @@ namespace Stack_Solver.Services.Layering
             layer.Geometry = LayerGeometryBuilder.Build(layer, supportSurface);
             layer.Metrics = LayerMetricsCalculator.Compute(layer, supportSurface);
 
-            var layers = new List<Layer> { layer };
-            LayerMetricsCalculator.ComputeCompatibility(layers);
-            return layers;
+            return [layer];
         }
 
         private static int ComputeGridStep(List<SKU> skus)

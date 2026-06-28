@@ -2,73 +2,8 @@
 
 namespace Stack_Solver.Services
 {
-    //TODO finish this
     public static class LayerGeometryOptimizer
     {
-        public static void OptimizeGeometry(Layer layer)
-        {
-            ArgumentNullException.ThrowIfNull(layer);
-            if (layer.Geometry == null)
-                throw new InvalidOperationException("Layer geometry is not built. Please build the geometry before optimizing.");
-
-            var items = layer.Items;
-            if (items == null || items.Count == 0) return;
-
-            var colGroups = BuildGroups(items, true);
-            var rowGroups = BuildGroups(items, false);
-
-            int colMultiItems = colGroups.Where(g => g.Items.Count >= 2).Sum(g => g.Items.Count);
-            int rowMultiItems = rowGroups.Where(g => g.Items.Count >= 2).Sum(g => g.Items.Count);
-            bool byColumns = colMultiItems > rowMultiItems || (colMultiItems == rowMultiItems && colGroups.Count <= rowGroups.Count);
-
-            var groups = byColumns ? colGroups : rowGroups;
-            if (groups.Count == 0) return;
-
-            int targetSpan = groups.Max(g => g.SumSpan);
-
-            foreach (var g in groups)
-            {
-                int n = g.Items.Count;
-                if (n <= 1) continue;
-                if (g.SumSpan >= targetSpan) continue;
-
-                int newGapsTotal = targetSpan - g.SumSpan;
-                double gapBetween = (double)newGapsTotal / (n - 1);
-
-                double pos = GetVariableCoord(g.Items[0], byColumns);
-                var planned = new double[n];
-                for (int idx = 0; idx < n; idx++)
-                {
-                    planned[idx] = pos;
-                    pos += GetSpan(g.Items[idx], byColumns);
-                    if (idx < n - 1) pos += gapBetween;
-                }
-                for (int idx = 0; idx < n; idx++)
-                    SetVariableCoord(g.Items[idx], (int)Math.Round(planned[idx]), byColumns);
-            }
-        }
-
-        private static List<Group> BuildGroups(List<PositionedItem> items, bool byColumns)
-        {
-            return [.. items
-                .GroupBy(i => byColumns ? i.X : i.Y)
-                .Select(g =>
-                {
-                    var list = g.OrderBy(i => GetVariableCoord(i, byColumns)).ToList();
-                    int sumSpan = list.Sum(i => GetSpan(i, byColumns));
-                    return new Group(g.Key, list, sumSpan);
-                })];
-        }
-
-        private readonly record struct Group(int Key, List<PositionedItem> Items, int SumSpan);
-
-        private static int GetSpan(PositionedItem i, bool byColumns) => byColumns ? i.GetYSpan() : i.GetXSpan();
-        private static int GetVariableCoord(PositionedItem i, bool byColumns) => byColumns ? i.Y : i.X;
-        private static void SetVariableCoord(PositionedItem i, int v, bool byColumns)
-        {
-            if (byColumns) i.Y = v; else i.X = v;
-        }
-
         public static void CenterLayer(Layer layer)
         {
             ArgumentNullException.ThrowIfNull(layer);

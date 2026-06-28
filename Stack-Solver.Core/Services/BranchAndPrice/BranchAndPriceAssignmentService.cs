@@ -3,6 +3,7 @@ using Stack_Solver.Models;
 using Stack_Solver.Models.Assignment;
 using Stack_Solver.Models.Layering;
 using Stack_Solver.Models.Supports;
+using Stack_Solver.Services.Stacking;
 
 namespace Stack_Solver.Services.BranchAndPrice
 {
@@ -105,8 +106,11 @@ namespace Stack_Solver.Services.BranchAndPrice
 
             double bound = double.IsInfinity(search.RootBound) ? 0 : search.RootBound;
 
+            // Pricing kept columns by position-independent SKU signature, so their layers still
+            // sit at their centered positions. Materialize only the chosen columns (few) so the
+            // rendered pallets show each layer shifted onto the support beneath it.
             var assignments = (search.OptimalColumns ?? [])
-                .Select(c => (c.Column.Template, c.Count))
+                .Select(c => (Materialize(c.Column.Template, pallet), c.Count))
                 .ToList();
 
             // Leftovers are only the honest minimum remainder the model could not tile —
@@ -207,6 +211,11 @@ namespace Stack_Solver.Services.BranchAndPrice
                 seed.PlaceableSkus,
                 seed.UnplaceableSkus);
         }
+
+        /// <summary>Rebuilds a template with its layers positioned for support (see <see cref="StackMaterializer"/>).</summary>
+        private static PalletTemplate Materialize(PalletTemplate template, Pallet pallet) =>
+            PalletTemplate.FromLayers(
+                StackMaterializer.Materialize(pallet, template.Layers, pallet.MaxSkuOverhang));
 
         private static Dictionary<string, int> UnplaceableLeftovers(
             IReadOnlyDictionary<string, int> demand, IReadOnlyList<string> unplaceable)

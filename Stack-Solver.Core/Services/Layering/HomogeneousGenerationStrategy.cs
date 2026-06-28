@@ -37,7 +37,6 @@ namespace Stack_Solver.Services.Layering
                     candidateLayers.Add(layer);
             }
 
-            LayerMetricsCalculator.ComputeCompatibility(candidateLayers);
             return candidateLayers;
         }
 
