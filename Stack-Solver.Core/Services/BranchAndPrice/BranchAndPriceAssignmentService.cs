@@ -44,17 +44,37 @@ namespace Stack_Solver.Services.BranchAndPrice
             if (layers.Count == 0 || demand.Count == 0)
                 return new AssignmentResult { Leftovers = ToLeftovers(demand) };
 
-            ct.ThrowIfCancellationRequested();
-            var cg = RunColumnGeneration(layers, demand, pallet, ct);
-
-            return BuildIncumbent(cg, demand, layers, pallet);
+            return Solve(layers, demand, pallet, options, warmStart, ct).Result;
         }
 
         /// <summary>
-        /// Seeds the pool, then alternates RMP solve ↔ heuristic pricing until no improving
-        /// column is found (LP optimum at the root) or the iteration budget is exhausted.
-        /// Extracts the LP primal, objective, and SKU placeability before disposing the RMP.
+        /// Full root solve: runs column generation, builds the integer incumbent, and returns
+        /// it together with the certified LP lower bound and optimality gap.
         /// </summary>
+        public static BranchAndPriceSolution Solve(
+            IReadOnlyList<Layer> layers,
+            IReadOnlyDictionary<string, int> demand,
+            Pallet pallet,
+            GenerationOptions options,
+            AssignmentResult? warmStart = null,
+            CancellationToken ct = default)
+        {
+            ArgumentNullException.ThrowIfNull(layers);
+            ArgumentNullException.ThrowIfNull(demand);
+            ArgumentNullException.ThrowIfNull(pallet);
+            ArgumentNullException.ThrowIfNull(options);
+
+            if (layers.Count == 0 || demand.Count == 0)
+                return new BranchAndPriceSolution(new AssignmentResult { Leftovers = ToLeftovers(demand) }, 0, false);
+
+            ct.ThrowIfCancellationRequested();
+            var cg = RunColumnGeneration(layers, demand, pallet, ct);
+            var result = BuildIncumbent(cg, demand, layers, pallet);
+
+            double bound = double.IsNaN(cg.Objective) ? 0 : cg.Objective;
+            return new BranchAndPriceSolution(result, bound, cg.BoundCertified);
+        }
+
         /// <summary>Runs root-node column generation and returns the LP optimum and final pool.</summary>
         public static ColumnGenerationResult GenerateColumns(
             IReadOnlyList<Layer> layers,
@@ -68,6 +88,12 @@ namespace Stack_Solver.Services.BranchAndPrice
             return RunColumnGeneration(layers, demand, pallet, ct);
         }
 
+        /// <summary>
+        /// Seeds the pool, then alternates RMP solve ↔ pricing until no improving column
+        /// exists. The fast heuristic pricer drives most iterations; when it is exhausted the
+        /// exact pricer either supplies a missed column or certifies (when its search is
+        /// exhaustive) that the LP optimum — a valid lower bound — has been reached.
+        /// </summary>
         private static ColumnGenerationResult RunColumnGeneration(
             IReadOnlyList<Layer> layers,
             IReadOnlyDictionary<string, int> demand,
@@ -76,7 +102,7 @@ namespace Stack_Solver.Services.BranchAndPrice
         {
             var seed = ColumnSeeder.Seed(layers, demand, pallet);
             if (seed.PlaceableSkus.Count == 0)
-                return new ColumnGenerationResult(new ColumnPool(), [], double.NaN, [], seed.UnplaceableSkus);
+                return new ColumnGenerationResult(new ColumnPool(), [], double.NaN, false, [], seed.UnplaceableSkus);
 
             var placeableDemand = seed.PlaceableSkus.ToDictionary(s => s, s => demand[s], StringComparer.Ordinal);
 
@@ -86,7 +112,9 @@ namespace Stack_Solver.Services.BranchAndPrice
             using var rmp = new RestrictedMasterProblem(seed.PlaceableSkus, placeableDemand);
             rmp.AddColumns(seed.Columns);
 
-            var pricer = new PricingSolver(layers, pallet);
+            var heuristic = new PricingSolver(layers, pallet);
+            var exact = new ExactPricingSolver(layers, pallet);
+            bool certified = false;
 
             for (int iter = 0; iter < DefaultMaxIterations; iter++)
             {
@@ -96,13 +124,30 @@ namespace Stack_Solver.Services.BranchAndPrice
                 if (status is not (Solver.ResultStatus.OPTIMAL or Solver.ResultStatus.FEASIBLE))
                     break;
 
-                var candidates = pricer.FindColumns(rmp.Duals());
+                var duals = rmp.Duals();
+
                 var added = new List<BnpColumn>();
-                foreach (var c in candidates)
+                foreach (var c in heuristic.FindColumns(duals))
                     if (pool.TryAdd(c)) added.Add(c);
 
-                if (added.Count == 0) break;   // heuristic found nothing new → stop
-                rmp.AddColumns(added);
+                if (added.Count > 0)
+                {
+                    rmp.AddColumns(added);
+                    continue;
+                }
+
+                // Heuristic exhausted — call the exact pricer to either find a missed column
+                // or certify LP optimality.
+                ct.ThrowIfCancellationRequested();
+                var exactColumn = exact.FindBestColumn(duals);
+                if (exactColumn != null && pool.TryAdd(exactColumn))
+                {
+                    rmp.AddColumns([exactColumn]);
+                    continue;
+                }
+
+                certified = exact.LastSearchExhaustive;
+                break;
             }
 
             ct.ThrowIfCancellationRequested();
@@ -112,6 +157,7 @@ namespace Stack_Solver.Services.BranchAndPrice
                 pool,
                 solved ? rmp.PrimalSolution() : [],
                 solved ? rmp.ObjectiveValue : double.NaN,
+                certified && solved,
                 seed.PlaceableSkus,
                 seed.UnplaceableSkus);
         }
@@ -242,12 +288,30 @@ namespace Stack_Solver.Services.BranchAndPrice
     /// <param name="Pool">All columns generated during root column generation.</param>
     /// <param name="Primal">Columns with x_t &gt; 0 in the LP optimum, with their values.</param>
     /// <param name="Objective">LP objective Σ x_t at the root (a lower bound on the pallet count); NaN if unsolved.</param>
+    /// <param name="BoundCertified">True when the exact pricer proved no improving column exists, so <paramref name="Objective"/> is the true LP optimum.</param>
     /// <param name="PlaceableSkus">SKUs included in the master.</param>
     /// <param name="UnplaceableSkus">SKUs that cannot be palletized under the constraints.</param>
     public sealed record ColumnGenerationResult(
         ColumnPool Pool,
         IReadOnlyList<(BnpColumn Column, double Value)> Primal,
         double Objective,
+        bool BoundCertified,
         IReadOnlyList<string> PlaceableSkus,
         IReadOnlyList<string> UnplaceableSkus);
+
+    /// <param name="Result">The integer pallet assignment.</param>
+    /// <param name="LowerBound">LP lower bound on the pallet count for the modeled (placeable) demand.</param>
+    /// <param name="LowerBoundCertified">True when <paramref name="LowerBound"/> is the proven LP optimum.</param>
+    public sealed record BranchAndPriceSolution(
+        AssignmentResult Result,
+        double LowerBound,
+        bool LowerBoundCertified)
+    {
+        /// <summary>Pallets used by the integer solution.</summary>
+        public int Pallets => Result.TotalPallets;
+
+        /// <summary>Relative optimality gap (integer pallets vs LP bound); 0 when no bound is available.</summary>
+        public double OptimalityGap =>
+            LowerBound > 1e-9 ? (Pallets - LowerBound) / LowerBound : 0;
+    }
 }

@@ -348,7 +348,16 @@ Mirror the existing `Tests/Stack-Solver.Tests/Services` layout.
    cannot always be tiled, so a sub-layer remainder is reported as a leftover (same
    semantics as the existing greedy); the LP stays pure-equality and feasible. Heuristic
    pricer caps stacks at 6 layers (matching the enumerator) — the exact pricer lifts this.
-3. **Exact pricer** → true LP lower bounds and optimality-gap reporting. *(medium)*
+3. ✅ **Exact pricer** → true LP lower bounds and optimality-gap reporting. *(medium)* —
+   **Done.** Extracted shared `PricingRules` (used by both pricers so they cannot drift),
+   added `ExactPricingSolver` (depth-first branch-and-bound, density bound, node budget,
+   permutation-pruning tie-break, no artificial layer cap). The CG loop now uses the
+   heuristic to drive iterations and the exact pricer as the certificate: when its search is
+   exhaustive and finds no improving column, the LP objective is the proven optimum. Exposed
+   via `BranchAndPriceSolution` (certified `LowerBound` + `OptimalityGap`) and the public
+   `Solve`. Covered by `ExactPricingSolverTests`. **Caveat:** the equal-weight permutation
+   tie-break is exact only when support is symmetric within an equal-weight group (true for
+   full-coverage layers); if the node budget is hit the bound is reported uncertified.
 4. **Ryan–Foster branching** → provable integer optimality. *(large, highest risk)*
 5. **Integration**: SKU placeability + leftovers warning, UI selector, settings, defaults.
    *(medium)*
