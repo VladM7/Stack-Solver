@@ -6,17 +6,14 @@ namespace Stack_Solver.Helpers.Rendering
     {
         private readonly PerspectiveCamera _camera;
 
+        // Zoom moves the camera along its orbit radius toward/away from the target. It must update the
+        // same spherical state (Distance) that rotation reads, otherwise a later rotate snaps the camera
+        // back to a stale position.
         public void Zoom(double delta)
         {
             double zoomFactor = 1.0 + delta * -0.001;
-            _camera.Position = new Point3D(
-                _camera.Position.X * zoomFactor,
-                _camera.Position.Y * zoomFactor,
-                _camera.Position.Z * zoomFactor
-            );
-
-            Vector3D toTarget = Target - _camera.Position;
-            Distance = toTarget.Length;
+            Distance = Math.Clamp(Distance * zoomFactor, _minDistance, _maxDistance);
+            UpdateCameraPosition();
         }
 
         private Point _lastMousePos;
@@ -25,6 +22,8 @@ namespace Stack_Solver.Helpers.Rendering
         private double Distance;
         private double Azimuth;
         private double Elevation;
+        private double _minDistance = 1.0;
+        private double _maxDistance = double.PositiveInfinity;
 
         public ViewportController(PerspectiveCamera camera, Point3D target)
         {
@@ -33,12 +32,19 @@ namespace Stack_Solver.Helpers.Rendering
 
             Vector3D toTarget = camera.Position - Target;
             Distance = toTarget.Length;
+            SetDistanceLimits(Distance);
 
             Azimuth = Math.Atan2(toTarget.X, toTarget.Z);
 
             double sinElev = toTarget.Y / Distance;
             sinElev = Math.Max(-1.0, Math.Min(1.0, sinElev));
             Elevation = Math.Asin(sinElev);
+        }
+
+        private void SetDistanceLimits(double framingDistance)
+        {
+            _minDistance = Math.Max(0.1, framingDistance * 0.1);
+            _maxDistance = framingDistance * 5.0;
         }
 
         public void BeginPan(Point start)
@@ -66,6 +72,7 @@ namespace Stack_Solver.Helpers.Rendering
         {
             Target = target;
             Distance = distance;
+            SetDistanceLimits(distance);
             Azimuth = Math.PI / 4;
             Elevation = Math.PI / 6;
             UpdateCameraPosition();

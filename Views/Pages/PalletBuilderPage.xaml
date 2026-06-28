@@ -33,7 +33,7 @@
         <!-- Collapsed strip: only the expand button -->
         <Border x:Name="ExpandStrip" Grid.Column="0" Width="40" Visibility="Collapsed"
                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
-            <ui:Button Icon="{ui:SymbolIcon PanelLeftExpand24}" Appearance="Transparent" Padding="8"
+            <ui:Button Icon="{ui:SymbolIcon PanelLeftExpand24}" Appearance="Transparent" Padding="8" BorderThickness="0,0,0,0"
                        VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,2,0,0"
                        Click="ToggleSettings_Click" ToolTip="Show setup" />
         </Border>
@@ -49,7 +49,7 @@
 
                 <DockPanel Grid.Row="0" Margin="0,0,0,8">
                     <ui:Button DockPanel.Dock="Right" Icon="{ui:SymbolIcon PanelLeftContract24}"
-                               Appearance="Transparent" Padding="6" Click="ToggleSettings_Click" ToolTip="Hide setup" />
+                               Appearance="Transparent" Padding="6" Click="ToggleSettings_Click" ToolTip="Hide setup" BorderThickness="0,0,0,0" />
                     <StackPanel Orientation="Horizontal">
                         <ui:SymbolIcon Symbol="Options24" VerticalAlignment="Center" />
                         <ui:TextBlock Text="Setup" FontTypography="Subtitle" Margin="8,0,0,0" VerticalAlignment="Center" />
@@ -284,7 +284,7 @@
                     <ui:Button Icon="{ui:SymbolIcon ArrowLeft24}" Appearance="Transparent" Padding="6" Margin="0,0,8,0"
                                Command="{Binding ViewModel.Results.BackCommand}"
                                Visibility="{Binding ViewModel.Results.CanGoBack, Converter={StaticResource BoolToVisibilityConverter}}"
-                               ToolTip="Back" />
+                               ToolTip="Back" BorderThickness="0,0,0,0" />
                     <ItemsControl ItemsSource="{Binding ViewModel.Results.Breadcrumbs}" VerticalAlignment="Center">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>

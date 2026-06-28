@@ -44,7 +44,10 @@ namespace Stack_Solver.Helpers.Rendering
                     new Point3D(0, 0, 0), palletLength, palletHeight, palletWidth,
                     palletBrush, Colors.Black, 0.4));
 
+                // First pass: collect every box's geometry params and bounds across all layers.
                 double currentY = palletHeight;
+                var boxes = new List<(Point3D Origin, double L, double H, double W, Brush Brush, string LayerId)>();
+                var bounds = new List<BoxBounds>();
                 foreach (var layer in template.Layers)
                 {
                     ct.ThrowIfCancellationRequested();
@@ -56,21 +59,24 @@ namespace Stack_Solver.Helpers.Rendering
                         double boxLength = item.Rotated ? sku.Width : sku.Length;
                         double boxWidth = item.Rotated ? sku.Length : sku.Width;
                         var origin = new Point3D(item.X, currentY, item.Y);
-                        var brush = GetBrushForSku(sku.SkuId);
-                        var boxGroup = GeometryCreator.CreateBoxWithEdges(
-                            origin, boxLength, sku.Height, boxWidth, brush, Colors.Black, 0.25);
-                        g.Children.Add(boxGroup);
-                        if (boxGroup is Model3DGroup boxModelGroup)
-                        {
-                            foreach (var child in boxModelGroup.Children)
-                            {
-                                if (child is GeometryModel3D geo)
-                                    mapping[geo] = layer.Id;
-                            }
-                        }
+                        boxes.Add((origin, boxLength, sku.Height, boxWidth, GetBrushForSku(sku.SkuId), layer.Id));
+                        bounds.Add(new BoxBounds(item.X, item.X + boxLength, currentY, currentY + sku.Height, item.Y, item.Y + boxWidth));
                     }
 
                     currentY += layer.Metadata.Height;
+                }
+
+                // Second pass: emit each box with internal/covered faces culled.
+                var masks = FaceCuller.Compute(bounds, palletTopY: palletHeight, palletMaxX: palletLength, palletMaxZ: palletWidth);
+                for (int bi = 0; bi < boxes.Count; bi++)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var (origin, l, h, w, brush, layerId) = boxes[bi];
+                    var boxGroup = GeometryCreator.CreateBoxMerged(origin, l, h, w, brush, Colors.Black, 0.25, masks[bi]);
+                    g.Children.Add(boxGroup);
+                    foreach (var child in boxGroup.Children)
+                        if (child is GeometryModel3D geo)
+                            mapping[geo] = layerId;
                 }
 
                 // Dimension annotations ─────────────────────────────────────────────────
