@@ -82,9 +82,11 @@ namespace Stack_Solver.Services.BranchAndPrice
 
             var placeableDemand = seed.PlaceableSkus.ToDictionary(s => s, s => demand[s], StringComparer.Ordinal);
 
+            var timeBudget = TimeSpan.FromSeconds(options.MaxSolverTime > 0 ? options.MaxSolverTime : 30);
+
             ct.ThrowIfCancellationRequested();
             using var search = new BranchAndPriceSearch(
-                layers, seed.PlaceableSkus, placeableDemand, seed.Columns, pallet, DefaultNodeBudget, ct);
+                layers, seed.PlaceableSkus, placeableDemand, seed.Columns, pallet, DefaultNodeBudget, timeBudget, ct);
             search.Run();
 
             double bound = double.IsInfinity(search.RootBound) ? 0 : search.RootBound;

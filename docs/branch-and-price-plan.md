@@ -381,8 +381,16 @@ Mirror the existing `Tests/Stack-Solver.Tests/Services` layout.
      grow fast on large demands (the node budget caps them and reports the result
      uncertified if hit); proven optimality needs both the tree and every node's exact
      pricing to finish within budget.
-5. **Integration**: SKU placeability + leftovers warning, UI selector, settings, defaults.
-   *(medium)*
+5. ✅ **Integration**: UI selector, settings, wiring into `ResultsViewModel`. *(medium)* —
+   **Done.** Added a `UseBranchAndPrice` toggle threaded through `PalletSettingsDto`,
+   `PalletBuilderSettingsViewModel`, `SettingsChangedMessage`, and the Advanced section of
+   `PalletBuilderPage.xaml`. `ResultsViewModel.BuildSolutions` runs
+   `BranchAndPriceAssignmentService.Assign` (best-effort, like CP-SAT) when the toggle is on
+   and shows a **"Branch & Price"** solution first. The search now also honours a wall-clock
+   budget (`MaxSolverTime`, default 30s) alongside the node budget so the toggle can't hang
+   the UI; the existing Cancel button still interrupts via the cancellation token. SKU
+   placeability and the leftovers warning are already handled inside the algorithm (leftovers
+   flow to the existing leftovers UI).
 6. **Stabilization, perf tuning, full test suite, docs.** *(medium)*
 
 Milestone 2 is the point of diminishing risk: if effort runs out there, the result is

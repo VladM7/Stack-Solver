@@ -200,6 +200,9 @@
                                 <ui:CardControl Header="Use CP-SAT layer generation">
                                     <ui:ToggleSwitch IsChecked="{Binding ViewModel.Settings.UseCpsat, Mode=TwoWay}" />
                                 </ui:CardControl>
+                                <ui:CardControl Header="Use Branch &amp; Price assignment">
+                                    <ui:ToggleSwitch IsChecked="{Binding ViewModel.Settings.UseBranchAndPrice, Mode=TwoWay}" />
+                                </ui:CardControl>
                                 <ui:CardControl Header="Solver time limit (s)">
                                     <ui:NumberBox Minimum="1"
                                                   Value="{Binding ViewModel.Settings.SolverTimeLimit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />

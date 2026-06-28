@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Google.OrTools.LinearSolver;
 using Stack_Solver.Models.Layering;
 using Stack_Solver.Models.Supports;
@@ -29,6 +30,8 @@ namespace Stack_Solver.Services.BranchAndPrice
         private readonly HashSet<string> _forbidden = new(StringComparer.Ordinal);
         private readonly CancellationToken _ct;
 
+        private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
+        private readonly TimeSpan _timeBudget;
         private long _nodeBudget;
         private bool _completed = true;
         private bool _allCertified = true;
@@ -44,10 +47,12 @@ namespace Stack_Solver.Services.BranchAndPrice
             IReadOnlyList<BnpColumn> seedColumns,
             Pallet pallet,
             long nodeBudget,
+            TimeSpan timeBudget,
             CancellationToken ct)
         {
             _ct = ct;
             _nodeBudget = nodeBudget;
+            _timeBudget = timeBudget;
             _rmp = new RestrictedMasterProblem(placeableSkus, placeableDemand);
             _pool.AddRange(seedColumns);
             _rmp.AddColumns(seedColumns);
@@ -123,7 +128,7 @@ namespace Stack_Solver.Services.BranchAndPrice
 
         private bool TakeNode()
         {
-            if (_nodeBudget <= 0) { _completed = false; return false; }
+            if (_nodeBudget <= 0 || _stopwatch.Elapsed > _timeBudget) { _completed = false; return false; }
             _nodeBudget--;
             return true;
         }

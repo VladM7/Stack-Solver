@@ -5,6 +5,7 @@ using Stack_Solver.Models.Assignment;
 using Stack_Solver.Models.Layering;
 using Stack_Solver.Models.Supports;
 using Stack_Solver.Services;
+using Stack_Solver.Services.BranchAndPrice;
 using Stack_Solver.Services.Stacking;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -55,6 +56,7 @@ namespace Stack_Solver.ViewModels.Pages
         private int _maxStackHeight = 180, _maxStackWeight = 950;
         private double _maxSkuOverhang;
         private bool _useCpsat;
+        private bool _useBranchAndPrice;
         private List<SKU> _selectedSkus = [];
         private GenerationOptions _generationOptions = new();
 
@@ -158,6 +160,7 @@ namespace Stack_Solver.ViewModels.Pages
             _maxStackWeight = msg.MaxStackWeight;
             _maxSkuOverhang = msg.MaxSkuOverhang;
             _useCpsat = msg.UseCpsat;
+            _useBranchAndPrice = msg.UseBranchAndPrice;
             _selectedSkus = [.. msg.Skus.Where(s => s.IsSelected && s.Quantity > 0)];
             _generationOptions = new GenerationOptions(msg.SolverTimeLimit, msg.MaxCpsatCandidates, msg.BlfAttempts);
             if (_viewportController != null)
@@ -318,7 +321,22 @@ namespace Stack_Solver.ViewModels.Pages
 
             ct.ThrowIfCancellationRequested();
 
+            AssignmentResult? bnpResult = null;
+            if (_useBranchAndPrice)
+            {
+                try
+                {
+                    bnpResult = BranchAndPriceAssignmentService.Assign(filtered, demand, pallet, options, greedy, ct);
+                }
+                catch (OperationCanceledException) { throw; }
+                catch { /* Branch-and-price is best-effort; other results still shown */ }
+            }
+
+            ct.ThrowIfCancellationRequested();
+
             var result = new List<SolutionDisplay>();
+            if (bnpResult != null && bnpResult.Assignments.Count > 0)
+                result.Add(new SolutionDisplay(result.Count + 1, "Branch & Price", bnpResult, skus, _palletLength, _palletWidth, _palletHeight));
             if (cpsatResult != null && cpsatResult.Assignments.Count > 0)
                 result.Add(new SolutionDisplay(result.Count + 1, "CP-SAT", cpsatResult, skus, _palletLength, _palletWidth, _palletHeight));
             if (greedy.Assignments.Count > 0)
