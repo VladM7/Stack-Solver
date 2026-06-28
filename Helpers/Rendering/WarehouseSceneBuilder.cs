@@ -84,6 +84,30 @@ namespace Stack_Solver.Helpers.Rendering
                     double loadHeight = palletHeight + template.TotalHeight;
                     var typeColor = TypePalette[typeIndex % TypePalette.Length];
 
+                    // Every instance of this type has identical box layout, so compute the culling
+                    // mask (and gather box params) once in pallet-local coordinates and reuse it.
+                    List<(double X, double Y, double Z, double L, double H, double W, Brush Brush)>? localBoxes = null;
+                    BoxFaces[]? masks = null;
+                    if (!simplify)
+                    {
+                        localBoxes = [];
+                        var bounds = new List<BoxBounds>();
+                        double cy = palletHeight;
+                        foreach (var layer in template.Layers)
+                        {
+                            foreach (var item in layer.Items)
+                            {
+                                var sku = item.SkuType;
+                                double bl = item.Rotated ? sku.Width : sku.Length;
+                                double bw = item.Rotated ? sku.Length : sku.Width;
+                                localBoxes.Add((item.X, cy, item.Y, bl, sku.Height, bw, GetBrushForSku(sku.SkuId)));
+                                bounds.Add(new BoxBounds(item.X, item.X + bl, cy, cy + sku.Height, item.Y, item.Y + bw));
+                            }
+                            cy += layer.Metadata.Height;
+                        }
+                        masks = FaceCuller.Compute(bounds, palletTopY: palletHeight, palletMaxX: palletLength, palletMaxZ: palletWidth);
+                    }
+
                     for (int i = 0; i < n; i++)
                     {
                         ct.ThrowIfCancellationRequested();
@@ -104,19 +128,11 @@ namespace Stack_Solver.Helpers.Rendering
                         }
                         else
                         {
-                            double currentY = palletHeight;
-                            foreach (var layer in template.Layers)
+                            for (int k = 0; k < localBoxes!.Count; k++)
                             {
-                                foreach (var item in layer.Items)
-                                {
-                                    var sku = item.SkuType;
-                                    double boxLength = item.Rotated ? sku.Width : sku.Length;
-                                    double boxWidth = item.Rotated ? sku.Length : sku.Width;
-                                    var brush = GetBrushForSku(sku.SkuId);
-                                    AddMapped(g, map, template.Id, GeometryCreator.CreateBoxWithEdges(
-                                        new Point3D(ox + item.X, currentY, oz + item.Y), boxLength, sku.Height, boxWidth, brush, Colors.Black, 0.25));
-                                }
-                                currentY += layer.Metadata.Height;
+                                var (lx, cy, lz, l, h, w, brush) = localBoxes[k];
+                                AddMapped(g, map, template.Id, GeometryCreator.CreateBoxMerged(
+                                    new Point3D(ox + lx, cy, oz + lz), l, h, w, brush, Colors.Black, 0.25, masks![k]));
                             }
                         }
                     }

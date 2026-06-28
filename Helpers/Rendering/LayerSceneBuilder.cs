@@ -48,28 +48,30 @@ namespace Stack_Solver.Helpers.Rendering
                 var palletBrush = new SolidColorBrush(Color.FromRgb(160, 120, 80));
                 g.Children.Add(GeometryCreator.CreateBoxWithEdges(new Point3D(0, 0, 0), palletLength, palletHeight, palletWidth, palletBrush, Colors.Black, 0.4));
 
-                foreach (var item in itemsSnapshot)
+                var bounds = itemsSnapshot.Select(item =>
+                {
+                    var sku = item.SkuType;
+                    double bl = item.Rotated ? sku.Width : sku.Length;
+                    double bw = item.Rotated ? sku.Length : sku.Width;
+                    return new BoxBounds(item.X, item.X + bl, palletHeight, palletHeight + sku.Height, item.Y, item.Y + bw);
+                }).ToList();
+                var masks = FaceCuller.Compute(bounds, palletTopY: palletHeight, palletMaxX: palletLength, palletMaxZ: palletWidth);
+
+                for (int bi = 0; bi < itemsSnapshot.Count; bi++)
                 {
                     ct.ThrowIfCancellationRequested();
+                    var item = itemsSnapshot[bi];
                     var sku = item.SkuType;
                     double boxLength = item.Rotated ? sku.Width : sku.Length;
                     double boxWidth = item.Rotated ? sku.Length : sku.Width;
                     double boxHeight = sku.Height;
                     var origin = new Point3D(item.X, palletHeight, item.Y);
                     var brush = GetBrushForSku(sku.SkuId);
-                    var boxGroup = GeometryCreator.CreateBoxWithEdges(origin, boxLength, boxHeight, boxWidth, brush, Colors.Black, 0.25);
+                    var boxGroup = GeometryCreator.CreateBoxMerged(origin, boxLength, boxHeight, boxWidth, brush, Colors.Black, 0.25, masks[bi]);
                     g.Children.Add(boxGroup);
-                    if (boxGroup is Model3DGroup boxModelGroup)
-                    {
-                        foreach (var child in boxModelGroup.Children)
-                        {
-                            if (child is GeometryModel3D geo)
-                            {
-                                mapping[geo] = item;
-                            }
-                        }
-                    }
-
+                    foreach (var child in boxGroup.Children)
+                        if (child is GeometryModel3D geo)
+                            mapping[geo] = item;
                 }
 
                 TryFreezeRecursive(g);
@@ -99,19 +101,11 @@ namespace Stack_Solver.Helpers.Rendering
                 double boxHeight = sku.Height;
                 var origin = new Point3D(item.X, palletHeight, item.Y);
                 var brush = GetBrushForSku(sku.SkuId);
-                var boxGroup = GeometryCreator.CreateBoxWithEdges(origin, boxLength, boxHeight, boxWidth, brush, Colors.Black, 0.25);
+                var boxGroup = GeometryCreator.CreateBoxMerged(origin, boxLength, boxHeight, boxWidth, brush, Colors.Black, 0.25);
                 target.Children.Add(boxGroup);
-                if (boxGroup is Model3DGroup boxModelGroup)
-                {
-                    foreach (var child in boxModelGroup.Children)
-                    {
-                        if (child is GeometryModel3D geo)
-                        {
-                            _geometryMap[geo] = item;
-                        }
-                    }
-                }
-
+                foreach (var child in boxGroup.Children)
+                    if (child is GeometryModel3D geo)
+                        _geometryMap[geo] = item;
             }
         }
 
