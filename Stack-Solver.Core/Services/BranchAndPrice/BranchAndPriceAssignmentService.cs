@@ -95,13 +95,40 @@ namespace Stack_Solver.Services.BranchAndPrice
                 .Select(c => (c.Column.Template, c.Count))
                 .ToList();
 
-            // Leftovers = untileable remainder (slack in the master) + unplaceable SKUs.
-            var leftovers = new Dictionary<string, int>(search.OptimalLeftovers, StringComparer.Ordinal);
+            // Any sub-layer remainder B&P could not tile with full layers is placed on extra
+            // pallets by a fast filler-aware greedy pass, so every placeable box ends up
+            // somewhere (see FillerLayerGenerator). Feeding fillers into the optimizer itself
+            // would explode the pricing search, so they are confined to this mop-up step.
+            var placeableLeftovers = search.OptimalLeftovers.Where(kvp => kvp.Value > 0)
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.Ordinal);
+            bool remainderPlaced = false;
+            if (placeableLeftovers.Count > 0)
+            {
+                ct.ThrowIfCancellationRequested();
+                var fillerLayers = FillerLayerGenerator.Augment(layers, pallet);
+                var remainder = GreedyAssignmentService.Assign(fillerLayers, placeableLeftovers, pallet);
+                if (remainder.Assignments.Count > 0)
+                {
+                    assignments.AddRange(remainder.Assignments.Select(a => (a.Template, a.Count)));
+                    remainderPlaced = true;
+                }
+                placeableLeftovers = remainder.Leftovers.Where(kvp => kvp.Value > 0)
+                    .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.Ordinal);
+            }
+
+            var merged = assignments
+                .GroupBy(a => BnpColumn.BuildSignature(a.Template), StringComparer.Ordinal)
+                .Select(g => (g.First().Template, Count: g.Sum(a => a.Count)))
+                .ToList();
+
+            var leftovers = new Dictionary<string, int>(placeableLeftovers, StringComparer.Ordinal);
             foreach (var (sku, count) in UnplaceableLeftovers(demand, seed.UnplaceableSkus))
                 leftovers[sku] = count;
 
-            var result = new AssignmentResult { Assignments = assignments, Leftovers = leftovers };
-            return new BranchAndPriceSolution(result, bound, search.ProvedOptimal);
+            // Appending heuristic remainder pallets means the total is no longer a proven optimum.
+            bool certified = search.ProvedOptimal && !remainderPlaced;
+            return new BranchAndPriceSolution(
+                new AssignmentResult { Assignments = merged, Leftovers = leftovers }, bound, certified);
         }
 
         /// <summary>Runs root-node column generation and returns the LP optimum and final pool.</summary>

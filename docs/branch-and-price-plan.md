@@ -391,6 +391,14 @@ Mirror the existing `Tests/Stack-Solver.Tests/Services` layout.
    the UI; the existing Cancel button still interrupts via the cancellation token. SKU
    placeability and the leftovers warning are already handled inside the algorithm (leftovers
    flow to the existing leftovers UI).
+   - **Filler remainder placement.** Per the user's "always place everything" preference, any
+     sub-layer remainder B&P can't tile with full layers (e.g. 2 boxes left of 500) is placed
+     on extra, possibly sparse, pallets by a fast filler-aware greedy pass
+     (`FillerLayerGenerator` adds 1/2/4/… box partial layers; the mop-up uses
+     `GreedyAssignmentService`). Fillers are deliberately **kept out of the optimizer** —
+     feeding them in explodes the pricing search — so only genuinely unplaceable SKUs (too
+     big/heavy) remain as leftovers. Appending a heuristic remainder pallet marks the result
+     uncertified.
 6. **Stabilization, perf tuning, full test suite, docs.** *(medium)*
 
 Milestone 2 is the point of diminishing risk: if effort runs out there, the result is

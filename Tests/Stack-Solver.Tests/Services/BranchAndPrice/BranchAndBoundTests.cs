@@ -38,11 +38,11 @@ namespace Services.BranchAndPrice
         }
 
         [Fact]
-        public void Solve_NonTileableRemainder_MinimizesLeftoverThenPallets()
+        public void Solve_SubLayerRemainder_IsPlacedViaFillerLayers()
         {
-            // Only 9-box layers exist (non-rotatable). 21 = 2×9 + 3: the minimum leftover is 3,
-            // and the 18 placed boxes fit one 2-layer pallet — so the proven optimum is 1
-            // pallet with 3 leftover (big-M drives leftovers down before trading pallets).
+            // Full-grid layers hold 9 boxes (non-rotatable). 21 = 2×9 + 3: the 3-box remainder
+            // has no full layer, but filler layers (1, 2, 4 boxes) place it — so every box is
+            // placed with no leftover, fitting one pallet.
             var skus = new List<SKU>
             {
                 new() { SkuId = "A", Name = "A", Length = 40, Width = 30, Height = 10, Quantity = 21, Rotatable = false },
@@ -55,10 +55,12 @@ namespace Services.BranchAndPrice
                 layers, demand, pallet, new GenerationOptions(), ct: TestContext.Current.CancellationToken);
 
             int placed = solution.Result.Assignments.Sum(a => a.Template.SkuCounts.GetValueOrDefault("A") * a.Count);
-            Assert.Equal(18, placed);
-            Assert.Equal(3, solution.Result.Leftovers["A"]);
-            Assert.Equal(1, solution.Pallets);
-            Assert.True(solution.LowerBoundCertified);
+            Assert.Equal(21, placed);                 // every box placed (3-box remainder on an extra pallet)
+            Assert.Empty(solution.Result.Leftovers);
+            // The 18 full-layer boxes plus the 3-box filler remainder fall on separate pallets.
+            Assert.Equal(2, solution.Pallets);
+            // Appending the heuristic remainder pallet means the total is no longer certified optimal.
+            Assert.False(solution.LowerBoundCertified);
         }
     }
 }
