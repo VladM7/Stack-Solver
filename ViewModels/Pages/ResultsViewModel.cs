@@ -55,6 +55,8 @@ namespace Stack_Solver.ViewModels.Pages
         private int _palletLength, _palletWidth, _palletHeight;
         private int _maxStackHeight = 180, _maxStackWeight = 950;
         private double _maxSkuOverhang;
+        private OverhangMode _overhangMode;
+        private double _maxTopHeavyPercent;
         private bool _useCpsat;
         private bool _useBranchAndPrice;
         private List<SKU> _selectedSkus = [];
@@ -159,6 +161,8 @@ namespace Stack_Solver.ViewModels.Pages
             _maxStackHeight = msg.MaxStackHeight;
             _maxStackWeight = msg.MaxStackWeight;
             _maxSkuOverhang = msg.MaxSkuOverhang;
+            _overhangMode = msg.OverhangMode;
+            _maxTopHeavyPercent = msg.MaxTopHeavyPercent;
             _useCpsat = msg.UseCpsat;
             _useBranchAndPrice = msg.UseBranchAndPrice;
             _selectedSkus = [.. msg.Skus.Where(s => s.IsSelected && s.Quantity > 0)];
@@ -210,7 +214,9 @@ namespace Stack_Solver.ViewModels.Pages
                 {
                     MaxStackHeight = _maxStackHeight,
                     MaxStackWeight = _maxStackWeight,
-                    MaxSkuOverhang = _maxSkuOverhang
+                    MaxSkuOverhang = _maxSkuOverhang,
+                    OverhangMode = _overhangMode,
+                    MaxTopHeavyPercent = _maxTopHeavyPercent
                 };
                 var options = _generationOptions;
                 var skus = _selectedSkus.ToList();

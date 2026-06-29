@@ -1,5 +1,6 @@
 using FluentValidation;
 using Stack_Solver.Models.Inputs;
+using Stack_Solver.Models.Layering;
 
 namespace Stack_Solver.Validation
 {
@@ -16,6 +17,10 @@ namespace Stack_Solver.Validation
             RuleFor(x => x.MaxStackHeight).GreaterThan(0);
             RuleFor(x => x.MaxStackWeight).GreaterThan(0);
             RuleFor(x => x.MaxSkuOverhang).GreaterThanOrEqualTo(0);
+            // A supported-percentage must be a valid percentage.
+            RuleFor(x => x.MaxSkuOverhang).InclusiveBetween(0, 100)
+                .When(x => x.OverhangMode == OverhangMode.MinSupportedPercent);
+            RuleFor(x => x.MaxTopHeavyPercent).GreaterThanOrEqualTo(0);
         }
     }
 }

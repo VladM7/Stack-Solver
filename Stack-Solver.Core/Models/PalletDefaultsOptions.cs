@@ -1,3 +1,5 @@
+using Stack_Solver.Models.Layering;
+
 namespace Stack_Solver.Models
 {
     /// <summary>
@@ -12,6 +14,8 @@ namespace Stack_Solver.Models
         public double PalletHeight { get; set; } = 14.4;
         public int MaxStackHeight { get; set; } = 180;
         public int MaxStackWeight { get; set; } = 950;
-        public double MaxSkuOverhang { get; set; } = 0;
+        public double MaxSkuOverhang { get; set; } = 100;
+        public OverhangMode OverhangMode { get; set; } = OverhangMode.MinSupportedPercent;
+        public double MaxTopHeavyPercent { get; set; } = 0;
     }
 }

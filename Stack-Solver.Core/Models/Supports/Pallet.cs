@@ -15,6 +15,19 @@ namespace Stack_Solver.Models.Supports
         public int MaxStackHeight { get; init; } = 180;
         public int MaxStackWeight { get; init; } = 950;
         public double MaxSkuOverhang { get; init; } = 0;
+        public OverhangMode OverhangMode { get; init; } = OverhangMode.AbsoluteCm;
+
+        /// <summary>The inter-layer support rule, combining <see cref="OverhangMode"/> and <see cref="MaxSkuOverhang"/>.</summary>
+        public OverhangRule OverhangRule => new(OverhangMode, MaxSkuOverhang);
+
+        /// <summary>
+        /// Top-heavy tolerance (percent): how much an upper layer's load density may exceed the
+        /// layer beneath it before the transition is forbidden. 0 = strict (no denser layer on top).
+        /// </summary>
+        public double MaxTopHeavyPercent { get; init; } = 0;
+
+        /// <summary>The top-heavy tolerance as a fraction for <see cref="StackingLoadRule"/>.</summary>
+        public double LoadDensityTolerance => MaxTopHeavyPercent / 100.0;
 
         public List<Layer> Layers { get; } = [];
         public PalletMetadata Metadata { get; set; } = new();

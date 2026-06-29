@@ -1,6 +1,7 @@
 using Stack_Solver.Models.Assignment;
 using Stack_Solver.Models.Layering;
 using Stack_Solver.Models.Supports;
+using Stack_Solver.Services.Stacking;
 
 namespace Stack_Solver.Services
 {
@@ -61,7 +62,17 @@ namespace Stack_Solver.Services
                         remaining[skuId] = Math.Max(0, remaining[skuId] - 1);
                 }
 
-                stackedLayers.Add(best);
+                // Bake the support-aligning shift into the stored layer so the rendered
+                // pallet shows the placement the support check actually accepted.
+                Layer toPlace = best;
+                if (stackedLayers.Count > 0)
+                {
+                    var fit = LayerSupportAnalyzer.FindBestPlacement(stackedLayers[^1], best, pallet, pallet.OverhangRule);
+                    if (fit.OffsetX != 0 || fit.OffsetY != 0)
+                        toPlace = StackMaterializer.Translate(best, fit.OffsetX, fit.OffsetY, pallet);
+                }
+
+                stackedLayers.Add(toPlace);
                 usedHeight += best.Metadata.Height;
                 usedWeight += best.Metrics.TotalWeight;
             }
@@ -108,8 +119,8 @@ namespace Stack_Solver.Services
 
             if (stackedLayers.Count > 0)
             {
-                var support = LayerSupportAnalyzer.Analyze(stackedLayers[^1], layer, pallet);
-                if (support.MaximumSkuOverhangArea > pallet.MaxSkuOverhang) return false;
+                var fit = LayerSupportAnalyzer.FindBestPlacement(stackedLayers[^1], layer, pallet, pallet.OverhangRule);
+                if (!fit.Feasible) return false;
             }
 
             return true;

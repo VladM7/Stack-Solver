@@ -54,29 +54,9 @@ namespace Stack_Solver.Services
                 Utilization = Math.Clamp(fillPercent, 0, 100),
                 Stability = Math.Clamp(stabilityPercent, 0, 100),
                 TotalWeight = totalWeight,
+                FootprintArea = usedArea,
                 UsedSkuTypes = [.. distinctSkuIds]
             };
-        }
-
-        public static void ComputeCompatibility(IReadOnlyList<Layer> layers)
-        {
-            ArgumentNullException.ThrowIfNull(layers);
-
-            foreach (var baseLayer in layers)
-            {
-                var compatibleTopLayerIds = new List<string>();
-
-                foreach (var topLayer in layers)
-                {
-                    if (ReferenceEquals(baseLayer, topLayer))
-                        continue;
-
-                    if (CanStackWithoutOverhang(baseLayer, topLayer))
-                        compatibleTopLayerIds.Add(topLayer.Id);
-                }
-
-                baseLayer.Metrics.CompatibleTopLayerIds = compatibleTopLayerIds;
-            }
         }
 
         public static List<Layer> FilterLayers(IReadOnlyList<Layer> layers, GenerationOptions options)
@@ -86,10 +66,7 @@ namespace Stack_Solver.Services
 
             var stabilityFiltered = FilterByStability(layers, options.MaxLayerStability);
             var deduplicated = RemoveIdenticalLayers(stabilityFiltered);
-            var selected = SelectTopFractionPerSkuByUtilization(deduplicated, options.PerSkuTopLayerFraction);
-
-            ComputeCompatibility(selected);
-            return selected;
+            return SelectTopFractionPerSkuByUtilization(deduplicated, options.PerSkuTopLayerFraction);
         }
 
         private static List<Layer> FilterByStability(IEnumerable<Layer> layers, double maxLayerStability)
@@ -176,40 +153,6 @@ namespace Stack_Solver.Services
                 return stabilityComparison < 0;
 
             return string.Compare(candidate.Id, incumbent.Id, StringComparison.Ordinal) < 0;
-        }
-
-        private static bool CanStackWithoutOverhang(Layer bottomLayer, Layer topLayer)
-        {
-            if (topLayer.Geometry == null)
-                return false;
-
-            if (bottomLayer.Geometry == null)
-                return false;
-
-            var topMap = topLayer.Geometry.ItemIndexGrid;
-            var bottomGrid = bottomLayer.Geometry.OccupancyGrid;
-
-            int width = topLayer.Geometry.Width;
-            int length = topLayer.Geometry.Length;
-
-            for (int y = 0; y < width; y++)
-            {
-                for (int x = 0; x < length; x++)
-                {
-                    int itemIndex = topMap[y, x];
-                    if (itemIndex < 0)
-                        continue;
-
-                    bool hasSupport = y < bottomGrid.GetLength(0) &&
-                        x < bottomGrid.GetLength(1) &&
-                        bottomGrid[y, x];
-
-                    if (!hasSupport)
-                        return false;
-                }
-            }
-
-            return true;
         }
     }
 }

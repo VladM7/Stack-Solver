@@ -11,10 +11,12 @@ namespace Stack_Solver.Services.BranchAndPrice
     /// reached the true LP optimum; otherwise the absence of a column is not a proof.
     ///
     /// Stacks obey the same <see cref="PricingRules"/> as the heuristic pricer (height,
-    /// weight, weight ordering, support, distinct-SKU cap), with no artificial layer-count
-    /// cap. Layers are sorted by non-increasing weight and equal-weight layers are explored
+    /// weight, load-density ordering, support, distinct-SKU cap), with no artificial layer-count
+    /// cap. Layers are sorted by non-increasing load density and equal-density layers are explored
     /// in non-decreasing index order to prune permutations; this loses no optimum when
-    /// support is symmetric within an equal-weight group (true for full-coverage layers).
+    /// support is symmetric within an equal-density group (true for full-coverage layers). A
+    /// positive top-heavy tolerance additionally permits a denser layer on a less-dense one,
+    /// which relaxes the canonical pruning (more permutations explored) but only when enabled.
     /// </summary>
     public sealed class ExactPricingSolver
     {
@@ -49,19 +51,20 @@ namespace Stack_Solver.Services.BranchAndPrice
             var cands = BuildCandidates(duals);
             if (cands.Count == 0) return null;
 
-            // Admissible value densities for the optimistic completion bound: every candidate
-            // satisfies value ≤ heightDensity·height and value ≤ weightDensity·weight, so the
-            // extra value reachable in the remaining height/weight is bounded by the smaller of
-            // heightDensity·remainingHeight and weightDensity·remainingWeight (a fractional-knapsack
-            // bound on two resources). A zero-weight layer makes the weight side non-binding (∞).
-            double heightDensity = 0, weightDensity = 0;
+            // Admissible value-per-resource ratios for the optimistic completion bound: every
+            // candidate satisfies value ≤ valuePerHeight·height and value ≤ valuePerWeight·weight,
+            // so the extra value reachable in the remaining height/weight is bounded by the smaller
+            // of valuePerHeight·remainingHeight and valuePerWeight·remainingWeight (a fractional-
+            // knapsack bound on two resources). A zero-weight layer makes the weight side
+            // non-binding (∞).
+            double valuePerHeight = 0, valuePerWeight = 0;
             foreach (var c in cands)
             {
-                heightDensity = Math.Max(heightDensity, c.Value / c.Height);
-                weightDensity = Math.Max(weightDensity, c.Weight > 0 ? c.Value / c.Weight : double.PositiveInfinity);
+                valuePerHeight = Math.Max(valuePerHeight, c.Value / c.Height);
+                valuePerWeight = Math.Max(valuePerWeight, c.Weight > 0 ? c.Value / c.Weight : double.PositiveInfinity);
             }
 
-            var ctx = new SearchContext(cands, _rules, heightDensity, weightDensity, NodeBudget, forbidden);
+            var ctx = new SearchContext(cands, _rules, valuePerHeight, valuePerWeight, NodeBudget, forbidden);
             for (int i = 0; i < cands.Count; i++)
             {
                 ctx.Descend(i);
@@ -89,27 +92,28 @@ namespace Stack_Solver.Services.BranchAndPrice
 
                 double value = PricingRules.LayerValue(layer, duals);
                 if (value <= 0) continue;
-                cands.Add(new Cand(layer, value, layer.Metadata.Height, layer.Metrics.TotalWeight));
+                cands.Add(new Cand(layer, value, layer.Metadata.Height, layer.Metrics.TotalWeight, layer.Metrics.LoadDensity));
             }
-            // Non-increasing weight makes weight tiers contiguous so the equal-weight
+            // Non-increasing load density makes density tiers contiguous so the equal-density
             // tie-break (by index) canonicalises permutations; within a tier, higher value
             // first so strong stacks (and tighter pruning bounds) are reached earlier.
             cands.Sort(static (a, b) =>
             {
-                int byWeight = b.Weight.CompareTo(a.Weight);
-                return byWeight != 0 ? byWeight : b.Value.CompareTo(a.Value);
+                int byDensity = b.Density.CompareTo(a.Density);
+                return byDensity != 0 ? byDensity : b.Value.CompareTo(a.Value);
             });
             return cands;
         }
 
-        private readonly record struct Cand(Layer Layer, double Value, int Height, double Weight);
+        private readonly record struct Cand(Layer Layer, double Value, int Height, double Weight, double Density);
 
         private sealed class SearchContext
         {
             private readonly List<Cand> _cands;
             private readonly PricingRules _rules;
-            private readonly double _heightDensity;
-            private readonly double _weightDensity;
+            private readonly double _valuePerHeight;
+            private readonly double _valuePerWeight;
+            private readonly double _tolerance;
             private readonly int _availH;
             private readonly IReadOnlySet<string>? _forbidden;
             private long _budget;
@@ -125,12 +129,13 @@ namespace Stack_Solver.Services.BranchAndPrice
             public List<int> BestStack { get; } = [];
             public bool BudgetExhausted { get; private set; }
 
-            public SearchContext(List<Cand> cands, PricingRules rules, double heightDensity, double weightDensity, long budget, IReadOnlySet<string>? forbidden)
+            public SearchContext(List<Cand> cands, PricingRules rules, double valuePerHeight, double valuePerWeight, long budget, IReadOnlySet<string>? forbidden)
             {
                 _cands = cands;
                 _rules = rules;
-                _heightDensity = heightDensity;
-                _weightDensity = weightDensity;
+                _valuePerHeight = valuePerHeight;
+                _valuePerWeight = valuePerWeight;
+                _tolerance = rules.LoadDensityTolerance;
                 _budget = budget;
                 _availH = rules.AvailHeight;
                 _forbidden = forbidden;
@@ -144,8 +149,8 @@ namespace Stack_Solver.Services.BranchAndPrice
                 if (_stack.Count > 0)
                 {
                     var top = _cands[_stack[^1]];
-                    if (c.Weight > top.Weight) return;                              // weight ordering
-                    if (c.Weight == top.Weight && i < _stack[^1]) return;          // canonical tie-break
+                    if (!StackingLoadRule.Allows(top.Density, c.Density, _tolerance)) return;  // load ordering
+                    if (c.Density == top.Density && i < _stack[^1]) return;                    // canonical tie-break
                     if (!_rules.TransitionValid(top.Layer, c.Layer)) return;
                 }
                 if (_usedHeight + c.Height > _availH) return;
@@ -166,8 +171,8 @@ namespace Stack_Solver.Services.BranchAndPrice
                 // Optimistic bound: fill the remaining height and weight at the best value
                 // densities, taking the binding (smaller) of the two resource limits.
                 double bound = _value + Math.Min(
-                    _heightDensity * (_availH - _usedHeight),
-                    _weightDensity * (_rules.MaxWeight - _usedWeight));
+                    _valuePerHeight * (_availH - _usedHeight),
+                    _valuePerWeight * (_rules.MaxWeight - _usedWeight));
                 if (bound > BestValue + Epsilon)
                 {
                     for (int j = 0; j < _cands.Count; j++)

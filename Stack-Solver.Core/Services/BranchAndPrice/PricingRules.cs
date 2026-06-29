@@ -27,14 +27,19 @@ namespace Stack_Solver.Services.BranchAndPrice
 
         public double MaxWeight => _pallet.MaxStackWeight;
 
+        /// <summary>Top-heavy tolerance (fraction) for the load-density stacking-order rule.</summary>
+        public double LoadDensityTolerance => _pallet.LoadDensityTolerance;
+
         /// <summary>True if <paramref name="upper"/> may rest on <paramref name="lower"/> within the overhang limit.</summary>
+        /// <remarks>Placement-aware: the upper layer is allowed to shift onto the support below, so a
+        /// transition is valid whenever some on-pallet offset keeps every SKU within the overhang limit,
+        /// matching the greedy stacking path.</remarks>
         public bool TransitionValid(Layer lower, Layer upper)
         {
             var key = (lower.Id, upper.Id);
             if (_transitionCache.TryGetValue(key, out bool cached)) return cached;
 
-            var support = LayerSupportAnalyzer.Analyze(lower, upper, _pallet);
-            bool ok = support.MaximumSkuOverhangArea <= _pallet.MaxSkuOverhang;
+            bool ok = LayerSupportAnalyzer.FindBestPlacement(lower, upper, _pallet, _pallet.OverhangRule).Feasible;
             _transitionCache[key] = ok;
             return ok;
         }

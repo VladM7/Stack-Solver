@@ -181,9 +181,23 @@
                                     <ui:NumberBox HorizontalAlignment="Left" Minimum="1"
                                                   Value="{Binding ViewModel.Settings.MaxStackWeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </ui:CardControl>
-                                <ui:CardControl Header="Max SKU overhang (cm)">
-                                    <ui:NumberBox HorizontalAlignment="Left" Minimum="0" SmallChange="10" LargeChange="100"
+                                <ui:CardControl Header="Overhang rule">
+                                    <ComboBox HorizontalAlignment="Left" Width="Auto"
+                                              ItemsSource="{Binding ViewModel.Settings.OverhangModeOptions}"
+                                              DisplayMemberPath="Label"
+                                              SelectedValuePath="Mode"
+                                              SelectedValue="{Binding ViewModel.Settings.OverhangMode, Mode=TwoWay}"
+                                              ToolTip="Max overhang per side: a box may hang at most N cm past the load below.&#x0a;Min supported: at least N% of each box must rest on support.&#x0a;Auto: keeps every box from tipping by ensuring its centre of weight is supported." />
+                                </ui:CardControl>
+                                <ui:CardControl Header="{Binding ViewModel.Settings.OverhangValueHeader}"
+                                                Visibility="{Binding ViewModel.Settings.IsOverhangValueVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <ui:NumberBox HorizontalAlignment="Left" Minimum="0" SmallChange="1" LargeChange="10"
                                                   Value="{Binding ViewModel.Settings.MaxSkuOverhang, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </ui:CardControl>
+                                <ui:CardControl Header="Top-heavy tolerance (%)"
+                                                ToolTip="How much denser (weight per footprint area) a layer may be than the one beneath it. 0 = a layer may never rest on a less-dense one; raise it to allow a heavier layer on top when a larger, lighter layer must sit at the bottom for support.">
+                                    <ui:NumberBox HorizontalAlignment="Left" Minimum="0" SmallChange="5" LargeChange="25"
+                                                  Value="{Binding ViewModel.Settings.MaxTopHeavyPercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </ui:CardControl>
                             </StackPanel>
                         </ui:CardExpander>

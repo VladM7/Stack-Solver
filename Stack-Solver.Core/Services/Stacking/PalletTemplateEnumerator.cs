@@ -37,7 +37,7 @@ namespace Stack_Solver.Services.Stacking
                 {
                     if (ReferenceEquals(bottom, top)) continue;
                     if (SkuOf(bottom) == SkuOf(top)) continue;
-                    if (bottom.Metrics.TotalWeight < top.Metrics.TotalWeight) continue;
+                    if (!LoadOrderingAllows(bottom, top, pallet)) continue;
                     if (!IsTransitionValid(bottom, top, pallet, supportCache)) continue;
 
                     EnumerateStackedPair(pallet, bottom, top, templates, seen);
@@ -52,13 +52,13 @@ namespace Stack_Solver.Services.Stacking
                 {
                     if (DistinctSkuUnion(m, hom) > MaxDistinctSkusPerTemplate) continue;
 
-                    if (m.Metrics.TotalWeight >= hom.Metrics.TotalWeight &&
+                    if (LoadOrderingAllows(m, hom, pallet) &&
                         IsTransitionValid(m, hom, pallet, supportCache))
                     {
                         EnumerateStackedPair(pallet, m, hom, templates, seen);
                     }
 
-                    if (hom.Metrics.TotalWeight >= m.Metrics.TotalWeight &&
+                    if (LoadOrderingAllows(hom, m, pallet) &&
                         IsTransitionValid(hom, m, pallet, supportCache))
                     {
                         EnumerateStackedPair(pallet, hom, m, templates, seen);
@@ -80,7 +80,7 @@ namespace Stack_Solver.Services.Stacking
 
             var stack = new List<Layer>(n);
             for (int i = 0; i < n; i++) stack.Add(layer);
-            AddIfDistinct(stack, templates, seen);
+            AddIfDistinct(pallet, stack, templates, seen);
         }
 
         private static void EnumerateStackedPair(
@@ -113,7 +113,7 @@ namespace Stack_Solver.Services.Stacking
                     var stack = new List<Layer>(nB + nT);
                     for (int i = 0; i < nB; i++) stack.Add(bottom);
                     for (int i = 0; i < nT; i++) stack.Add(top);
-                    AddIfDistinct(stack, templates, seen);
+                    AddIfDistinct(pallet, stack, templates, seen);
                 }
             }
         }
@@ -131,6 +131,10 @@ namespace Stack_Solver.Services.Stacking
             return Math.Min(byH, byW);
         }
 
+        /// <summary>True if <paramref name="upper"/> is not too top-heavy to rest on <paramref name="lower"/>.</summary>
+        private static bool LoadOrderingAllows(Layer lower, Layer upper, Pallet pallet) =>
+            StackingLoadRule.Allows(lower.Metrics.LoadDensity, upper.Metrics.LoadDensity, pallet.LoadDensityTolerance);
+
         private static bool IsTransitionValid(
             Layer lower,
             Layer upper,
@@ -140,8 +144,9 @@ namespace Stack_Solver.Services.Stacking
             var key = (lower.Id, upper.Id);
             if (cache.TryGetValue(key, out bool cached)) return cached;
 
-            var support = LayerSupportAnalyzer.Analyze(lower, upper, pallet);
-            bool ok = support.MaximumSkuOverhangArea <= pallet.MaxSkuOverhang;
+            // Placement-aware: the transition is valid if the upper layer can be shifted onto
+            // the lower one within the overhang budget, even if its centered position would overhang.
+            bool ok = LayerSupportAnalyzer.FindBestPlacement(lower, upper, pallet, pallet.OverhangRule).Feasible;
             cache[key] = ok;
             return ok;
         }
@@ -160,13 +165,18 @@ namespace Stack_Solver.Services.Stacking
             l.Metrics.UsedSkuTypes.First();
 
         private static void AddIfDistinct(
+            Pallet pallet,
             IReadOnlyList<Layer> layers,
             List<PalletTemplate> templates,
             HashSet<string> seen)
         {
-            var template = PalletTemplate.FromLayers(layers);
-            if (seen.Add(Signature(template)))
-                templates.Add(template);
+            // Dedup on SKU counts first (position-independent), so we only pay the cost of
+            // materializing the placed stack for templates we actually keep.
+            var signature = Signature(PalletTemplate.FromLayers(layers));
+            if (!seen.Add(signature)) return;
+
+            var placed = StackMaterializer.Materialize(pallet, layers, pallet.OverhangRule);
+            templates.Add(PalletTemplate.FromLayers(placed));
         }
 
         private static string Signature(PalletTemplate t) =>

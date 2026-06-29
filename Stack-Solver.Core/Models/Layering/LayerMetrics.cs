@@ -17,8 +17,18 @@ namespace Stack_Solver.Models.Layering
 
         public double TotalWeight { get; set; }
 
-        public IReadOnlyCollection<string> UsedSkuTypes { get; set; } = [];
+        /// <summary>Combined base area of the layer's boxes (the load-bearing footprint), in cm².</summary>
+        public double FootprintArea { get; set; }
 
-        public IReadOnlyCollection<string> CompatibleTopLayerIds { get; set; } = [];
+        /// <summary>
+        /// Average areal load — weight per unit footprint area (kg/cm²). This is the pressure
+        /// proxy used to decide stacking order: a layer may rest on another only when its load
+        /// density does not exceed the one below by more than the configured tolerance. Normalizing
+        /// by area (rather than comparing total weight) stops a many-box light layer from reading
+        /// as "heavy". Zero for an empty or weightless layer.
+        /// </summary>
+        public double LoadDensity => FootprintArea > 0 ? TotalWeight / FootprintArea : 0;
+
+        public IReadOnlyCollection<string> UsedSkuTypes { get; set; } = [];
     }
 }
