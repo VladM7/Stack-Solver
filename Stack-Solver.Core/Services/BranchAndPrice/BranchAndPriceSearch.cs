@@ -24,10 +24,14 @@ namespace Stack_Solver.Services.BranchAndPrice
         private const int MaxCgIterations = 500;
         private const double IntTol = 1e-6;
 
-        // Wall-clock slice handed to the restricted-master IP heuristic: a fraction of the time
-        // left after root column generation, capped so it can never starve the tree search.
+        // Wall-clock slice handed to the restricted-master IP heuristic at the root: a fraction of
+        // the time left after root column generation, capped so it can never starve the tree search.
         private const double IpHeuristicTimeFraction = 0.3;
         private static readonly TimeSpan IpHeuristicMaxTime = TimeSpan.FromSeconds(10);
+
+        // The final-polish IP runs after the tree, so it may use most of the remaining time.
+        private const double IpFinalTimeFraction = 0.9;
+        private static readonly TimeSpan IpFinalMaxTime = TimeSpan.FromSeconds(60);
 
         private readonly RestrictedMasterProblem _rmp;
         private readonly ColumnPool _pool = new();
@@ -44,7 +48,8 @@ namespace Stack_Solver.Services.BranchAndPrice
         private long _nodeBudget;
         private bool _completed = true;
         private bool _allCertified = true;
-        private bool _provenByRootCert;
+        private bool _provenByBound;
+        private bool _rootBoundUsable;
         private readonly BranchAndPriceStats _stats = new();
 
         private double _bestObjective = double.PositiveInfinity;
@@ -95,9 +100,9 @@ namespace Stack_Solver.Services.BranchAndPrice
         /// <summary>Leftover (unmet) units per SKU in the returned solution.</summary>
         public IReadOnlyDictionary<string, int> OptimalLeftovers => _bestLeftovers;
 
-        /// <summary>True only when the returned solution is a proven optimum — either certified at
-        /// the root by a valid lower bound, or by a fully-completed, all-certified tree search.</summary>
-        public bool ProvedOptimal => _best != null && (_provenByRootCert || (_completed && _allCertified));
+        /// <summary>True only when the returned solution is a proven optimum — either certified by a
+        /// valid lower bound, or by a fully-completed, all-certified tree search.</summary>
+        public bool ProvedOptimal => _best != null && (_provenByBound || (_completed && _allCertified));
 
         /// <summary>Diagnostic counters describing where the solve spent its effort.</summary>
         public BranchAndPriceStats Stats => _stats;
@@ -133,47 +138,70 @@ namespace Stack_Solver.Services.BranchAndPrice
             var root = SolveNode();
             RootBound = root.Feasible ? root.Primal.Sum(p => p.Value) : double.PositiveInfinity;
             RootCertified = root.Certified;
+            // The LP optimum is a valid integer lower bound only when the pricer proved it exhaustive
+            // and the root itself leaves no untiled demand.
+            _rootBoundUsable = RootCertified && root.Feasible && AllZero(root.Leftovers);
 
             // Strengthen the incumbent with the restricted-master IP before deciding whether to
             // branch: a tight integer solution over the root column pool often matches ⌈bound⌉ and
             // certifies optimality here, skipping the tree entirely.
-            TryImproveIncumbentWithIp();
-
-            // ⌈bound⌉ certification: the integer pallet optimum is ≥ every valid lower bound, and is
-            // integral when all placeable demand tiles (it does, with residual layers). Two certified
-            // bounds apply — the LP optimum (only when the pricer proved it exhaustive) and the
-            // always-valid combinatorial bound — so an incumbent that places all demand and matches
-            // ⌈max of them⌉ is provably optimal; skip the tree.
-            int lpLb = RootCertified && root.Feasible && AllZero(root.Leftovers)
-                ? (int)Math.Ceiling(RootBound - IntTol)
-                : int.MinValue;
-            int comboLb = (int)Math.Ceiling(_combinatorialBound - IntTol);
-            int certifiedLb = Math.Max(lpLb, comboLb);
-
-            if (_best != null && AllZero(_bestLeftovers) && _bestObjective <= certifiedLb + IntTol)
+            TryImproveIncumbentWithIp(IpHeuristicTimeFraction, IpHeuristicMaxTime);
+            if (TryCertifyByBound())
             {
-                _provenByRootCert = true;
-                _stats.RootCertificationFired = true;
                 FinalizeStats();
                 return;
             }
 
             BranchAndBound(root);
+
+            // Final polish: the tree has built a far richer column pool than the root had. If the
+            // search stopped early (node/time budget) without proving optimality, an exact IP over
+            // all generated columns may assemble an incumbent that matches ⌈bound⌉ — certifying an
+            // optimum the column-variable branching never reached — using any leftover wall-clock.
+            if (!ProvedOptimal)
+            {
+                TryImproveIncumbentWithIp(IpFinalTimeFraction, IpFinalMaxTime);
+                TryCertifyByBound();
+            }
+
             FinalizeStats();
+        }
+
+        /// <summary>
+        /// Marks the incumbent proven optimal when it places all demand with no more pallets than
+        /// ⌈max(certified LP bound, combinatorial bound)⌉. Both inputs are valid lower bounds on the
+        /// integer optimum, so a matching incumbent is optimal. Idempotent; safe to call repeatedly.
+        /// </summary>
+        private bool TryCertifyByBound()
+        {
+            if (_best == null || !AllZero(_bestLeftovers)) return false;
+
+            int lpLb = _rootBoundUsable ? (int)Math.Ceiling(RootBound - IntTol) : int.MinValue;
+            int comboLb = (int)Math.Ceiling(_combinatorialBound - IntTol);
+            int certifiedLb = Math.Max(lpLb, comboLb);
+
+            if (_bestObjective <= certifiedLb + IntTol)
+            {
+                _provenByBound = true;
+                _stats.RootCertificationFired = true;
+                return true;
+            }
+            return false;
         }
 
         /// <summary>
         /// Runs the restricted-master IP over the current column pool and adopts its assignment as
         /// the incumbent when it covers all demand with fewer pallets than the current best. Bounded
-        /// by a fraction of the remaining time so it cannot starve the branch-and-bound search.
+        /// to <paramref name="fraction"/> of the remaining time (capped at <paramref name="cap"/>) so
+        /// it cannot starve the branch-and-bound search.
         /// </summary>
-        private void TryImproveIncumbentWithIp()
+        private void TryImproveIncumbentWithIp(double fraction, TimeSpan cap)
         {
             var remaining = _timeBudget - _stopwatch.Elapsed;
             if (remaining <= TimeSpan.Zero) return;
 
-            var slice = TimeSpan.FromMilliseconds(remaining.TotalMilliseconds * IpHeuristicTimeFraction);
-            if (slice > IpHeuristicMaxTime) slice = IpHeuristicMaxTime;
+            var slice = TimeSpan.FromMilliseconds(remaining.TotalMilliseconds * fraction);
+            if (slice > cap) slice = cap;
 
             var ip = RestrictedMasterHeuristic.Solve(_pool.Columns, _placeableSkus, _placeableDemand, slice, _ct);
             _stats.RestrictedMasterIpRan = true;
