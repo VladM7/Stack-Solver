@@ -106,7 +106,10 @@ namespace Stack_Solver.Services.BranchAndPrice
             search.Run();
             Trace.WriteLine(search.Stats.ToString());
 
-            double bound = double.IsInfinity(search.RootBound) ? 0 : search.RootBound;
+            // Report the strongest valid lower bound: the LP optimum or the always-valid
+            // combinatorial (physics) bound, whichever is larger.
+            double lpBound = double.IsInfinity(search.RootBound) ? 0 : search.RootBound;
+            double bound = Math.Max(lpBound, search.CombinatorialLowerBound);
 
             // Pricing kept columns by position-independent SKU signature, so their layers still
             // sit at their centered positions. Materialize only the chosen columns (few) so the

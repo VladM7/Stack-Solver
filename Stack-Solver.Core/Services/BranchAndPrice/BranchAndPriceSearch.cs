@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Google.OrTools.LinearSolver;
+using Stack_Solver.Models;
 using Stack_Solver.Models.Layering;
 using Stack_Solver.Models.Supports;
 
@@ -28,6 +29,7 @@ namespace Stack_Solver.Services.BranchAndPrice
         private readonly PricingSolver _heuristic;
         private readonly ExactPricingSolver _exact;
         private readonly HashSet<string> _forbidden = new(StringComparer.Ordinal);
+        private readonly double _combinatorialBound;
         private readonly CancellationToken _ct;
 
         private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
@@ -35,6 +37,7 @@ namespace Stack_Solver.Services.BranchAndPrice
         private long _nodeBudget;
         private bool _completed = true;
         private bool _allCertified = true;
+        private bool _provenByRootCert;
         private readonly BranchAndPriceStats _stats = new();
 
         private double _bestObjective = double.PositiveInfinity;
@@ -54,11 +57,22 @@ namespace Stack_Solver.Services.BranchAndPrice
             _ct = ct;
             _nodeBudget = nodeBudget;
             _timeBudget = timeBudget;
+            _combinatorialBound = CombinatorialBound.Compute(placeableDemand, BuildSkuMap(layers), pallet);
             _rmp = new RestrictedMasterProblem(placeableSkus, placeableDemand);
             _pool.AddRange(seedColumns);
             _rmp.AddColumns(seedColumns);
             _heuristic = new PricingSolver(layers, pallet);
             _exact = new ExactPricingSolver(layers, pallet);
+        }
+
+        /// <summary>Maps each SKU id appearing in the layers to its <see cref="SKU"/> (box dimensions/weight).</summary>
+        private static Dictionary<string, SKU> BuildSkuMap(IReadOnlyList<Layer> layers)
+        {
+            var map = new Dictionary<string, SKU>(StringComparer.Ordinal);
+            foreach (var layer in layers)
+                foreach (var item in layer.Items)
+                    map.TryAdd(item.SkuType.SkuId, item.SkuType);
+            return map;
         }
 
         /// <summary>Certified-or-not LP lower bound at the root (∞ if the root is infeasible).</summary>
@@ -72,8 +86,9 @@ namespace Stack_Solver.Services.BranchAndPrice
         /// <summary>Leftover (unmet) units per SKU in the returned solution.</summary>
         public IReadOnlyDictionary<string, int> OptimalLeftovers => _bestLeftovers;
 
-        /// <summary>True only when the returned solution is a proven optimum.</summary>
-        public bool ProvedOptimal => _completed && _allCertified && _best != null;
+        /// <summary>True only when the returned solution is a proven optimum — either certified at
+        /// the root by a valid lower bound, or by a fully-completed, all-certified tree search.</summary>
+        public bool ProvedOptimal => _best != null && (_provenByRootCert || (_completed && _allCertified));
 
         /// <summary>Diagnostic counters describing where the solve spent its effort.</summary>
         public BranchAndPriceStats Stats => _stats;
@@ -98,20 +113,32 @@ namespace Stack_Solver.Services.BranchAndPrice
             _bestLeftovers = new Dictionary<string, int>(StringComparer.Ordinal);
         }
 
+        /// <summary>
+        /// Certified combinatorial (physics) lower bound on the pallet count — valid regardless of
+        /// the LP, and the reportable bound when the LP optimum is weaker. See <see cref="CombinatorialBound"/>.
+        /// </summary>
+        public double CombinatorialLowerBound => _combinatorialBound;
+
         public void Run()
         {
             var root = SolveNode();
             RootBound = root.Feasible ? root.Primal.Sum(p => p.Value) : double.PositiveInfinity;
             RootCertified = root.Certified;
 
-            // ⌈LP bound⌉ certification: the integer pallet optimum is ≥ the certified LP bound,
-            // and integral when all placeable demand tiles (it does, with residual layers). So an
-            // incumbent matching ⌈RootBound⌉ — with no leftover at the root or in the incumbent —
-            // is already provably optimal; skip the tree.
-            if (_best != null && RootCertified && root.Feasible
-                && AllZero(root.Leftovers) && AllZero(_bestLeftovers)
-                && _bestObjective <= Math.Ceiling(RootBound - IntTol) + IntTol)
+            // ⌈bound⌉ certification: the integer pallet optimum is ≥ every valid lower bound, and is
+            // integral when all placeable demand tiles (it does, with residual layers). Two certified
+            // bounds apply — the LP optimum (only when the pricer proved it exhaustive) and the
+            // always-valid combinatorial bound — so an incumbent that places all demand and matches
+            // ⌈max of them⌉ is provably optimal; skip the tree.
+            int lpLb = RootCertified && root.Feasible && AllZero(root.Leftovers)
+                ? (int)Math.Ceiling(RootBound - IntTol)
+                : int.MinValue;
+            int comboLb = (int)Math.Ceiling(_combinatorialBound - IntTol);
+            int certifiedLb = Math.Max(lpLb, comboLb);
+
+            if (_best != null && AllZero(_bestLeftovers) && _bestObjective <= certifiedLb + IntTol)
             {
+                _provenByRootCert = true;
                 _stats.RootCertificationFired = true;
                 FinalizeStats();
                 return;
@@ -142,8 +169,10 @@ namespace Stack_Solver.Services.BranchAndPrice
             if (!node.Feasible) return;
             _stats.TreeNodes++;
 
-            // Prune: this node's LP objective cannot beat the incumbent objective.
-            if (node.Objective >= _bestObjective - IntTol) return;
+            // Prune: no completion of this node can beat the incumbent. The node bound is the
+            // stronger of its LP objective and the global combinatorial bound (both valid lower
+            // bounds on the integer optimum reachable here).
+            if (Math.Max(node.Objective, _combinatorialBound) >= _bestObjective - IntTol) return;
 
             if (node.Integral)
             {
