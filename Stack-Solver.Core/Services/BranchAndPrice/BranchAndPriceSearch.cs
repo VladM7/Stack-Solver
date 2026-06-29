@@ -208,7 +208,10 @@ namespace Stack_Solver.Services.BranchAndPrice
                     continue;
                 }
 
-                var exactColumn = _exact.FindBestColumn(duals, _forbidden);
+                var remaining = _timeBudget - _stopwatch.Elapsed;
+                var exactColumn = _exact.FindBestColumn(
+                    duals, _forbidden, _ct,
+                    DateTime.UtcNow + (remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero));
                 if (exactColumn != null && _pool.TryAdd(exactColumn))
                 {
                     _rmp.AddColumns([exactColumn]);

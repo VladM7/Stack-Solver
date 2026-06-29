@@ -189,7 +189,7 @@ namespace Stack_Solver.Services.BranchAndPrice
                 // Heuristic exhausted — call the exact pricer to either find a missed column
                 // or certify LP optimality.
                 ct.ThrowIfCancellationRequested();
-                var exactColumn = exact.FindBestColumn(duals);
+                var exactColumn = exact.FindBestColumn(duals, forbidden: null, ct: ct);
                 if (exactColumn != null && pool.TryAdd(exactColumn))
                 {
                     rmp.AddColumns([exactColumn]);
