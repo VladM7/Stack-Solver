@@ -215,7 +215,7 @@ namespace Stack_Solver.Services.BranchAndPrice
         /// <summary>Rebuilds a template with its layers positioned for support (see <see cref="StackMaterializer"/>).</summary>
         private static PalletTemplate Materialize(PalletTemplate template, Pallet pallet) =>
             PalletTemplate.FromLayers(
-                StackMaterializer.Materialize(pallet, template.Layers, pallet.MaxSkuOverhang));
+                StackMaterializer.Materialize(pallet, template.Layers, pallet.OverhangRule));
 
         private static Dictionary<string, int> UnplaceableLeftovers(
             IReadOnlyDictionary<string, int> demand, IReadOnlyList<string> unplaceable)

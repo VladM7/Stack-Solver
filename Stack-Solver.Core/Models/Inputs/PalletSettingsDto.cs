@@ -1,3 +1,5 @@
+using Stack_Solver.Models.Layering;
+
 namespace Stack_Solver.Models.Inputs
 {
     public class PalletSettingsDto
@@ -13,5 +15,6 @@ namespace Stack_Solver.Models.Inputs
         public int MaxStackHeight { get; set; }
         public int MaxStackWeight { get; set; }
         public double MaxSkuOverhang { get; set; }
+        public OverhangMode OverhangMode { get; set; }
     }
 }

@@ -4,6 +4,7 @@ using Stack_Solver.Data.Repositories;
 using Stack_Solver.Infrastructure;
 using Stack_Solver.Models;
 using Stack_Solver.Models.Inputs;
+using Stack_Solver.Models.Layering;
 using Stack_Solver.Models.Supports;
 using Stack_Solver.Validation;
 using System.Collections.ObjectModel;
@@ -67,6 +68,25 @@ namespace Stack_Solver.ViewModels.Pages
             }
         }
 
+        [ObservableProperty]
+        private OverhangMode _overhangMode;
+
+        /// <summary>Choices for the overhang-rule selector; <see cref="MaxSkuOverhang"/> is ignored for Auto.</summary>
+        public IReadOnlyList<OverhangModeOption> OverhangModeOptions { get; } =
+        [
+            new(OverhangMode.AbsoluteCm, "Max overhang per side"),
+            new(OverhangMode.MinSupportedPercent, "Min supported"),
+            new(OverhangMode.Auto, "Auto"),
+        ];
+
+        /// <summary>True when the overhang value field applies (every mode except Auto).</summary>
+        public bool IsOverhangValueVisible => OverhangMode != OverhangMode.Auto;
+
+        /// <summary>Header for the overhang value field, reflecting the unit of the selected rule.</summary>
+        public string OverhangValueHeader => OverhangMode == OverhangMode.MinSupportedPercent
+            ? "Min supported (%)"
+            : "Max overhang per side (cm)";
+
         public ObservableCollection<Pallet> CommonPalletsInternational { get; } = [];
         public ObservableCollection<Pallet> CommonPalletsAmerica { get; } = [];
 
@@ -127,6 +147,7 @@ namespace Stack_Solver.ViewModels.Pages
             MaxStackHeight = _palletDefaults.MaxStackHeight;
             MaxStackWeight = _palletDefaults.MaxStackWeight;
             MaxSkuOverhang = _palletDefaults.MaxSkuOverhang;
+            OverhangMode = _palletDefaults.OverhangMode;
         }
 
         public async Task InitializeAsync()
@@ -204,6 +225,12 @@ namespace Stack_Solver.ViewModels.Pages
         partial void OnSolverTimeLimitChanged(int value) => PublishSettingsChanged();
         partial void OnMaxStackHeightChanged(int value) => PublishSettingsChanged();
         partial void OnMaxStackWeightChanged(int value) => PublishSettingsChanged();
+        partial void OnOverhangModeChanged(OverhangMode value)
+        {
+            OnPropertyChanged(nameof(IsOverhangValueVisible));
+            OnPropertyChanged(nameof(OverhangValueHeader));
+            PublishSettingsChanged();
+        }
 
         private void PublishSettingsChanged()
         {
@@ -219,7 +246,8 @@ namespace Stack_Solver.ViewModels.Pages
                 SolverTimeLimit = SolverTimeLimit,
                 MaxStackHeight = MaxStackHeight,
                 MaxStackWeight = MaxStackWeight,
-                MaxSkuOverhang = MaxSkuOverhang
+                MaxSkuOverhang = MaxSkuOverhang,
+                OverhangMode = OverhangMode
             };
             var result = _settingsValidator.Validate(dto);
             if (!result.IsValid)
@@ -230,7 +258,7 @@ namespace Stack_Solver.ViewModels.Pages
             _events.Publish(new SettingsChangedMessage(
                 PalletLength, PalletWidth, PalletHeight,
                 UseCpsat, UseBranchAndPrice, MaxCpsatCandidates, BlfAttempts, SolverTimeLimit,
-                MaxStackHeight, MaxStackWeight, MaxSkuOverhang,
+                MaxStackHeight, MaxStackWeight, MaxSkuOverhang, OverhangMode,
                 [.. Skus]));
 
             if (_isInitialized)
@@ -244,7 +272,8 @@ namespace Stack_Solver.ViewModels.Pages
                     PalletHeight = PalletHeight,
                     MaxStackHeight = MaxStackHeight,
                     MaxStackWeight = MaxStackWeight,
-                    MaxSkuOverhang = MaxSkuOverhang
+                    MaxSkuOverhang = MaxSkuOverhang,
+                    OverhangMode = OverhangMode
                 };
                 var genOpts = new GenerationOptions
                 {
@@ -349,5 +378,9 @@ namespace Stack_Solver.ViewModels.Pages
         int MaxStackHeight,
         int MaxStackWeight,
         double MaxSkuOverhang,
+        OverhangMode OverhangMode,
         List<SKU> Skus);
+
+    /// <summary>A selectable overhang rule with a human-readable label for the settings combo box.</summary>
+    public record OverhangModeOption(OverhangMode Mode, string Label);
 }

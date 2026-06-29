@@ -17,7 +17,7 @@ namespace Services.Stacking
             var lower = CreateLayer("Lower", new PositionedItem(sku, 30, 30, rotated: false));
             var upper = CreateLayer("Upper", new PositionedItem(sku, 0, 0, rotated: false));
 
-            var placed = StackMaterializer.Materialize(pallet, [lower, upper], maxOverhang: 0, gridStep: 10);
+            var placed = StackMaterializer.Materialize(pallet, [lower, upper], new OverhangRule(OverhangMode.AbsoluteCm, 0), gridStep: 10);
 
             Assert.Equal(2, placed.Count);
             // Lower placed as-is (same reference, untouched).

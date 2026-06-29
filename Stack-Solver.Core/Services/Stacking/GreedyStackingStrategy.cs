@@ -28,7 +28,7 @@ namespace Stack_Solver.Services.Stacking
 
             int maxHeight = pallet is Pallet p ? p.MaxStackHeight : int.MaxValue;
             int maxWeight = pallet is Pallet p2 ? p2.MaxStackWeight : int.MaxValue;
-            double maxSkuOverhang = pallet is Pallet p3 ? p3.MaxSkuOverhang : 0;
+            OverhangRule overhangRule = pallet is Pallet p3 ? p3.OverhangRule : OverhangRule.FullSupport;
 
             // After each successful placement, restart from the top of the ordered list.
             // This lets the same layer pattern repeat as many times as the height/weight
@@ -49,7 +49,7 @@ namespace Stack_Solver.Services.Stacking
                     Layer toPlace = layer;
                     if (stackedLayers.Count > 0)
                     {
-                        var fit = LayerSupportAnalyzer.FindBestPlacement(stackedLayers[^1], layer, pallet, maxSkuOverhang);
+                        var fit = LayerSupportAnalyzer.FindBestPlacement(stackedLayers[^1], layer, pallet, overhangRule);
                         if (!fit.Feasible) continue;
                         if (fit.OffsetX != 0 || fit.OffsetY != 0)
                             toPlace = StackMaterializer.Translate(layer, fit.OffsetX, fit.OffsetY, pallet);

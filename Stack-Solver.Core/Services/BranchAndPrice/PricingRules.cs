@@ -36,7 +36,7 @@ namespace Stack_Solver.Services.BranchAndPrice
             var key = (lower.Id, upper.Id);
             if (_transitionCache.TryGetValue(key, out bool cached)) return cached;
 
-            bool ok = LayerSupportAnalyzer.FindBestPlacement(lower, upper, _pallet, _pallet.MaxSkuOverhang).Feasible;
+            bool ok = LayerSupportAnalyzer.FindBestPlacement(lower, upper, _pallet, _pallet.OverhangRule).Feasible;
             _transitionCache[key] = ok;
             return ok;
         }

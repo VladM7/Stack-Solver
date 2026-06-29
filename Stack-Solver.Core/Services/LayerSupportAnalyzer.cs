@@ -87,13 +87,13 @@ namespace Stack_Solver.Services
         /// <param name="lowerLayer">The layer beneath, already positioned. If null/empty, nothing supports the upper layer.</param>
         /// <param name="upperLayer">The layer to place. Its items are treated as a rigid group; the search finds a translation, not a re-pack.</param>
         /// <param name="supportSurface">The pallet surface bounding the search.</param>
-        /// <param name="maxOverhang">The maximum unsupported area allowed for any single SKU; drives the <see cref="PlacementFit.Feasible"/> flag.</param>
+        /// <param name="rule">How adequate support is judged at the chosen offset; drives the <see cref="PlacementFit.Feasible"/> flag.</param>
         /// <param name="gridStep">The grid cell size, in units. Must be positive.</param>
         public static PlacementFit FindBestPlacement(
             Layer? lowerLayer,
             Layer upperLayer,
             SupportSurface supportSurface,
-            double maxOverhang,
+            OverhangRule rule,
             int gridStep = 1)
         {
             ArgumentNullException.ThrowIfNull(upperLayer);
@@ -109,6 +109,19 @@ namespace Stack_Solver.Services
                 ? LayerGeometryBuilder.Build(lowerLayer, supportSurface, gridStep).OccupancyGrid
                 : new bool[gridWidth, gridLength];
             int[,] prefix = BuildPrefixSum(lowerOcc, gridWidth, gridLength);
+
+            // Occupied bounding box of the support below (for the absolute per-side overhang rule).
+            int lowMinC = int.MaxValue, lowMaxC = int.MinValue, lowMinR = int.MaxValue, lowMaxR = int.MinValue;
+            for (int r = 0; r < gridWidth; r++)
+                for (int c = 0; c < gridLength; c++)
+                    if (lowerOcc[r, c])
+                    {
+                        if (c < lowMinC) lowMinC = c;
+                        if (c > lowMaxC) lowMaxC = c;
+                        if (r < lowMinR) lowMinR = r;
+                        if (r > lowMaxR) lowMaxR = r;
+                    }
+            bool lowerHasCells = lowMaxC >= 0;
 
             // Per-item cell rectangles (clipped to the pallet, matching LayerGeometryBuilder).
             int n = upperLayer.Items.Count;
@@ -196,7 +209,43 @@ namespace Stack_Solver.Services
                 }
             }
 
-            bool feasible = bestMaxOverhang <= maxOverhang;
+            // Feasibility is judged by the selected rule at the chosen (best-supported) offset.
+            bool feasible = true;
+            for (int i = 0; i < n && feasible; i++)
+            {
+                int rx = sx[i] + bestDcx;
+                int ry = sy[i] + bestDcy;
+                int supported = RectSum(prefix, ry, rx, h[i], w[i]);
+
+                switch (rule.Mode)
+                {
+                    case OverhangMode.MinSupportedPercent:
+                        double fraction = cells[i] > 0 ? (double)supported / cells[i] : 1.0;
+                        if (fraction * 100.0 + 1e-9 < rule.Value) feasible = false;
+                        break;
+
+                    case OverhangMode.Auto:
+                        // Centre of weight (geometric centre for a uniform box) must rest on support.
+                        int cc = rx + w[i] / 2;
+                        int cr = ry + h[i] / 2;
+                        bool centreSupported = lowerHasCells
+                            && cr >= 0 && cr < gridWidth && cc >= 0 && cc < gridLength
+                            && lowerOcc[cr, cc];
+                        if (!centreSupported) feasible = false;
+                        break;
+
+                    default: // AbsoluteCm: how far the box hangs past the supporting load on any side.
+                        if (!lowerHasCells) { feasible = false; break; }
+                        int leftOver = Math.Max(0, lowMinC - rx);
+                        int rightOver = Math.Max(0, (rx + w[i] - 1) - lowMaxC);
+                        int bottomOver = Math.Max(0, lowMinR - ry);
+                        int topOver = Math.Max(0, (ry + h[i] - 1) - lowMaxR);
+                        int maxSide = Math.Max(Math.Max(leftOver, rightOver), Math.Max(bottomOver, topOver));
+                        if (maxSide * (double)gridStep > rule.Value + 1e-9) feasible = false;
+                        break;
+                }
+            }
+
             return new PlacementFit(
                 feasible,
                 bestDcx * gridStep,

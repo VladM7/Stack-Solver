@@ -142,7 +142,7 @@ namespace Stack_Solver.Services.Stacking
 
             // Placement-aware: the transition is valid if the upper layer can be shifted onto
             // the lower one within the overhang budget, even if its centered position would overhang.
-            bool ok = LayerSupportAnalyzer.FindBestPlacement(lower, upper, pallet, pallet.MaxSkuOverhang).Feasible;
+            bool ok = LayerSupportAnalyzer.FindBestPlacement(lower, upper, pallet, pallet.OverhangRule).Feasible;
             cache[key] = ok;
             return ok;
         }
@@ -171,7 +171,7 @@ namespace Stack_Solver.Services.Stacking
             var signature = Signature(PalletTemplate.FromLayers(layers));
             if (!seen.Add(signature)) return;
 
-            var placed = StackMaterializer.Materialize(pallet, layers, pallet.MaxSkuOverhang);
+            var placed = StackMaterializer.Materialize(pallet, layers, pallet.OverhangRule);
             templates.Add(PalletTemplate.FromLayers(placed));
         }
 

@@ -181,8 +181,17 @@
                                     <ui:NumberBox HorizontalAlignment="Left" Minimum="1"
                                                   Value="{Binding ViewModel.Settings.MaxStackWeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </ui:CardControl>
-                                <ui:CardControl Header="Max SKU overhang (cm)">
-                                    <ui:NumberBox HorizontalAlignment="Left" Minimum="0" SmallChange="10" LargeChange="100"
+                                <ui:CardControl Header="Overhang rule">
+                                    <ComboBox HorizontalAlignment="Left" Width="Auto"
+                                              ItemsSource="{Binding ViewModel.Settings.OverhangModeOptions}"
+                                              DisplayMemberPath="Label"
+                                              SelectedValuePath="Mode"
+                                              SelectedValue="{Binding ViewModel.Settings.OverhangMode, Mode=TwoWay}"
+                                              ToolTip="Max overhang per side: a box may hang at most N cm past the load below.&#x0a;Min supported: at least N% of each box must rest on support.&#x0a;Auto: keeps every box from tipping by ensuring its centre of weight is supported." />
+                                </ui:CardControl>
+                                <ui:CardControl Header="{Binding ViewModel.Settings.OverhangValueHeader}"
+                                                Visibility="{Binding ViewModel.Settings.IsOverhangValueVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <ui:NumberBox HorizontalAlignment="Left" Minimum="0" SmallChange="1" LargeChange="10"
                                                   Value="{Binding ViewModel.Settings.MaxSkuOverhang, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </ui:CardControl>
                             </StackPanel>

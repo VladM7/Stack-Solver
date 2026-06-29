@@ -15,6 +15,10 @@ namespace Stack_Solver.Models.Supports
         public int MaxStackHeight { get; init; } = 180;
         public int MaxStackWeight { get; init; } = 950;
         public double MaxSkuOverhang { get; init; } = 0;
+        public OverhangMode OverhangMode { get; init; } = OverhangMode.AbsoluteCm;
+
+        /// <summary>The inter-layer support rule, combining <see cref="OverhangMode"/> and <see cref="MaxSkuOverhang"/>.</summary>
+        public OverhangRule OverhangRule => new(OverhangMode, MaxSkuOverhang);
 
         public List<Layer> Layers { get; } = [];
         public PalletMetadata Metadata { get; set; } = new();

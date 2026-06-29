@@ -19,7 +19,7 @@ namespace Stack_Solver.Services.Stacking
         public static List<Layer> Materialize(
             SupportSurface surface,
             IReadOnlyList<Layer> ordered,
-            double maxOverhang,
+            OverhangRule rule,
             int gridStep = 1)
         {
             ArgumentNullException.ThrowIfNull(surface);
@@ -35,7 +35,7 @@ namespace Stack_Solver.Services.Stacking
                     continue;
                 }
 
-                var fit = LayerSupportAnalyzer.FindBestPlacement(placed[^1], layer, surface, maxOverhang, gridStep);
+                var fit = LayerSupportAnalyzer.FindBestPlacement(placed[^1], layer, surface, rule, gridStep);
                 placed.Add(fit.OffsetX == 0 && fit.OffsetY == 0
                     ? layer
                     : Translate(layer, fit.OffsetX, fit.OffsetY, surface, gridStep));

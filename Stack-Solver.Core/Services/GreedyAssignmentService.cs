@@ -67,7 +67,7 @@ namespace Stack_Solver.Services
                 Layer toPlace = best;
                 if (stackedLayers.Count > 0)
                 {
-                    var fit = LayerSupportAnalyzer.FindBestPlacement(stackedLayers[^1], best, pallet, pallet.MaxSkuOverhang);
+                    var fit = LayerSupportAnalyzer.FindBestPlacement(stackedLayers[^1], best, pallet, pallet.OverhangRule);
                     if (fit.OffsetX != 0 || fit.OffsetY != 0)
                         toPlace = StackMaterializer.Translate(best, fit.OffsetX, fit.OffsetY, pallet);
                 }
@@ -119,7 +119,7 @@ namespace Stack_Solver.Services
 
             if (stackedLayers.Count > 0)
             {
-                var fit = LayerSupportAnalyzer.FindBestPlacement(stackedLayers[^1], layer, pallet, pallet.MaxSkuOverhang);
+                var fit = LayerSupportAnalyzer.FindBestPlacement(stackedLayers[^1], layer, pallet, pallet.OverhangRule);
                 if (!fit.Feasible) return false;
             }
 
