@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Google.OrTools.LinearSolver;
 using Stack_Solver.Models;
 using Stack_Solver.Models.Assignment;
@@ -103,6 +104,7 @@ namespace Stack_Solver.Services.BranchAndPrice
                 search.SeedIncumbent(incumbent);
 
             search.Run();
+            Trace.WriteLine(search.Stats.ToString());
 
             double bound = double.IsInfinity(search.RootBound) ? 0 : search.RootBound;
 
@@ -122,7 +124,8 @@ namespace Stack_Solver.Services.BranchAndPrice
                 leftovers[sku] = count;
 
             return new BranchAndPriceSolution(
-                new AssignmentResult { Assignments = assignments, Leftovers = leftovers }, bound, search.ProvedOptimal);
+                new AssignmentResult { Assignments = assignments, Leftovers = leftovers }, bound, search.ProvedOptimal,
+                search.Stats);
         }
 
         /// <summary>Runs root-node column generation and returns the LP optimum and final pool.</summary>
@@ -309,7 +312,8 @@ namespace Stack_Solver.Services.BranchAndPrice
     public sealed record BranchAndPriceSolution(
         AssignmentResult Result,
         double LowerBound,
-        bool LowerBoundCertified)
+        bool LowerBoundCertified,
+        BranchAndPriceStats? Stats = null)
     {
         /// <summary>Pallets used by the integer solution.</summary>
         public int Pallets => Result.TotalPallets;

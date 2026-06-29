@@ -46,6 +46,9 @@ namespace Stack_Solver.Services.BranchAndPrice
         /// <summary>True iff the most recent <see cref="FindBestColumn"/> explored the whole tree.</summary>
         public bool LastSearchExhaustive { get; private set; }
 
+        /// <summary>DFS nodes visited by the most recent <see cref="FindBestColumn"/> (diagnostics).</summary>
+        public long LastNodesExplored { get; private set; }
+
         /// <param name="duals">Demand-constraint duals π_i.</param>
         /// <param name="forbidden">Column signatures barred by branching; never returned, but still traversed as prefixes.</param>
         /// <param name="ct">Cancelled cooperatively from inside the search; on cancellation the search stops early and is reported non-exhaustive.</param>
@@ -58,6 +61,7 @@ namespace Stack_Solver.Services.BranchAndPrice
         {
             ArgumentNullException.ThrowIfNull(duals);
             LastSearchExhaustive = true;
+            LastNodesExplored = 0;
             if (_rules.AvailHeight <= 0) return null;
 
             var cands = BuildCandidates(duals);
@@ -89,6 +93,7 @@ namespace Stack_Solver.Services.BranchAndPrice
             }
 
             LastSearchExhaustive = !ctx.BudgetExhausted;
+            LastNodesExplored = Math.Max(0, budget - ctx.RemainingBudget);
 
             if (ctx.BestValue > 1.0 + Epsilon && ctx.BestStack.Count > 0)
             {
@@ -165,6 +170,9 @@ namespace Stack_Solver.Services.BranchAndPrice
             public double BestValue { get; private set; }
             public List<int> BestStack { get; } = [];
             public bool BudgetExhausted { get; private set; }
+
+            /// <summary>Node budget left after the search (diagnostics; may be slightly negative on the aborting node).</summary>
+            public long RemainingBudget => _budget;
 
             public SearchContext(List<Cand> cands, PricingRules rules, double valuePerHeight, double valuePerWeight, long budget, IReadOnlySet<string>? forbidden, CancellationToken ct, DateTime? deadlineUtc)
             {

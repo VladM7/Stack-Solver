@@ -35,6 +35,7 @@ namespace Stack_Solver.Services.BranchAndPrice
         private long _nodeBudget;
         private bool _completed = true;
         private bool _allCertified = true;
+        private readonly BranchAndPriceStats _stats = new();
 
         private double _bestObjective = double.PositiveInfinity;
         private List<(BnpColumn Column, int Count)>? _best;
@@ -74,6 +75,9 @@ namespace Stack_Solver.Services.BranchAndPrice
         /// <summary>True only when the returned solution is a proven optimum.</summary>
         public bool ProvedOptimal => _completed && _allCertified && _best != null;
 
+        /// <summary>Diagnostic counters describing where the solve spent its effort.</summary>
+        public BranchAndPriceStats Stats => _stats;
+
         /// <summary>
         /// Seeds a starting integer incumbent (e.g. from <see cref="LayerPackingHeuristic"/>) so
         /// the search has an upper bound to prune against and never returns short on timeout.
@@ -107,9 +111,23 @@ namespace Stack_Solver.Services.BranchAndPrice
             if (_best != null && RootCertified && root.Feasible
                 && AllZero(root.Leftovers) && AllZero(_bestLeftovers)
                 && _bestObjective <= Math.Ceiling(RootBound - IntTol) + IntTol)
+            {
+                _stats.RootCertificationFired = true;
+                FinalizeStats();
                 return;
+            }
 
             BranchAndBound(root);
+            FinalizeStats();
+        }
+
+        private void FinalizeStats()
+        {
+            _stats.Completed = _completed;
+            _stats.AllCertified = _allCertified;
+            _stats.RootBound = RootBound;
+            _stats.BestObjective = _best != null ? _bestObjective : double.NaN;
+            _stats.Elapsed = _stopwatch.Elapsed;
         }
 
         private static bool AllZero(IReadOnlyDictionary<string, int> leftovers)
@@ -122,6 +140,7 @@ namespace Stack_Solver.Services.BranchAndPrice
         {
             _ct.ThrowIfCancellationRequested();
             if (!node.Feasible) return;
+            _stats.TreeNodes++;
 
             // Prune: this node's LP objective cannot beat the incumbent objective.
             if (node.Objective >= _bestObjective - IntTol) return;
@@ -188,9 +207,11 @@ namespace Stack_Solver.Services.BranchAndPrice
         /// </summary>
         private NodeSolve SolveNode()
         {
+            _stats.LpNodesSolved++;
             for (int iter = 0; iter < MaxCgIterations; iter++)
             {
                 _ct.ThrowIfCancellationRequested();
+                _stats.CgIterations++;
 
                 var status = _rmp.Solve();
                 if (status is not (Solver.ResultStatus.OPTIMAL or Solver.ResultStatus.FEASIBLE))
@@ -212,6 +233,10 @@ namespace Stack_Solver.Services.BranchAndPrice
                 var exactColumn = _exact.FindBestColumn(
                     duals, _forbidden, _ct,
                     DateTime.UtcNow + (remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero));
+                _stats.ExactPricerCalls++;
+                _stats.ExactPricerNodes += _exact.LastNodesExplored;
+                if (_exact.LastSearchExhaustive) _stats.ExactPricerExhaustive++;
+                else _stats.ExactPricerTruncated++;
                 if (exactColumn != null && _pool.TryAdd(exactColumn))
                 {
                     _rmp.AddColumns([exactColumn]);
