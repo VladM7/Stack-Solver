@@ -16,5 +16,6 @@ namespace Stack_Solver.Models.Inputs
         public int MaxStackWeight { get; set; }
         public double MaxSkuOverhang { get; set; }
         public OverhangMode OverhangMode { get; set; }
+        public double MaxTopHeavyPercent { get; set; }
     }
 }

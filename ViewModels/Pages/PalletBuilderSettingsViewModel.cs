@@ -71,6 +71,9 @@ namespace Stack_Solver.ViewModels.Pages
         [ObservableProperty]
         private OverhangMode _overhangMode;
 
+        [ObservableProperty]
+        private double _maxTopHeavyPercent;
+
         /// <summary>Choices for the overhang-rule selector; <see cref="MaxSkuOverhang"/> is ignored for Auto.</summary>
         public IReadOnlyList<OverhangModeOption> OverhangModeOptions { get; } =
         [
@@ -148,6 +151,7 @@ namespace Stack_Solver.ViewModels.Pages
             MaxStackWeight = _palletDefaults.MaxStackWeight;
             MaxSkuOverhang = _palletDefaults.MaxSkuOverhang;
             OverhangMode = _palletDefaults.OverhangMode;
+            MaxTopHeavyPercent = _palletDefaults.MaxTopHeavyPercent;
         }
 
         public async Task InitializeAsync()
@@ -231,6 +235,7 @@ namespace Stack_Solver.ViewModels.Pages
             OnPropertyChanged(nameof(OverhangValueHeader));
             PublishSettingsChanged();
         }
+        partial void OnMaxTopHeavyPercentChanged(double value) => PublishSettingsChanged();
 
         private void PublishSettingsChanged()
         {
@@ -247,7 +252,8 @@ namespace Stack_Solver.ViewModels.Pages
                 MaxStackHeight = MaxStackHeight,
                 MaxStackWeight = MaxStackWeight,
                 MaxSkuOverhang = MaxSkuOverhang,
-                OverhangMode = OverhangMode
+                OverhangMode = OverhangMode,
+                MaxTopHeavyPercent = MaxTopHeavyPercent
             };
             var result = _settingsValidator.Validate(dto);
             if (!result.IsValid)
@@ -258,7 +264,7 @@ namespace Stack_Solver.ViewModels.Pages
             _events.Publish(new SettingsChangedMessage(
                 PalletLength, PalletWidth, PalletHeight,
                 UseCpsat, UseBranchAndPrice, MaxCpsatCandidates, BlfAttempts, SolverTimeLimit,
-                MaxStackHeight, MaxStackWeight, MaxSkuOverhang, OverhangMode,
+                MaxStackHeight, MaxStackWeight, MaxSkuOverhang, OverhangMode, MaxTopHeavyPercent,
                 [.. Skus]));
 
             if (_isInitialized)
@@ -273,7 +279,8 @@ namespace Stack_Solver.ViewModels.Pages
                     MaxStackHeight = MaxStackHeight,
                     MaxStackWeight = MaxStackWeight,
                     MaxSkuOverhang = MaxSkuOverhang,
-                    OverhangMode = OverhangMode
+                    OverhangMode = OverhangMode,
+                    MaxTopHeavyPercent = MaxTopHeavyPercent
                 };
                 var genOpts = new GenerationOptions
                 {
@@ -379,6 +386,7 @@ namespace Stack_Solver.ViewModels.Pages
         int MaxStackWeight,
         double MaxSkuOverhang,
         OverhangMode OverhangMode,
+        double MaxTopHeavyPercent,
         List<SKU> Skus);
 
     /// <summary>A selectable overhang rule with a human-readable label for the settings combo box.</summary>

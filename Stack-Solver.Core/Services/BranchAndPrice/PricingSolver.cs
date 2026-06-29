@@ -7,9 +7,9 @@ namespace Stack_Solver.Services.BranchAndPrice
     /// Heuristic pricing subproblem. Given the demand-constraint duals π_i, searches for
     /// valid pallet templates whose dual value Σ_i a_{t,i}·π_i exceeds 1 — i.e. negative
     /// reduced cost (1 − Σ a·π) in the min-pallets master. A beam search stacks layers
-    /// bottom-to-top under <see cref="PricingRules"/>: available height, weight, weight
-    /// ordering (a layer may only rest on one at least as heavy), inter-layer support, and
-    /// the distinct-SKU cap. Every partial stack whose value exceeds 1 is a candidate column.
+    /// bottom-to-top under <see cref="PricingRules"/>: available height, weight, load-density
+    /// ordering (a layer may rest on one no more than the tolerance denser), inter-layer support,
+    /// and the distinct-SKU cap. Every partial stack whose value exceeds 1 is a candidate column.
     ///
     /// This finds improving columns quickly but does not prove their absence; proving LP
     /// optimality is the job of <see cref="ExactPricingSolver"/>.
@@ -94,7 +94,7 @@ namespace Stack_Solver.Services.BranchAndPrice
 
                 double value = PricingRules.LayerValue(layer, duals);
                 if (value <= 0) continue;
-                scored.Add(new ScoredLayer(layer, value));
+                scored.Add(new ScoredLayer(layer, value, layer.Metrics.LoadDensity));
             }
             return scored;
         }
@@ -103,7 +103,8 @@ namespace Stack_Solver.Services.BranchAndPrice
         {
             if (st.UsedHeight + cand.Layer.Metadata.Height > _rules.AvailHeight) return false;
             if (st.UsedWeight + cand.Layer.Metrics.TotalWeight > _rules.MaxWeight) return false;
-            if (cand.Layer.Metrics.TotalWeight > st.TopWeight) return false;                  // weight ordering
+            // Load-density ordering: the upper layer may be at most LoadDensityTolerance denser than the one below.
+            if (!StackingLoadRule.Allows(st.TopDensity, cand.Density, _rules.LoadDensityTolerance)) return false;
             if (PricingRules.CountDistinct(st.Skus, cand.Layer) > PricingRules.MaxDistinctSkusPerTemplate) return false;
             return _rules.TransitionValid(st.TopLayer, cand.Layer);
         }
@@ -116,7 +117,7 @@ namespace Stack_Solver.Services.BranchAndPrice
                 best[column.Signature] = (column, st.Value);
         }
 
-        private readonly record struct ScoredLayer(Layer Layer, double Value);
+        private readonly record struct ScoredLayer(Layer Layer, double Value, double Density);
 
         private sealed class StackState
         {
@@ -124,7 +125,7 @@ namespace Stack_Solver.Services.BranchAndPrice
             public required Layer TopLayer { get; init; }
             public required int UsedHeight { get; init; }
             public required double UsedWeight { get; init; }
-            public required double TopWeight { get; init; }
+            public required double TopDensity { get; init; }
             public required HashSet<string> Skus { get; init; }
             public required double Value { get; init; }
 
@@ -134,7 +135,7 @@ namespace Stack_Solver.Services.BranchAndPrice
                 TopLayer = s.Layer,
                 UsedHeight = s.Layer.Metadata.Height,
                 UsedWeight = s.Layer.Metrics.TotalWeight,
-                TopWeight = s.Layer.Metrics.TotalWeight,
+                TopDensity = s.Density,
                 Skus = new HashSet<string>(s.Layer.Metrics.UsedSkuTypes, StringComparer.Ordinal),
                 Value = s.Value,
             };
@@ -151,7 +152,7 @@ namespace Stack_Solver.Services.BranchAndPrice
                     TopLayer = s.Layer,
                     UsedHeight = UsedHeight + s.Layer.Metadata.Height,
                     UsedWeight = UsedWeight + s.Layer.Metrics.TotalWeight,
-                    TopWeight = s.Layer.Metrics.TotalWeight,
+                    TopDensity = s.Density,
                     Skus = skus,
                     Value = Value + s.Value,
                 };

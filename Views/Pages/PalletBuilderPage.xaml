@@ -194,6 +194,11 @@
                                     <ui:NumberBox HorizontalAlignment="Left" Minimum="0" SmallChange="1" LargeChange="10"
                                                   Value="{Binding ViewModel.Settings.MaxSkuOverhang, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </ui:CardControl>
+                                <ui:CardControl Header="Top-heavy tolerance (%)"
+                                                ToolTip="How much denser (weight per footprint area) a layer may be than the one beneath it. 0 = a layer may never rest on a less-dense one; raise it to allow a heavier layer on top when a larger, lighter layer must sit at the bottom for support.">
+                                    <ui:NumberBox HorizontalAlignment="Left" Minimum="0" SmallChange="5" LargeChange="25"
+                                                  Value="{Binding ViewModel.Settings.MaxTopHeavyPercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </ui:CardControl>
                             </StackPanel>
                         </ui:CardExpander>
 

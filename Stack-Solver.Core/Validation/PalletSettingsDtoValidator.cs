@@ -20,6 +20,7 @@ namespace Stack_Solver.Validation
             // A supported-percentage must be a valid percentage.
             RuleFor(x => x.MaxSkuOverhang).InclusiveBetween(0, 100)
                 .When(x => x.OverhangMode == OverhangMode.MinSupportedPercent);
+            RuleFor(x => x.MaxTopHeavyPercent).GreaterThanOrEqualTo(0);
         }
     }
 }

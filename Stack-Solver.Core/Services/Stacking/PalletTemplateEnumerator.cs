@@ -37,7 +37,7 @@ namespace Stack_Solver.Services.Stacking
                 {
                     if (ReferenceEquals(bottom, top)) continue;
                     if (SkuOf(bottom) == SkuOf(top)) continue;
-                    if (bottom.Metrics.TotalWeight < top.Metrics.TotalWeight) continue;
+                    if (!LoadOrderingAllows(bottom, top, pallet)) continue;
                     if (!IsTransitionValid(bottom, top, pallet, supportCache)) continue;
 
                     EnumerateStackedPair(pallet, bottom, top, templates, seen);
@@ -52,13 +52,13 @@ namespace Stack_Solver.Services.Stacking
                 {
                     if (DistinctSkuUnion(m, hom) > MaxDistinctSkusPerTemplate) continue;
 
-                    if (m.Metrics.TotalWeight >= hom.Metrics.TotalWeight &&
+                    if (LoadOrderingAllows(m, hom, pallet) &&
                         IsTransitionValid(m, hom, pallet, supportCache))
                     {
                         EnumerateStackedPair(pallet, m, hom, templates, seen);
                     }
 
-                    if (hom.Metrics.TotalWeight >= m.Metrics.TotalWeight &&
+                    if (LoadOrderingAllows(hom, m, pallet) &&
                         IsTransitionValid(hom, m, pallet, supportCache))
                     {
                         EnumerateStackedPair(pallet, hom, m, templates, seen);
@@ -130,6 +130,10 @@ namespace Stack_Solver.Services.Stacking
                 : int.MaxValue;
             return Math.Min(byH, byW);
         }
+
+        /// <summary>True if <paramref name="upper"/> is not too top-heavy to rest on <paramref name="lower"/>.</summary>
+        private static bool LoadOrderingAllows(Layer lower, Layer upper, Pallet pallet) =>
+            StackingLoadRule.Allows(lower.Metrics.LoadDensity, upper.Metrics.LoadDensity, pallet.LoadDensityTolerance);
 
         private static bool IsTransitionValid(
             Layer lower,

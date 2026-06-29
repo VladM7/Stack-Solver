@@ -54,6 +54,7 @@ namespace Stack_Solver.Services
                 Utilization = Math.Clamp(fillPercent, 0, 100),
                 Stability = Math.Clamp(stabilityPercent, 0, 100),
                 TotalWeight = totalWeight,
+                FootprintArea = usedArea,
                 UsedSkuTypes = [.. distinctSkuIds]
             };
         }

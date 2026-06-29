@@ -27,6 +27,9 @@ namespace Stack_Solver.Services.BranchAndPrice
 
         public double MaxWeight => _pallet.MaxStackWeight;
 
+        /// <summary>Top-heavy tolerance (fraction) for the load-density stacking-order rule.</summary>
+        public double LoadDensityTolerance => _pallet.LoadDensityTolerance;
+
         /// <summary>True if <paramref name="upper"/> may rest on <paramref name="lower"/> within the overhang limit.</summary>
         /// <remarks>Placement-aware: the upper layer is allowed to shift onto the support below, so a
         /// transition is valid whenever some on-pallet offset keeps every SKU within the overhang limit,
