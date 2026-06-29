@@ -24,11 +24,18 @@ namespace Stack_Solver.Services.BranchAndPrice
         private const int MaxCgIterations = 500;
         private const double IntTol = 1e-6;
 
+        // Wall-clock slice handed to the restricted-master IP heuristic: a fraction of the time
+        // left after root column generation, capped so it can never starve the tree search.
+        private const double IpHeuristicTimeFraction = 0.3;
+        private static readonly TimeSpan IpHeuristicMaxTime = TimeSpan.FromSeconds(10);
+
         private readonly RestrictedMasterProblem _rmp;
         private readonly ColumnPool _pool = new();
         private readonly PricingSolver _heuristic;
         private readonly ExactPricingSolver _exact;
         private readonly HashSet<string> _forbidden = new(StringComparer.Ordinal);
+        private readonly IReadOnlyList<string> _placeableSkus;
+        private readonly IReadOnlyDictionary<string, int> _placeableDemand;
         private readonly double _combinatorialBound;
         private readonly CancellationToken _ct;
 
@@ -57,6 +64,8 @@ namespace Stack_Solver.Services.BranchAndPrice
             _ct = ct;
             _nodeBudget = nodeBudget;
             _timeBudget = timeBudget;
+            _placeableSkus = placeableSkus;
+            _placeableDemand = placeableDemand;
             _combinatorialBound = CombinatorialBound.Compute(placeableDemand, BuildSkuMap(layers), pallet);
             _rmp = new RestrictedMasterProblem(placeableSkus, placeableDemand);
             _pool.AddRange(seedColumns);
@@ -125,6 +134,11 @@ namespace Stack_Solver.Services.BranchAndPrice
             RootBound = root.Feasible ? root.Primal.Sum(p => p.Value) : double.PositiveInfinity;
             RootCertified = root.Certified;
 
+            // Strengthen the incumbent with the restricted-master IP before deciding whether to
+            // branch: a tight integer solution over the root column pool often matches ⌈bound⌉ and
+            // certifies optimality here, skipping the tree entirely.
+            TryImproveIncumbentWithIp();
+
             // ⌈bound⌉ certification: the integer pallet optimum is ≥ every valid lower bound, and is
             // integral when all placeable demand tiles (it does, with residual layers). Two certified
             // bounds apply — the LP optimum (only when the pricer proved it exhaustive) and the
@@ -146,6 +160,39 @@ namespace Stack_Solver.Services.BranchAndPrice
 
             BranchAndBound(root);
             FinalizeStats();
+        }
+
+        /// <summary>
+        /// Runs the restricted-master IP over the current column pool and adopts its assignment as
+        /// the incumbent when it covers all demand with fewer pallets than the current best. Bounded
+        /// by a fraction of the remaining time so it cannot starve the branch-and-bound search.
+        /// </summary>
+        private void TryImproveIncumbentWithIp()
+        {
+            var remaining = _timeBudget - _stopwatch.Elapsed;
+            if (remaining <= TimeSpan.Zero) return;
+
+            var slice = TimeSpan.FromMilliseconds(remaining.TotalMilliseconds * IpHeuristicTimeFraction);
+            if (slice > IpHeuristicMaxTime) slice = IpHeuristicMaxTime;
+
+            var ip = RestrictedMasterHeuristic.Solve(_pool.Columns, _placeableSkus, _placeableDemand, slice, _ct);
+            _stats.RestrictedMasterIpRan = true;
+            if (ip == null || !AllZero(ip.Leftovers)) return;
+
+            double objective = ip.Columns.Sum(c => c.Count);
+            _stats.RestrictedMasterIpObjective = objective;
+            if (objective >= _bestObjective - IntTol) return;
+
+            // The IP found a strictly better full-coverage assignment — adopt it, and make sure its
+            // columns are in the pool/RMP so the tree can also reach (and branch around) it.
+            var added = new List<BnpColumn>();
+            foreach (var (col, _) in ip.Columns)
+                if (_pool.TryAdd(col)) added.Add(col);
+            if (added.Count > 0) _rmp.AddColumns(added);
+
+            _best = ip.Columns.Where(c => c.Count > 0).Select(c => (c.Column, c.Count)).ToList();
+            _bestObjective = objective;
+            _bestLeftovers = new Dictionary<string, int>(StringComparer.Ordinal);
         }
 
         private void FinalizeStats()

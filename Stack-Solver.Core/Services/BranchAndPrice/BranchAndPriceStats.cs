@@ -33,6 +33,12 @@ namespace Stack_Solver.Services.BranchAndPrice
         /// <summary>True when the ⌈LP-bound⌉ short-circuit proved optimality at the root, skipping the tree.</summary>
         public bool RootCertificationFired { get; set; }
 
+        /// <summary>True when the restricted-master IP heuristic was invoked at the root.</summary>
+        public bool RestrictedMasterIpRan { get; set; }
+
+        /// <summary>Pallet count of the restricted-master IP's assignment (NaN if it produced none).</summary>
+        public double RestrictedMasterIpObjective { get; set; } = double.NaN;
+
         /// <summary>True when the search exhausted the tree within budget.</summary>
         public bool Completed { get; set; }
 
@@ -54,6 +60,7 @@ namespace Stack_Solver.Services.BranchAndPrice
             $"tree={TreeNodes} lpNodes={LpNodesSolved} cgIters={CgIterations} " +
             $"pricer={ExactPricerCalls}(exh={ExactPricerExhaustive} trunc={ExactPricerTruncated}) " +
             $"pricerNodes={ExactPricerNodes} " +
+            $"ip={(RestrictedMasterIpRan ? (double.IsNaN(RestrictedMasterIpObjective) ? "none" : RestrictedMasterIpObjective.ToString("0.##")) : "off")} " +
             $"rootCert={(RootCertificationFired ? "Y" : "N")} completed={(Completed ? "Y" : "N")} " +
             $"allCertified={(AllCertified ? "Y" : "N")} " +
             $"rootBound={(double.IsInfinity(RootBound) ? "inf" : RootBound.ToString("0.##"))} " +
