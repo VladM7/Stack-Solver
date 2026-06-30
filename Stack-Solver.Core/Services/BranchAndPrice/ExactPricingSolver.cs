@@ -53,11 +53,13 @@ namespace Stack_Solver.Services.BranchAndPrice
         /// <param name="forbidden">Column signatures barred by branching; never returned, but still traversed as prefixes.</param>
         /// <param name="ct">Cancelled cooperatively from inside the search; on cancellation the search stops early and is reported non-exhaustive.</param>
         /// <param name="deadlineUtc">Absolute wall-clock cutoff. When reached the search stops early and is reported non-exhaustive, so a long pricing call cannot overrun the solver's time budget.</param>
+        /// <param name="reducedCostThreshold">A column is improving only when its dual value Σ a·π exceeds this. Defaults to 1 (the unit pallet cost); a cardinality cap raises it to 1 − μ.</param>
         public BnpColumn? FindBestColumn(
             IReadOnlyDictionary<string, double> duals,
             IReadOnlySet<string>? forbidden = null,
             CancellationToken ct = default,
-            DateTime? deadlineUtc = null)
+            DateTime? deadlineUtc = null,
+            double reducedCostThreshold = 1.0)
         {
             ArgumentNullException.ThrowIfNull(duals);
             LastSearchExhaustive = true;
@@ -95,7 +97,7 @@ namespace Stack_Solver.Services.BranchAndPrice
             LastSearchExhaustive = !ctx.BudgetExhausted;
             LastNodesExplored = Math.Max(0, budget - ctx.RemainingBudget);
 
-            if (ctx.BestValue > 1.0 + Epsilon && ctx.BestStack.Count > 0)
+            if (ctx.BestValue > reducedCostThreshold + Epsilon && ctx.BestStack.Count > 0)
             {
                 var layers = ctx.BestStack.Select(i => cands[i].Layer).ToList();
                 return new BnpColumn(PalletTemplate.FromLayers(layers));
