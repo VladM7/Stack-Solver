@@ -326,6 +326,36 @@
                                                Visibility="{Binding ShowSeparator, Converter={StaticResource BoolToVisibilityConverter}}" />
                                     <ui:Button Content="{Binding Label}" Command="{Binding Command}" IsEnabled="{Binding IsClickable}"
                                                Appearance="Transparent" Padding="6,2" BorderThickness="0" />
+
+                                    <!-- Explorer-style dropdown of sibling solutions -->
+                                    <Grid Visibility="{Binding HasDropdown, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <ToggleButton x:Name="SegmentChevron" Background="Transparent" BorderThickness="0"
+                                                      Padding="2,0" VerticalAlignment="Center" Cursor="Hand" ToolTip="Switch solution">
+                                            <ui:SymbolIcon Symbol="ChevronDown24" FontSize="12" Opacity="0.7" />
+                                        </ToggleButton>
+                                        <Popup IsOpen="{Binding IsChecked, ElementName=SegmentChevron}" StaysOpen="False"
+                                               Placement="Bottom" AllowsTransparency="True" PopupAnimation="Fade">
+                                            <Border Background="{DynamicResource ApplicationBackgroundBrush}"
+                                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"
+                                                    CornerRadius="4" Padding="4" Margin="0,2,0,0">
+                                                <ItemsControl ItemsSource="{Binding Choices}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <ui:Button Command="{Binding Command}" Appearance="Transparent"
+                                                                       HorizontalContentAlignment="Left" HorizontalAlignment="Stretch"
+                                                                       Padding="8,4" BorderThickness="0" MinWidth="160">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <ui:SymbolIcon Symbol="Checkmark24" FontSize="12" Width="16" Margin="0,0,6,0"
+                                                                                   Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                                                                </StackPanel>
+                                                            </ui:Button>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Border>
+                                        </Popup>
+                                    </Grid>
                                 </StackPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -344,21 +374,12 @@
                 <!-- Drill-down lists + details -->
                 <Grid Grid.Column="0" Margin="0,0,8,8">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
-                        <TextBlock Text="Solution" VerticalAlignment="Center" Margin="0,0,8,0" />
-                        <ComboBox ItemsSource="{Binding ViewModel.Results.Solutions}"
-                                  SelectedItem="{Binding ViewModel.Results.SelectedSolution, Mode=TwoWay}"
-                                  DisplayMemberPath="Name" MinWidth="140"
-                                  IsEnabled="{Binding ViewModel.Results.HasResults}" />
-                    </StackPanel>
-
-                    <Border Grid.Row="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Margin="0,0,0,8">
+                    <Border Grid.Row="0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Margin="0,0,0,8">
                         <DockPanel>
                             <Grid DockPanel.Dock="Top" Margin="8,6,8,4">
                                 <TextBlock Text="Pallet types" FontWeight="SemiBold" VerticalAlignment="Center" />
@@ -385,7 +406,7 @@
                         </DockPanel>
                     </Border>
 
-                    <Border Grid.Row="2" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Margin="0,0,0,8">
+                    <Border Grid.Row="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Margin="0,0,0,8">
                         <DockPanel>
                             <Grid DockPanel.Dock="Top" Margin="8,6,8,4">
                                 <TextBlock Text="Layers" FontWeight="SemiBold" VerticalAlignment="Center" />
@@ -411,7 +432,7 @@
                         </DockPanel>
                     </Border>
 
-                    <Border Grid.Row="3" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="8" MaxHeight="180">
+                    <Border Grid.Row="2" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="8" MaxHeight="180">
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Top" Text="{Binding ViewModel.Results.DetailTitle}" FontWeight="SemiBold" Margin="0,0,0,6" />
                             <ScrollViewer VerticalScrollBarVisibility="Auto">

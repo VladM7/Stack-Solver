@@ -18,10 +18,11 @@ namespace Stack_Solver.ViewModels.Pages
         IValidator<PalletSettingsDto> settingsValidator,
         IValidator<SkuQuantityDto> skuQuantityValidator,
         IUserSettingsService userSettings,
-        ISnackbarService snackbarService) : ObservableObject
+        ISnackbarService snackbarService,
+        IJobRepository jobRepository) : ObservableObject
     {
         public PalletBuilderSettingsViewModel Settings { get; } = new PalletBuilderSettingsViewModel(skuRepository, events, genOptions, palletDefaults, settingsValidator, skuQuantityValidator, userSettings);
-        public ResultsViewModel Results { get; } = new ResultsViewModel(events, viz, snackbarService);
+        public ResultsViewModel Results { get; } = new ResultsViewModel(events, viz, snackbarService, jobRepository);
 
         public async Task OnNavigatedToAsync()
         {

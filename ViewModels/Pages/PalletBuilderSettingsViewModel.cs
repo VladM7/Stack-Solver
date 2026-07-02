@@ -361,7 +361,7 @@ namespace Stack_Solver.ViewModels.Pages
                 UseCpsat, UseGreedy, UseCpsatSolution, UseBranchAndPrice,
                 MaxCpsatCandidates, BlfAttempts, SolverTimeLimit,
                 MaxStackHeight, MaxStackWeight, MaxSkuOverhang, OverhangMode, MaxTopHeavyPercent,
-                [.. Skus]));
+                [.. Skus], _defaultCatalog, _defaultPalletName));
 
             if (_isInitialized)
             {
@@ -489,7 +489,9 @@ namespace Stack_Solver.ViewModels.Pages
         double MaxSkuOverhang,
         OverhangMode OverhangMode,
         double MaxTopHeavyPercent,
-        List<SKU> Skus);
+        List<SKU> Skus,
+        string? DefaultCatalog,
+        string? DefaultPalletName);
 
     /// <summary>A selectable overhang rule with a human-readable label for the settings combo box.</summary>
     public record OverhangModeOption(OverhangMode Mode, string Label);
