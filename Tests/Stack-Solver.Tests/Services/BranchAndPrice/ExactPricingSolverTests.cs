@@ -54,6 +54,26 @@ namespace Services.BranchAndPrice
         }
 
         [Fact]
+        public void FindBestColumn_RaisedThreshold_SuppressesAColumnThatPricesOutAtOne()
+        {
+            var (layers, pallet) = TwoSkuLayers();
+            var duals = new Dictionary<string, double> { ["A"] = 0.1, ["B"] = 0.1 };
+            var exact = new ExactPricingSolver(layers, pallet);
+
+            // At the default threshold the best column is improving (value > 1).
+            var atOne = exact.FindBestColumn(duals, reducedCostThreshold: 1.0);
+            Assert.NotNull(atOne);
+            double bestValue = Value(atOne!, duals);
+            Assert.True(bestValue > 1.0);
+
+            // Raising the threshold above that value (as a cardinality dual would) makes it
+            // non-improving, so nothing is returned — but the search is still exhaustive.
+            var raised = exact.FindBestColumn(duals, reducedCostThreshold: bestValue + 1.0);
+            Assert.Null(raised);
+            Assert.True(exact.LastSearchExhaustive);
+        }
+
+        [Fact]
         public void FindBestColumn_IsNeverWorseThanHeuristic()
         {
             var (layers, pallet) = TwoSkuLayers();

@@ -30,8 +30,17 @@ namespace Stack_Solver.Services.BranchAndPrice
         /// <summary>Total DFS nodes visited across all exact-pricer calls.</summary>
         public long ExactPricerNodes { get; set; }
 
+        /// <summary>Improving columns contributed by the constructive box-built pricer.</summary>
+        public int ConstructivePricerColumns { get; set; }
+
         /// <summary>True when the ⌈LP-bound⌉ short-circuit proved optimality at the root, skipping the tree.</summary>
         public bool RootCertificationFired { get; set; }
+
+        /// <summary>True when pallet-count (cardinality) certification proved the returned optimum.</summary>
+        public bool PalletCountCertified { get; set; }
+
+        /// <summary>Largest pallet count K tested by the cardinality certification loop (0 if it never ran).</summary>
+        public int MaxPalletCountTested { get; set; }
 
         /// <summary>True when the restricted-master IP heuristic was invoked at the root.</summary>
         public bool RestrictedMasterIpRan { get; set; }
@@ -59,9 +68,11 @@ namespace Stack_Solver.Services.BranchAndPrice
             $"B&P [{Elapsed.TotalSeconds:0.00}s] " +
             $"tree={TreeNodes} lpNodes={LpNodesSolved} cgIters={CgIterations} " +
             $"pricer={ExactPricerCalls}(exh={ExactPricerExhaustive} trunc={ExactPricerTruncated}) " +
-            $"pricerNodes={ExactPricerNodes} " +
+            $"pricerNodes={ExactPricerNodes} constructiveCols={ConstructivePricerColumns} " +
             $"ip={(RestrictedMasterIpRan ? (double.IsNaN(RestrictedMasterIpObjective) ? "none" : RestrictedMasterIpObjective.ToString("0.##")) : "off")} " +
-            $"rootCert={(RootCertificationFired ? "Y" : "N")} completed={(Completed ? "Y" : "N")} " +
+            $"rootCert={(RootCertificationFired ? "Y" : "N")} " +
+            $"palletCountCert={(PalletCountCertified ? $"Y(K={MaxPalletCountTested})" : "N")} " +
+            $"completed={(Completed ? "Y" : "N")} " +
             $"allCertified={(AllCertified ? "Y" : "N")} " +
             $"rootBound={(double.IsInfinity(RootBound) ? "inf" : RootBound.ToString("0.##"))} " +
             $"best={BestObjective:0.##}";

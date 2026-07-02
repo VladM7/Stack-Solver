@@ -15,6 +15,7 @@ using Stack_Solver.ViewModels.Windows;
 using Stack_Solver.Views.Pages;
 using Stack_Solver.Views.Windows;
 using System.IO;
+using System.Windows;
 using System.Windows.Threading;
 using Wpf.Ui;
 using Wpf.Ui.DependencyInjection;
@@ -107,15 +108,53 @@ namespace Stack_Solver
         /// </summary>
         private async void OnStartup(object sender, StartupEventArgs e)
         {
-            Log.Information("Application starting");
+            try
+            {
+                // Guarantee the writable app-data folder exists before the host, logger or
+                // database touch it (see AppPaths / DatabaseInitializer).
+                AppPaths.EnsureAppData();
 
-            await _host.StartAsync();
-            Log.Information("Host started");
+                Log.Information("Application starting");
 
-            // Initialize database
-            var dbInit = Services.GetRequiredService<DatabaseInitializer>();
-            await dbInit.InitializeAsync();
-            Log.Information("Database initialized");
+                await _host.StartAsync();
+                Log.Information("Host started");
+
+                // Initialize database
+                var dbInit = Services.GetRequiredService<DatabaseInitializer>();
+                await dbInit.InitializeAsync();
+                Log.Information("Database initialized");
+            }
+            catch (Exception ex)
+            {
+                HandleFatalStartupError(ex);
+            }
+        }
+
+        /// <summary>
+        /// Reports an otherwise-silent startup failure: logs it, writes a plain-text crash file to
+        /// the app-data folder, shows the tester a dialog pointing at that file, then exits. Without
+        /// this an exception in the async startup path just closes the window with no trace.
+        /// </summary>
+        private static void HandleFatalStartupError(Exception ex)
+        {
+            Log.Fatal(ex, "Fatal error during application startup");
+
+            string? crashFile = null;
+            try
+            {
+                AppPaths.EnsureAppData();
+                crashFile = Path.Combine(AppPaths.AppDataDirectory, "startup-error.log");
+                File.WriteAllText(crashFile, $"{DateTime.Now:u}{Environment.NewLine}{ex}");
+            }
+            catch { /* best-effort: the dialog below still shows the message */ }
+
+            var where = crashFile != null ? $"{Environment.NewLine}{Environment.NewLine}Details saved to:{Environment.NewLine}{crashFile}" : "";
+            MessageBox.Show(
+                $"Stack Solver could not start.{Environment.NewLine}{Environment.NewLine}{ex.GetType().Name}: {ex.Message}{where}",
+                "Stack Solver - startup error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+            Log.CloseAndFlush();
+            Current.Shutdown(-1);
         }
 
         /// <summary>
