@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Google.OrTools.LinearSolver;
 using Stack_Solver.Models;
 using Stack_Solver.Models.Assignment;
@@ -103,8 +104,12 @@ namespace Stack_Solver.Services.BranchAndPrice
                 search.SeedIncumbent(incumbent);
 
             search.Run();
+            Trace.WriteLine(search.Stats.ToString());
 
-            double bound = double.IsInfinity(search.RootBound) ? 0 : search.RootBound;
+            // Report the strongest valid lower bound: the LP optimum or the always-valid
+            // combinatorial (physics) bound, whichever is larger.
+            double lpBound = double.IsInfinity(search.RootBound) ? 0 : search.RootBound;
+            double bound = Math.Max(lpBound, search.CombinatorialLowerBound);
 
             // Pricing kept columns by position-independent SKU signature, so their layers still
             // sit at their centered positions. Materialize only the chosen columns (few) so the
@@ -122,7 +127,8 @@ namespace Stack_Solver.Services.BranchAndPrice
                 leftovers[sku] = count;
 
             return new BranchAndPriceSolution(
-                new AssignmentResult { Assignments = assignments, Leftovers = leftovers }, bound, search.ProvedOptimal);
+                new AssignmentResult { Assignments = assignments, Leftovers = leftovers }, bound, search.ProvedOptimal,
+                search.Stats);
         }
 
         /// <summary>Runs root-node column generation and returns the LP optimum and final pool.</summary>
@@ -189,7 +195,7 @@ namespace Stack_Solver.Services.BranchAndPrice
                 // Heuristic exhausted — call the exact pricer to either find a missed column
                 // or certify LP optimality.
                 ct.ThrowIfCancellationRequested();
-                var exactColumn = exact.FindBestColumn(duals);
+                var exactColumn = exact.FindBestColumn(duals, forbidden: null, ct: ct);
                 if (exactColumn != null && pool.TryAdd(exactColumn))
                 {
                     rmp.AddColumns([exactColumn]);
@@ -309,7 +315,8 @@ namespace Stack_Solver.Services.BranchAndPrice
     public sealed record BranchAndPriceSolution(
         AssignmentResult Result,
         double LowerBound,
-        bool LowerBoundCertified)
+        bool LowerBoundCertified,
+        BranchAndPriceStats? Stats = null)
     {
         /// <summary>Pallets used by the integer solution.</summary>
         public int Pallets => Result.TotalPallets;

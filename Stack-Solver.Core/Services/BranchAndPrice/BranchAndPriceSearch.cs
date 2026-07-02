@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Google.OrTools.LinearSolver;
+using Stack_Solver.Models;
 using Stack_Solver.Models.Layering;
 using Stack_Solver.Models.Supports;
 
@@ -23,11 +24,24 @@ namespace Stack_Solver.Services.BranchAndPrice
         private const int MaxCgIterations = 500;
         private const double IntTol = 1e-6;
 
+        // Wall-clock slice handed to the restricted-master IP heuristic at the root: a fraction of
+        // the time left after root column generation, capped so it can never starve the tree search.
+        private const double IpHeuristicTimeFraction = 0.3;
+        private static readonly TimeSpan IpHeuristicMaxTime = TimeSpan.FromSeconds(10);
+
+        // The final-polish IP runs after the tree, so it may use most of the remaining time.
+        private const double IpFinalTimeFraction = 0.9;
+        private static readonly TimeSpan IpFinalMaxTime = TimeSpan.FromSeconds(60);
+
         private readonly RestrictedMasterProblem _rmp;
         private readonly ColumnPool _pool = new();
         private readonly PricingSolver _heuristic;
+        private readonly ConstructivePalletPricer _constructive;
         private readonly ExactPricingSolver _exact;
         private readonly HashSet<string> _forbidden = new(StringComparer.Ordinal);
+        private readonly IReadOnlyList<string> _placeableSkus;
+        private readonly IReadOnlyDictionary<string, int> _placeableDemand;
+        private readonly double _combinatorialBound;
         private readonly CancellationToken _ct;
 
         private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
@@ -35,6 +49,9 @@ namespace Stack_Solver.Services.BranchAndPrice
         private long _nodeBudget;
         private bool _completed = true;
         private bool _allCertified = true;
+        private bool _provenByBound;
+        private bool _rootBoundUsable;
+        private readonly BranchAndPriceStats _stats = new();
 
         private double _bestObjective = double.PositiveInfinity;
         private List<(BnpColumn Column, int Count)>? _best;
@@ -53,11 +70,26 @@ namespace Stack_Solver.Services.BranchAndPrice
             _ct = ct;
             _nodeBudget = nodeBudget;
             _timeBudget = timeBudget;
+            _placeableSkus = placeableSkus;
+            _placeableDemand = placeableDemand;
+            var skuMap = BuildSkuMap(layers);
+            _combinatorialBound = CombinatorialBound.Compute(placeableDemand, skuMap, pallet);
             _rmp = new RestrictedMasterProblem(placeableSkus, placeableDemand);
             _pool.AddRange(seedColumns);
             _rmp.AddColumns(seedColumns);
             _heuristic = new PricingSolver(layers, pallet);
+            _constructive = new ConstructivePalletPricer(skuMap.Values, placeableDemand, pallet);
             _exact = new ExactPricingSolver(layers, pallet);
+        }
+
+        /// <summary>Maps each SKU id appearing in the layers to its <see cref="SKU"/> (box dimensions/weight).</summary>
+        private static Dictionary<string, SKU> BuildSkuMap(IReadOnlyList<Layer> layers)
+        {
+            var map = new Dictionary<string, SKU>(StringComparer.Ordinal);
+            foreach (var layer in layers)
+                foreach (var item in layer.Items)
+                    map.TryAdd(item.SkuType.SkuId, item.SkuType);
+            return map;
         }
 
         /// <summary>Certified-or-not LP lower bound at the root (∞ if the root is infeasible).</summary>
@@ -71,8 +103,12 @@ namespace Stack_Solver.Services.BranchAndPrice
         /// <summary>Leftover (unmet) units per SKU in the returned solution.</summary>
         public IReadOnlyDictionary<string, int> OptimalLeftovers => _bestLeftovers;
 
-        /// <summary>True only when the returned solution is a proven optimum.</summary>
-        public bool ProvedOptimal => _completed && _allCertified && _best != null;
+        /// <summary>True only when the returned solution is a proven optimum — either certified by a
+        /// valid lower bound, or by a fully-completed, all-certified tree search.</summary>
+        public bool ProvedOptimal => _best != null && (_provenByBound || (_completed && _allCertified));
+
+        /// <summary>Diagnostic counters describing where the solve spent its effort.</summary>
+        public BranchAndPriceStats Stats => _stats;
 
         /// <summary>
         /// Seeds a starting integer incumbent (e.g. from <see cref="LayerPackingHeuristic"/>) so
@@ -94,22 +130,127 @@ namespace Stack_Solver.Services.BranchAndPrice
             _bestLeftovers = new Dictionary<string, int>(StringComparer.Ordinal);
         }
 
+        /// <summary>
+        /// Certified combinatorial (physics) lower bound on the pallet count — valid regardless of
+        /// the LP, and the reportable bound when the LP optimum is weaker. See <see cref="CombinatorialBound"/>.
+        /// </summary>
+        public double CombinatorialLowerBound => _combinatorialBound;
+
         public void Run()
         {
             var root = SolveNode();
             RootBound = root.Feasible ? root.Primal.Sum(p => p.Value) : double.PositiveInfinity;
             RootCertified = root.Certified;
+            // The LP optimum is a valid integer lower bound only when the pricer proved it exhaustive
+            // and the root itself leaves no untiled demand.
+            _rootBoundUsable = RootCertified && root.Feasible && AllZero(root.Leftovers);
 
-            // ⌈LP bound⌉ certification: the integer pallet optimum is ≥ the certified LP bound,
-            // and integral when all placeable demand tiles (it does, with residual layers). So an
-            // incumbent matching ⌈RootBound⌉ — with no leftover at the root or in the incumbent —
-            // is already provably optimal; skip the tree.
-            if (_best != null && RootCertified && root.Feasible
-                && AllZero(root.Leftovers) && AllZero(_bestLeftovers)
-                && _bestObjective <= Math.Ceiling(RootBound - IntTol) + IntTol)
+            // Strengthen the incumbent with the restricted-master IP before deciding whether to
+            // branch: a tight integer solution over the root column pool often matches ⌈bound⌉ and
+            // certifies optimality here, skipping the tree entirely.
+            TryImproveIncumbentWithIp(IpHeuristicTimeFraction, IpHeuristicMaxTime);
+            if (TryCertifyByBound())
+            {
+                FinalizeStats();
                 return;
+            }
+
+            // Pallet-count certification: prove the round-up gap by testing whether all demand fits
+            // in K pallets for K from the lower bound up to the incumbent. The cardinality cap makes
+            // these subproblems tight (≤ K columns), cracking the round-up cases the uncapped tree
+            // cannot. Runs before the expensive uncapped tree so the budget isn't wasted on it.
+            if (CertifyByPalletCount())
+            {
+                FinalizeStats();
+                return;
+            }
 
             BranchAndBound(root);
+
+            // Final polish: the tree has built a far richer column pool than the root had. If the
+            // search stopped early (node/time budget) without proving optimality, an exact IP over
+            // all generated columns may assemble an incumbent that matches ⌈bound⌉ — certifying an
+            // optimum the column-variable branching never reached — using any leftover wall-clock.
+            if (!ProvedOptimal)
+            {
+                TryImproveIncumbentWithIp(IpFinalTimeFraction, IpFinalMaxTime);
+                TryCertifyByBound();
+            }
+
+            FinalizeStats();
+        }
+
+        /// <summary>
+        /// Marks the incumbent proven optimal when it places all demand with no more pallets than
+        /// ⌈max(certified LP bound, combinatorial bound)⌉. Both inputs are valid lower bounds on the
+        /// integer optimum, so a matching incumbent is optimal. Idempotent; safe to call repeatedly.
+        /// </summary>
+        private bool TryCertifyByBound()
+        {
+            if (_best == null || !AllZero(_bestLeftovers)) return false;
+
+            if (_bestObjective <= CertifiedLowerBound() + IntTol)
+            {
+                _provenByBound = true;
+                _stats.RootCertificationFired = true;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// ⌈max(certified LP bound, combinatorial bound)⌉ — a valid integer lower bound on the pallet
+        /// count. The LP term is included only when the root LP was certified and left no demand
+        /// untiled (<see cref="_rootBoundUsable"/>); the combinatorial term is always valid.
+        /// </summary>
+        private int CertifiedLowerBound()
+        {
+            int lpLb = _rootBoundUsable ? (int)Math.Ceiling(RootBound - IntTol) : int.MinValue;
+            int comboLb = (int)Math.Ceiling(_combinatorialBound - IntTol);
+            return Math.Max(lpLb, comboLb);
+        }
+
+        /// <summary>
+        /// Runs the restricted-master IP over the current column pool and adopts its assignment as
+        /// the incumbent when it covers all demand with fewer pallets than the current best. Bounded
+        /// to <paramref name="fraction"/> of the remaining time (capped at <paramref name="cap"/>) so
+        /// it cannot starve the branch-and-bound search.
+        /// </summary>
+        private void TryImproveIncumbentWithIp(double fraction, TimeSpan cap)
+        {
+            var remaining = _timeBudget - _stopwatch.Elapsed;
+            if (remaining <= TimeSpan.Zero) return;
+
+            var slice = TimeSpan.FromMilliseconds(remaining.TotalMilliseconds * fraction);
+            if (slice > cap) slice = cap;
+
+            var ip = RestrictedMasterHeuristic.Solve(_pool.Columns, _placeableSkus, _placeableDemand, slice, _ct);
+            _stats.RestrictedMasterIpRan = true;
+            if (ip == null || !AllZero(ip.Leftovers)) return;
+
+            double objective = ip.Columns.Sum(c => c.Count);
+            _stats.RestrictedMasterIpObjective = objective;
+            if (objective >= _bestObjective - IntTol) return;
+
+            // The IP found a strictly better full-coverage assignment — adopt it, and make sure its
+            // columns are in the pool/RMP so the tree can also reach (and branch around) it.
+            var added = new List<BnpColumn>();
+            foreach (var (col, _) in ip.Columns)
+                if (_pool.TryAdd(col)) added.Add(col);
+            if (added.Count > 0) _rmp.AddColumns(added);
+
+            _best = ip.Columns.Where(c => c.Count > 0).Select(c => (c.Column, c.Count)).ToList();
+            _bestObjective = objective;
+            _bestLeftovers = new Dictionary<string, int>(StringComparer.Ordinal);
+        }
+
+        private void FinalizeStats()
+        {
+            _stats.Completed = _completed;
+            _stats.AllCertified = _allCertified;
+            _stats.RootBound = RootBound;
+            _stats.BestObjective = _best != null ? _bestObjective : double.NaN;
+            _stats.Elapsed = _stopwatch.Elapsed;
         }
 
         private static bool AllZero(IReadOnlyDictionary<string, int> leftovers)
@@ -122,9 +263,14 @@ namespace Stack_Solver.Services.BranchAndPrice
         {
             _ct.ThrowIfCancellationRequested();
             if (!node.Feasible) return;
+            _stats.TreeNodes++;
+            // A single uncertified node anywhere invalidates the tree's optimality proof.
+            _allCertified &= node.Certified;
 
-            // Prune: this node's LP objective cannot beat the incumbent objective.
-            if (node.Objective >= _bestObjective - IntTol) return;
+            // Prune: no completion of this node can beat the incumbent. The node bound is the
+            // stronger of its LP objective and the global combinatorial bound (both valid lower
+            // bounds on the integer optimum reachable here).
+            if (Math.Max(node.Objective, _combinatorialBound) >= _bestObjective - IntTol) return;
 
             if (node.Integral)
             {
@@ -162,6 +308,132 @@ namespace Stack_Solver.Services.BranchAndPrice
             }
         }
 
+        /// <summary>
+        /// Certifies optimality by branching on the total pallet count. For K from the certified
+        /// lower bound up to incumbent−1, tests whether all demand fits in at most K pallets under a
+        /// cardinality cap Σx ≤ K. The first feasible K is the proven optimum (every smaller K was
+        /// already proven infeasible, and K ≥ the lower bound); if every K up to incumbent−1 is
+        /// infeasible the incumbent itself is optimal. Returns true when it certifies (recording the
+        /// proof), false when inconclusive (budget/time out or non-exhaustive pricing) so the caller
+        /// can fall back to the uncapped tree. The cap and forbidden set are always restored.
+        /// </summary>
+        private bool CertifyByPalletCount()
+        {
+            if (_best == null || !AllZero(_bestLeftovers)) return false;
+
+            int lstart = Math.Max(1, CertifiedLowerBound());
+            int incumbent = (int)Math.Round(_bestObjective);
+            if (lstart >= incumbent) return false; // no gap (TryCertifyByBound would have fired)
+
+            try
+            {
+                for (int k = lstart; k < incumbent; k++)
+                {
+                    _stats.MaxPalletCountTested = k;
+                    _forbidden.Clear();
+                    _rmp.SetCardinalityCap(k);
+
+                    var outcome = SearchCappedZeroLeftover(out var found);
+                    if (outcome == CappedOutcome.Found)
+                    {
+                        _best = found;
+                        _bestObjective = found!.Sum(c => c.Count);
+                        _bestLeftovers = new Dictionary<string, int>(StringComparer.Ordinal);
+                        _provenByBound = true;
+                        _stats.PalletCountCertified = true;
+                        return true;
+                    }
+                    if (outcome == CappedOutcome.Inconclusive) return false;
+                    // Infeasible → optimum ≥ K+1; try the next count.
+                }
+
+                // No zero-leftover packing exists with ≤ incumbent−1 pallets ⇒ the incumbent is optimal.
+                _provenByBound = true;
+                _stats.PalletCountCertified = true;
+                return true;
+            }
+            finally
+            {
+                _forbidden.Clear();
+                _rmp.ClearCardinalityCap();
+            }
+        }
+
+        private enum CappedOutcome { Found, Infeasible, Inconclusive }
+
+        /// <summary>
+        /// Depth-first search for an integral, zero-leftover solution under the active cardinality
+        /// cap. Branches on the most-fractional column like the main tree, but keeps its own
+        /// exhaustion/certification flags so it never disturbs the global incumbent or its proof.
+        /// <c>Found</c> is always a genuine feasible solution; <c>Infeasible</c> is trusted only when
+        /// the whole subtree was explored with exhaustive pricing at every node, otherwise the
+        /// verdict is <c>Inconclusive</c>.
+        /// </summary>
+        private CappedOutcome SearchCappedZeroLeftover(out List<(BnpColumn Column, int Count)>? found)
+        {
+            bool completed = true;
+            bool allCertified = true;
+            List<(BnpColumn Column, int Count)>? result = null;
+
+            CappedOutcome Dfs(NodeSolve node)
+            {
+                _ct.ThrowIfCancellationRequested();
+                if (!node.Feasible) return CappedOutcome.Infeasible;
+                allCertified &= node.Certified;
+
+                // The LP objective is a valid lower bound when certified. If it already forces a
+                // leftover (objective ≥ the big-M penalty), no integral completion here covers all
+                // demand. (Σx ≤ K < penalty, so the penalty term alone pushes it over the threshold.)
+                if (node.Objective >= _rmp.LeftoverPenalty - IntTol) return CappedOutcome.Infeasible;
+
+                if (node.Integral)
+                {
+                    if (!AllZero(node.Leftovers)) return CappedOutcome.Infeasible;
+                    result = node.Primal
+                        .Select(p => (p.Column, Count: (int)Math.Round(p.Value)))
+                        .Where(p => p.Count > 0)
+                        .ToList();
+                    return CappedOutcome.Found;
+                }
+
+                var (col, value) = MostFractional(node.Primal);
+                string sig = col.Signature;
+                int floorV = (int)Math.Floor(value);
+
+                // Down branch: x_t ≤ ⌊v⌋ (forbid the column when ⌊v⌋ = 0).
+                if (!TakeNode()) { completed = false; return CappedOutcome.Inconclusive; }
+                {
+                    var (lb, ub) = _rmp.GetBounds(sig);
+                    _rmp.SetBounds(sig, lb, floorV);
+                    bool forbade = floorV == 0 && _forbidden.Add(sig);
+                    var down = Dfs(SolveNode());
+                    if (forbade) _forbidden.Remove(sig);
+                    _rmp.SetBounds(sig, lb, ub);
+                    if (down == CappedOutcome.Found) return CappedOutcome.Found;
+                    if (down == CappedOutcome.Inconclusive) { completed = false; return CappedOutcome.Inconclusive; }
+                }
+
+                // Up branch: x_t ≥ ⌈v⌉.
+                if (!TakeNode()) { completed = false; return CappedOutcome.Inconclusive; }
+                {
+                    var (lb, ub) = _rmp.GetBounds(sig);
+                    _rmp.SetBounds(sig, floorV + 1, ub);
+                    var up = Dfs(SolveNode());
+                    _rmp.SetBounds(sig, lb, ub);
+                    if (up == CappedOutcome.Found) return CappedOutcome.Found;
+                    if (up == CappedOutcome.Inconclusive) { completed = false; return CappedOutcome.Inconclusive; }
+                }
+
+                return CappedOutcome.Infeasible; // both children infeasible
+            }
+
+            var top = Dfs(SolveNode());
+            found = result;
+            if (top == CappedOutcome.Found) return CappedOutcome.Found;
+            if (!completed || !allCertified) return CappedOutcome.Inconclusive;
+            return CappedOutcome.Infeasible;
+        }
+
         private bool TakeNode()
         {
             if (_nodeBudget <= 0 || _stopwatch.Elapsed > _timeBudget) { _completed = false; return false; }
@@ -188,9 +460,11 @@ namespace Stack_Solver.Services.BranchAndPrice
         /// </summary>
         private NodeSolve SolveNode()
         {
+            _stats.LpNodesSolved++;
             for (int iter = 0; iter < MaxCgIterations; iter++)
             {
                 _ct.ThrowIfCancellationRequested();
+                _stats.CgIterations++;
 
                 var status = _rmp.Solve();
                 if (status is not (Solver.ResultStatus.OPTIMAL or Solver.ResultStatus.FEASIBLE))
@@ -198,8 +472,12 @@ namespace Stack_Solver.Services.BranchAndPrice
 
                 var duals = _rmp.Duals();
 
+                // Under a cardinality cap Σx ≤ K the cap's dual μ ≤ 0 shifts every column's reduced
+                // cost; an improving column then needs Σa·π > 1 − μ. Without a cap this is just 1.
+                double threshold = _rmp.IsCardinalityCapped ? 1.0 - _rmp.CardinalityDual() : 1.0;
+
                 var added = new List<BnpColumn>();
-                foreach (var c in _heuristic.FindColumns(duals, _forbidden))
+                foreach (var c in _heuristic.FindColumns(duals, _forbidden, threshold))
                     if (_pool.TryAdd(c)) added.Add(c);
 
                 if (added.Count > 0)
@@ -208,21 +486,43 @@ namespace Stack_Solver.Services.BranchAndPrice
                     continue;
                 }
 
-                var exactColumn = _exact.FindBestColumn(duals, _forbidden);
+                // The pool pricer has stalled: try the constructive box-built pricer, which can
+                // synthesize pallets the fixed layer pool cannot express (e.g. a layer merging two
+                // SKUs' leftovers). It is heuristic and additive — it never certifies, so the exact
+                // pricer below remains the certification signal; we only run that once the
+                // constructive finder is also exhausted.
+                var built = new List<BnpColumn>();
+                foreach (var c in _constructive.FindColumns(duals, _forbidden, threshold))
+                    if (_pool.TryAdd(c)) built.Add(c);
+
+                if (built.Count > 0)
+                {
+                    _rmp.AddColumns(built);
+                    _stats.ConstructivePricerColumns += built.Count;
+                    continue;
+                }
+
+                var remaining = _timeBudget - _stopwatch.Elapsed;
+                var exactColumn = _exact.FindBestColumn(
+                    duals, _forbidden, _ct,
+                    DateTime.UtcNow + (remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero),
+                    threshold);
+                _stats.ExactPricerCalls++;
+                _stats.ExactPricerNodes += _exact.LastNodesExplored;
+                if (_exact.LastSearchExhaustive) _stats.ExactPricerExhaustive++;
+                else _stats.ExactPricerTruncated++;
                 if (exactColumn != null && _pool.TryAdd(exactColumn))
                 {
                     _rmp.AddColumns([exactColumn]);
                     continue;
                 }
 
-                bool certified = _exact.LastSearchExhaustive;
-                if (!certified) _allCertified = false;
-
-                return new NodeSolve(true, _rmp.ObjectiveValue, _rmp.PrimalSolution(), _rmp.Leftovers(), _rmp.IsIntegral(), certified);
+                // The node is certified (a true LP lower bound) only when the exact pricer exhausted
+                // its search. Callers aggregate this into their own certification flag.
+                return new NodeSolve(true, _rmp.ObjectiveValue, _rmp.PrimalSolution(), _rmp.Leftovers(), _rmp.IsIntegral(), _exact.LastSearchExhaustive);
             }
 
-            // CG iteration cap hit: treat as an uncertified feasible node.
-            _allCertified = false;
+            // CG iteration cap hit: a feasible but uncertified node.
             bool solved = _rmp.Solve() is Solver.ResultStatus.OPTIMAL or Solver.ResultStatus.FEASIBLE;
             return solved
                 ? new NodeSolve(true, _rmp.ObjectiveValue, _rmp.PrimalSolution(), _rmp.Leftovers(), _rmp.IsIntegral(), false)

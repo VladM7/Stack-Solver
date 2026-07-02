@@ -36,13 +36,16 @@ namespace Stack_Solver.Services.BranchAndPrice
         public int MaxColumns { get; init; } = 8;
 
         /// <summary>
-        /// Returns up to <see cref="MaxColumns"/> distinct improving columns (dual value &gt; 1),
-        /// highest value first. Columns whose signature is in <paramref name="forbidden"/>
-        /// (forbidden by a branching constraint) are never returned. Empty when none is found.
+        /// Returns up to <see cref="MaxColumns"/> distinct improving columns (dual value &gt;
+        /// <paramref name="reducedCostThreshold"/>), highest value first. Columns whose signature is
+        /// in <paramref name="forbidden"/> (forbidden by a branching constraint) are never returned.
+        /// Empty when none is found. The threshold defaults to 1 (the unit pallet cost); a
+        /// cardinality cap raises it to 1 − μ.
         /// </summary>
         public IReadOnlyList<BnpColumn> FindColumns(
             IReadOnlyDictionary<string, double> duals,
-            IReadOnlySet<string>? forbidden = null)
+            IReadOnlySet<string>? forbidden = null,
+            double reducedCostThreshold = 1.0)
         {
             ArgumentNullException.ThrowIfNull(duals);
             if (_rules.AvailHeight <= 0) return [];
@@ -59,7 +62,7 @@ namespace Stack_Solver.Services.BranchAndPrice
             for (int depth = 0; depth < MaxLayersPerTemplate && beam.Count > 0; depth++)
             {
                 foreach (var st in beam)
-                    if (st.Value > 1.0 + ReducedCostEpsilon)
+                    if (st.Value > reducedCostThreshold + ReducedCostEpsilon)
                         Record(best, st, forbidden);
 
                 if (depth == MaxLayersPerTemplate - 1) break;

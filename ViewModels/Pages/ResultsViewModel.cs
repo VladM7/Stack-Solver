@@ -327,12 +327,12 @@ namespace Stack_Solver.ViewModels.Pages
 
             ct.ThrowIfCancellationRequested();
 
-            AssignmentResult? bnpResult = null;
+            BranchAndPriceSolution? bnp = null;
             if (_useBranchAndPrice)
             {
                 try
                 {
-                    bnpResult = BranchAndPriceAssignmentService.Assign(filtered, demand, pallet, options, greedy, ct);
+                    bnp = BranchAndPriceAssignmentService.Solve(filtered, demand, pallet, options, greedy, ct);
                 }
                 catch (OperationCanceledException) { throw; }
                 catch { /* Branch-and-price is best-effort; other results still shown */ }
@@ -341,8 +341,9 @@ namespace Stack_Solver.ViewModels.Pages
             ct.ThrowIfCancellationRequested();
 
             var result = new List<SolutionDisplay>();
-            if (bnpResult != null && bnpResult.Assignments.Count > 0)
-                result.Add(new SolutionDisplay(result.Count + 1, "Branch & Price", bnpResult, skus, _palletLength, _palletWidth, _palletHeight));
+            if (bnp != null && bnp.Result.Assignments.Count > 0)
+                result.Add(new SolutionDisplay(result.Count + 1, "Branch & Price", bnp.Result, skus, _palletLength, _palletWidth, _palletHeight,
+                    isProvenOptimal: bnp.LowerBoundCertified, lowerBound: bnp.LowerBound));
             if (cpsatResult != null && cpsatResult.Assignments.Count > 0)
                 result.Add(new SolutionDisplay(result.Count + 1, "CP-SAT", cpsatResult, skus, _palletLength, _palletWidth, _palletHeight));
             if (greedy.Assignments.Count > 0)
@@ -686,6 +687,15 @@ namespace Stack_Solver.ViewModels.Pages
             sb.AppendLine($"Pallet types: {s.PalletTypes}");
             sb.AppendLine($"Items packed: {s.TotalItemsPacked}");
             sb.AppendLine($"Avg. utilization: {s.Efficiency}");
+            if (s.IsProvenOptimal is bool optimal)
+            {
+                if (optimal)
+                    sb.AppendLine("Solution quality: proven optimal");
+                else if (s.LowerBound > 1e-9)
+                    sb.AppendLine($"Solution quality: best found (not proven optimal; lower bound ⌈{s.LowerBound:0.##}⌉ = {Math.Ceiling(s.LowerBound - 1e-9):0} pallets)");
+                else
+                    sb.AppendLine("Solution quality: best found (not proven optimal)");
+            }
             sb.AppendLine();
             foreach (var a in Assignments)
                 sb.AppendLine($"  {a.Name}  ×{a.Count}  —  {a.Contents}");
@@ -828,6 +838,12 @@ namespace Stack_Solver.ViewModels.Pages
         public int TotalItemsPacked { get; }
         public string Efficiency { get; }
 
+        /// <summary>True/false when the solver reports optimality status (Branch &amp; Price); null when not applicable.</summary>
+        public bool? IsProvenOptimal { get; }
+
+        /// <summary>LP lower bound on the pallet count, when the solver provides one.</summary>
+        public double LowerBound { get; }
+
         public SolutionDisplay(
             int number,
             string name,
@@ -835,7 +851,9 @@ namespace Stack_Solver.ViewModels.Pages
             IReadOnlyList<SKU> skus,
             int palletLength,
             int palletWidth,
-            int palletHeight)
+            int palletHeight,
+            bool? isProvenOptimal = null,
+            double? lowerBound = null)
         {
             Number = number;
             Name = name;
@@ -844,6 +862,8 @@ namespace Stack_Solver.ViewModels.Pages
             PalletLength = palletLength;
             PalletWidth = palletWidth;
             PalletHeight = palletHeight;
+            IsProvenOptimal = isProvenOptimal;
+            LowerBound = lowerBound ?? 0;
             TotalPallets = result.TotalPallets;
             PalletTypes = result.Assignments.Count;
             TotalItemsPacked = result.Assignments.Sum(a => a.Template.TotalBoxCount * a.Count);

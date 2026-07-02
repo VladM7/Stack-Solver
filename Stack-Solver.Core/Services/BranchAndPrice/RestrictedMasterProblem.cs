@@ -27,6 +27,12 @@ namespace Stack_Solver.Services.BranchAndPrice
         private readonly Dictionary<string, Variable> _bySignature = new(StringComparer.Ordinal);
         private readonly Dictionary<string, Variable> _slack = new(StringComparer.Ordinal);
 
+        // Optional cardinality cap Σ_t x_t ≤ K, created lazily by SetCardinalityCap. When active,
+        // every column variable carries coefficient 1; leftover slacks are excluded so the cap
+        // limits pallets only. Used by pallet-count certification to test whether all demand fits
+        // in at most K pallets.
+        private Constraint? _cardinality;
+
         /// <param name="skuOrder">Placeable SKUs that form the demand constraints.</param>
         /// <param name="demand">Exact demand per SKU; must contain every SKU in <paramref name="skuOrder"/>.</param>
         public RestrictedMasterProblem(IReadOnlyList<string> skuOrder, IReadOnlyDictionary<string, int> demand)
@@ -80,6 +86,7 @@ namespace Stack_Solver.Services.BranchAndPrice
                 int a = column.CountOf(sku);
                 if (a != 0) _demand[sku].SetCoefficient(v, a);
             }
+            _cardinality?.SetCoefficient(v, 1.0);
             _columns.Add((column, v));
             _bySignature[column.Signature] = v;
             return v;
@@ -102,6 +109,37 @@ namespace Stack_Solver.Services.BranchAndPrice
             ArgumentNullException.ThrowIfNull(columns);
             foreach (var c in columns) AddColumn(c);
         }
+
+        /// <summary>
+        /// Constrains the total pallet count Σ_t x_t ≤ <paramref name="k"/>. Created on first use
+        /// (back-filling coefficient 1 on every existing column); thereafter the cap is just
+        /// retightened. New columns added while the cap is active also receive coefficient 1.
+        /// </summary>
+        public void SetCardinalityCap(int k)
+        {
+            if (_cardinality == null)
+            {
+                _cardinality = _solver.MakeConstraint(double.NegativeInfinity, k, "cardinality");
+                foreach (var (_, var) in _columns) _cardinality.SetCoefficient(var, 1.0);
+            }
+            else
+            {
+                _cardinality.SetUb(k);
+            }
+        }
+
+        /// <summary>Relaxes the cardinality cap (ub +∞) so the uncapped master is recovered.</summary>
+        public void ClearCardinalityCap() => _cardinality?.SetUb(double.PositiveInfinity);
+
+        /// <summary>True while a finite cardinality cap is in force (its dual then shifts pricing).</summary>
+        public bool IsCardinalityCapped => _cardinality != null && !double.IsPositiveInfinity(_cardinality.Ub());
+
+        /// <summary>
+        /// Dual price μ of the cardinality cap from the most recent solve (0 when no cap is set).
+        /// A binding ≤ cap on a minimization yields μ ≤ 0; it enters every column's reduced cost
+        /// (1 − Σ a·π − μ), so the pricer's improving threshold rises from 1 to 1 − μ.
+        /// </summary>
+        public double CardinalityDual() => _cardinality?.DualValue() ?? 0.0;
 
         public Solver.ResultStatus Solve() => _solver.Solve();
 
