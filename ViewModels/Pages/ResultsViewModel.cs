@@ -58,7 +58,9 @@ namespace Stack_Solver.ViewModels.Pages
         private OverhangMode _overhangMode;
         private double _maxTopHeavyPercent;
         private bool _useCpsat;
-        private bool _useBranchAndPrice;
+        private bool _useGreedy = true;
+        private bool _useCpsatSolution = true;
+        private bool _useBranchAndPrice = true;
         private List<SKU> _selectedSkus = [];
         private GenerationOptions _generationOptions = new();
 
@@ -164,6 +166,8 @@ namespace Stack_Solver.ViewModels.Pages
             _overhangMode = msg.OverhangMode;
             _maxTopHeavyPercent = msg.MaxTopHeavyPercent;
             _useCpsat = msg.UseCpsat;
+            _useGreedy = msg.UseGreedy;
+            _useCpsatSolution = msg.UseCpsatSolution;
             _useBranchAndPrice = msg.UseBranchAndPrice;
             _selectedSkus = [.. msg.Skus.Where(s => s.IsSelected && s.Quantity > 0)];
             _generationOptions = new GenerationOptions(msg.SolverTimeLimit, msg.MaxCpsatCandidates, msg.BlfAttempts);
@@ -316,14 +320,17 @@ namespace Stack_Solver.ViewModels.Pages
             ct.ThrowIfCancellationRequested();
 
             AssignmentResult? cpsatResult = null;
-            try
+            if (_useCpsatSolution)
             {
-                var pool = PalletTemplateEnumerator.Enumerate(pallet, filtered);
-                var pruned = TemplateFilter.Filter(pool, pallet);
-                cpsatResult = CPSATAssignmentService.Assign(pruned, demand, pallet, options, greedy, ct);
+                try
+                {
+                    var pool = PalletTemplateEnumerator.Enumerate(pallet, filtered);
+                    var pruned = TemplateFilter.Filter(pool, pallet);
+                    cpsatResult = CPSATAssignmentService.Assign(pruned, demand, pallet, options, greedy, ct);
+                }
+                catch (OperationCanceledException) { throw; }
+                catch { /* CP-SAT is best-effort; greedy result still shown */ }
             }
-            catch (OperationCanceledException) { throw; }
-            catch { /* CP-SAT is best-effort; greedy result still shown */ }
 
             ct.ThrowIfCancellationRequested();
 
@@ -346,7 +353,9 @@ namespace Stack_Solver.ViewModels.Pages
                     isProvenOptimal: bnp.LowerBoundCertified, lowerBound: bnp.LowerBound));
             if (cpsatResult != null && cpsatResult.Assignments.Count > 0)
                 result.Add(new SolutionDisplay(result.Count + 1, "CP-SAT", cpsatResult, skus, _palletLength, _palletWidth, _palletHeight));
-            if (greedy.Assignments.Count > 0)
+            // Greedy always runs above as the warm-start seed for CP-SAT and B&P; it is only
+            // offered as its own solution when the user has enabled it.
+            if (_useGreedy && greedy.Assignments.Count > 0)
                 result.Add(new SolutionDisplay(result.Count + 1, "Greedy", greedy, skus, _palletLength, _palletWidth, _palletHeight));
             return result;
         }

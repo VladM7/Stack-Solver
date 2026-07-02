@@ -211,14 +211,25 @@
                                 </StackPanel>
                             </ui:CardExpander.Header>
                             <StackPanel>
+                                <ui:CardControl>
+                                    <ui:CardControl.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="Solution algorithms" />
+                                            <TextBlock Text="Which assignment solvers to run. BnP might take longer, but produces better solutions."
+                                                       Opacity="0.7" FontSize="12" TextWrapping="Wrap" Margin="0,2,8,0" />
+                                        </StackPanel>
+                                    </ui:CardControl.Header>
+                                    <StackPanel>
+                                        <CheckBox Content="Greedy" IsChecked="{Binding ViewModel.Settings.UseGreedy, Mode=TwoWay}" />
+                                        <CheckBox Content="CP-SAT" IsChecked="{Binding ViewModel.Settings.UseCpsatSolution, Mode=TwoWay}" />
+                                        <CheckBox Content="Branch &amp; Price" IsChecked="{Binding ViewModel.Settings.UseBranchAndPrice, Mode=TwoWay}" />
+                                    </StackPanel>
+                                </ui:CardControl>
                                 <ui:CardControl Header="Use CP-SAT layer generation">
                                     <ui:ToggleSwitch IsChecked="{Binding ViewModel.Settings.UseCpsat, Mode=TwoWay}" />
                                 </ui:CardControl>
-                                <ui:CardControl Header="Use Branch &amp; Price assignment">
-                                    <ui:ToggleSwitch IsChecked="{Binding ViewModel.Settings.UseBranchAndPrice, Mode=TwoWay}" />
-                                </ui:CardControl>
                                 <ui:CardControl Header="Solver time limit (s)">
-                                    <ui:NumberBox Minimum="1"
+                                    <ui:NumberBox Minimum="1" SmallChange="60" LargeChange="180"
                                                   Value="{Binding ViewModel.Settings.SolverTimeLimit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </ui:CardControl>
                                 <ui:CardControl Header="Max CP-SAT candidates">

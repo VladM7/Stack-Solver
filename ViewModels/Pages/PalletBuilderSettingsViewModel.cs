@@ -22,6 +22,17 @@ namespace Stack_Solver.ViewModels.Pages
         private readonly PalletDefaultsOptions _palletDefaults;
         private bool _isInitialized;
 
+        // Last-selected common pallet, persisted so the selection survives a restart.
+        // Null once the user types custom dimensions that no longer match any named pallet.
+        private string? _defaultCatalog;
+        private string? _defaultPalletName;
+
+        // True while restoring persisted settings, so selecting the saved pallet does not
+        // clobber the persisted dimensions. True while a pallet selection is applying its
+        // dimensions, so that dimension change is not mistaken for a manual edit.
+        private bool _isRestoring;
+        private bool _isApplyingPalletSelection;
+
         [ObservableProperty]
         private ObservableCollection<SKU> _skus = [];
 
@@ -34,11 +45,21 @@ namespace Stack_Solver.ViewModels.Pages
         [ObservableProperty]
         private double _palletHeight;
 
+        /// <summary>Use CP-SAT (rather than the heuristic packer) to generate candidate layers. Distinct from <see cref="UseCpsatSolution"/>.</summary>
         [ObservableProperty]
         private bool _useCpsat;
 
+        /// <summary>Offer a Greedy assignment as one of the produced solutions.</summary>
         [ObservableProperty]
-        private bool _useBranchAndPrice;
+        private bool _useGreedy = true;
+
+        /// <summary>Offer a CP-SAT assignment as one of the produced solutions.</summary>
+        [ObservableProperty]
+        private bool _useCpsatSolution = true;
+
+        /// <summary>Offer a Branch &amp; Price assignment as one of the produced solutions.</summary>
+        [ObservableProperty]
+        private bool _useBranchAndPrice = true;
 
         [ObservableProperty]
         private int _maxCpsatCandidates;
@@ -101,6 +122,9 @@ namespace Stack_Solver.ViewModels.Pages
             {
                 if (SetProperty(ref _selectedInternationalPallet, value) && value is not null)
                 {
+                    _defaultCatalog = "International";
+                    _defaultPalletName = value.Name;
+                    ClearAmericanSelection();
                     SelectPallet(value);
                 }
             }
@@ -114,9 +138,28 @@ namespace Stack_Solver.ViewModels.Pages
             {
                 if (SetProperty(ref _selectedAmericanPallet, value) && value is not null)
                 {
+                    _defaultCatalog = "America";
+                    _defaultPalletName = value.Name;
+                    ClearInternationalSelection();
                     SelectPallet(value);
                 }
             }
+        }
+
+        // Deselect the other catalog's grid (bypassing the setters, so no re-entrancy)
+        // so that at most one common pallet is ever highlighted.
+        private void ClearInternationalSelection()
+        {
+            if (_selectedInternationalPallet is null) return;
+            _selectedInternationalPallet = null;
+            OnPropertyChanged(nameof(SelectedInternationalPallet));
+        }
+
+        private void ClearAmericanSelection()
+        {
+            if (_selectedAmericanPallet is null) return;
+            _selectedAmericanPallet = null;
+            OnPropertyChanged(nameof(SelectedAmericanPallet));
         }
 
         public PalletBuilderSettingsViewModel(
@@ -142,6 +185,13 @@ namespace Stack_Solver.ViewModels.Pages
             SolverTimeLimit = _defaults.MaxSolverTime;
             MaxCpsatCandidates = _defaults.MaxCPSATCandidates;
             BlfAttempts = _defaults.BLFAttempts;
+            UseCpsat = _defaults.UseCpsat;
+            UseGreedy = _defaults.UseGreedy;
+            UseCpsatSolution = _defaults.UseCpsatSolution;
+            UseBranchAndPrice = _defaults.UseBranchAndPrice;
+
+            _defaultCatalog = _palletDefaults.DefaultCatalog;
+            _defaultPalletName = _palletDefaults.DefaultPalletName;
 
             PalletLength = _palletDefaults.PalletLength;
             PalletWidth = _palletDefaults.PalletWidth;
@@ -172,15 +222,23 @@ namespace Stack_Solver.ViewModels.Pages
                     CommonPalletsAmerica.Add(p);
             }
 
-            if (!string.IsNullOrWhiteSpace(_palletDefaults.DefaultPalletName))
+            if (!string.IsNullOrWhiteSpace(_defaultPalletName))
             {
-                if (string.Equals(_palletDefaults.DefaultCatalog, "America", StringComparison.OrdinalIgnoreCase))
+                _isRestoring = true;
+                try
                 {
-                    SelectedAmericanPallet = CommonPalletsAmerica.FirstOrDefault(p => string.Equals(p.Name, _palletDefaults.DefaultPalletName, StringComparison.OrdinalIgnoreCase));
+                    if (string.Equals(_defaultCatalog, "America", StringComparison.OrdinalIgnoreCase))
+                    {
+                        SelectedAmericanPallet = CommonPalletsAmerica.FirstOrDefault(p => string.Equals(p.Name, _defaultPalletName, StringComparison.OrdinalIgnoreCase));
+                    }
+                    else
+                    {
+                        SelectedInternationalPallet = CommonPalletsInternational.FirstOrDefault(p => string.Equals(p.Name, _defaultPalletName, StringComparison.OrdinalIgnoreCase));
+                    }
                 }
-                else
+                finally
                 {
-                    SelectedInternationalPallet = CommonPalletsInternational.FirstOrDefault(p => string.Equals(p.Name, _palletDefaults.DefaultPalletName, StringComparison.OrdinalIgnoreCase));
+                    _isRestoring = false;
                 }
             }
 
@@ -195,8 +253,21 @@ namespace Stack_Solver.ViewModels.Pages
         private void SelectPallet(Pallet? pallet)
         {
             if (pallet is null) return;
-            PalletLength = pallet.Length;
-            PalletWidth = pallet.Width;
+            // While restoring, keep the persisted dimensions (which may be user-customised)
+            // instead of snapping back to the named pallet's size.
+            if (!_isRestoring)
+            {
+                _isApplyingPalletSelection = true;
+                try
+                {
+                    PalletLength = pallet.Length;
+                    PalletWidth = pallet.Width;
+                }
+                finally
+                {
+                    _isApplyingPalletSelection = false;
+                }
+            }
             PublishSettingsChanged();
         }
 
@@ -219,11 +290,33 @@ namespace Stack_Solver.ViewModels.Pages
             PublishSettingsChanged();
         }
 
-        partial void OnPalletLengthChanged(int value) => PublishSettingsChanged();
-        partial void OnPalletWidthChanged(int value) => PublishSettingsChanged();
+        partial void OnPalletLengthChanged(int value)
+        {
+            ClearPalletSelectionIfManual();
+            PublishSettingsChanged();
+        }
+        partial void OnPalletWidthChanged(int value)
+        {
+            ClearPalletSelectionIfManual();
+            PublishSettingsChanged();
+        }
         partial void OnPalletHeightChanged(double value) => PublishSettingsChanged();
         partial void OnUseCpsatChanged(bool value) => PublishSettingsChanged();
+        partial void OnUseGreedyChanged(bool value) => PublishSettingsChanged();
+        partial void OnUseCpsatSolutionChanged(bool value) => PublishSettingsChanged();
         partial void OnUseBranchAndPriceChanged(bool value) => PublishSettingsChanged();
+
+        // A hand-typed length/width no longer matches any named pallet, so drop the
+        // remembered selection. Ignored when the change came from restore or from
+        // applying a pallet's own dimensions.
+        private void ClearPalletSelectionIfManual()
+        {
+            if (_isRestoring || _isApplyingPalletSelection) return;
+            _defaultCatalog = null;
+            _defaultPalletName = null;
+            ClearInternationalSelection();
+            ClearAmericanSelection();
+        }
         partial void OnMaxCpsatCandidatesChanged(int value) => PublishSettingsChanged();
         partial void OnBlfAttemptsChanged(int value) => PublishSettingsChanged();
         partial void OnSolverTimeLimitChanged(int value) => PublishSettingsChanged();
@@ -245,6 +338,8 @@ namespace Stack_Solver.ViewModels.Pages
                 PalletWidth = PalletWidth,
                 PalletHeight = PalletHeight,
                 UseCpsat = UseCpsat,
+                UseGreedy = UseGreedy,
+                UseCpsatSolution = UseCpsatSolution,
                 UseBranchAndPrice = UseBranchAndPrice,
                 MaxCpsatCandidates = MaxCpsatCandidates,
                 BlfAttempts = BlfAttempts,
@@ -263,7 +358,8 @@ namespace Stack_Solver.ViewModels.Pages
             }
             _events.Publish(new SettingsChangedMessage(
                 PalletLength, PalletWidth, PalletHeight,
-                UseCpsat, UseBranchAndPrice, MaxCpsatCandidates, BlfAttempts, SolverTimeLimit,
+                UseCpsat, UseGreedy, UseCpsatSolution, UseBranchAndPrice,
+                MaxCpsatCandidates, BlfAttempts, SolverTimeLimit,
                 MaxStackHeight, MaxStackWeight, MaxSkuOverhang, OverhangMode, MaxTopHeavyPercent,
                 [.. Skus]));
 
@@ -271,8 +367,8 @@ namespace Stack_Solver.ViewModels.Pages
             {
                 var palletOpts = new PalletDefaultsOptions
                 {
-                    DefaultCatalog = _palletDefaults.DefaultCatalog,
-                    DefaultPalletName = _palletDefaults.DefaultPalletName,
+                    DefaultCatalog = _defaultCatalog,
+                    DefaultPalletName = _defaultPalletName,
                     PalletLength = PalletLength,
                     PalletWidth = PalletWidth,
                     PalletHeight = PalletHeight,
@@ -288,7 +384,11 @@ namespace Stack_Solver.ViewModels.Pages
                     MaxCPSATCandidates = MaxCpsatCandidates,
                     BLFAttempts = BlfAttempts,
                     MaxLayerStability = _defaults.MaxLayerStability,
-                    PerSkuTopLayerFraction = _defaults.PerSkuTopLayerFraction
+                    PerSkuTopLayerFraction = _defaults.PerSkuTopLayerFraction,
+                    UseCpsat = UseCpsat,
+                    UseGreedy = UseGreedy,
+                    UseCpsatSolution = UseCpsatSolution,
+                    UseBranchAndPrice = UseBranchAndPrice
                 };
                 _ = _userSettings.SaveAsync(palletOpts, genOpts);
             }
@@ -378,6 +478,8 @@ namespace Stack_Solver.ViewModels.Pages
         int PalletWidth,
         double PalletHeight,
         bool UseCpsat,
+        bool UseGreedy,
+        bool UseCpsatSolution,
         bool UseBranchAndPrice,
         int MaxCpsatCandidates,
         int BlfAttempts,

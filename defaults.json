@@ -26,7 +26,11 @@
     "MaxCPSATCandidates": 2000,
     "BLFAttempts": 200,
     "MaxLayerStability": 50,
-    "PerSkuTopLayerFraction": 0.5
+    "PerSkuTopLayerFraction": 0.5,
+    "UseCpsat": false,
+    "UseGreedy": true,
+    "UseCpsatSolution": true,
+    "UseBranchAndPrice": true
   },
   "PalletDefaults": {
     "DefaultCatalog": "International",
@@ -36,6 +40,7 @@
     "PalletHeight": 14.4,
     "MaxStackHeight": 180,
     "MaxStackWeight": 950,
-    "MaxSkuOverhang": 0
+    "OverhangMode": "MinSupportedPercent",
+    "MaxSkuOverhang": 100
   }
 }

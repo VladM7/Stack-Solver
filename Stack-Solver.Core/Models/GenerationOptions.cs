@@ -15,6 +15,18 @@
 
         public double PerSkuTopLayerFraction { get; set; } = 0.5;
 
+        /// <summary>Use CP-SAT (rather than the heuristic packer) to generate candidate layers.</summary>
+        public bool UseCpsat { get; set; }
+
+        /// <summary>Produce a Greedy assignment solution. Greedy always runs internally as a warm-start seed; this only controls whether it is offered as a result.</summary>
+        public bool UseGreedy { get; set; } = true;
+
+        /// <summary>Produce a CP-SAT assignment solution.</summary>
+        public bool UseCpsatSolution { get; set; } = true;
+
+        /// <summary>Produce a Branch &amp; Price assignment solution.</summary>
+        public bool UseBranchAndPrice { get; set; } = true;
+
         public GenerationOptions() { }
 
         public GenerationOptions(int maxSolverTime, int maxCandidates, int blfAttempts)
@@ -30,7 +42,11 @@
             return new GenerationOptions(source.MaxSolverTime, source.MaxCPSATCandidates, source.BLFAttempts)
             {
                 MaxLayerStability = source.MaxLayerStability,
-                PerSkuTopLayerFraction = source.PerSkuTopLayerFraction
+                PerSkuTopLayerFraction = source.PerSkuTopLayerFraction,
+                UseCpsat = source.UseCpsat,
+                UseGreedy = source.UseGreedy,
+                UseCpsatSolution = source.UseCpsatSolution,
+                UseBranchAndPrice = source.UseBranchAndPrice
             };
         }
     }
