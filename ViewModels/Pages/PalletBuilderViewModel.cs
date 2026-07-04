@@ -4,6 +4,7 @@ using Stack_Solver.Data.Repositories;
 using Stack_Solver.Infrastructure;
 using Stack_Solver.Models;
 using Stack_Solver.Models.Inputs;
+using Stack_Solver.Models.Jobs;
 using Stack_Solver.Services;
 using Wpf.Ui;
 
@@ -27,6 +28,19 @@ namespace Stack_Solver.ViewModels.Pages
         public async Task OnNavigatedToAsync()
         {
             await Settings.InitializeAsync();
+        }
+
+        /// <summary>
+        /// Opens a saved job: mirrors the settings it ran with into the setup rail and displays its
+        /// solutions in the results view. Called before navigating to this page.
+        /// </summary>
+        public async Task OpenJobAsync(Job job)
+        {
+            var settings = JobSnapshotMapper.DeserializeSettings(job.SettingsJson);
+            if (settings is null) return;
+
+            await Settings.ApplyJobAsync(settings);
+            Results.DisplayJob(job, settings);
         }
 
         public static Task OnNavigatedFromAsync() => Task.CompletedTask;

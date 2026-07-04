@@ -4,6 +4,7 @@ using Stack_Solver.Data.Repositories;
 using Stack_Solver.Infrastructure;
 using Stack_Solver.Models;
 using Stack_Solver.Models.Inputs;
+using Stack_Solver.Models.Jobs;
 using Stack_Solver.Models.Layering;
 using Stack_Solver.Models.Supports;
 using Stack_Solver.Validation;
@@ -273,6 +274,87 @@ namespace Stack_Solver.ViewModels.Pages
 
         public void NotifySelectionChanged() => PublishSettingsChanged();
 
+        /// <summary>
+        /// Mirrors the settings a saved job ran with, replacing the current setup (per the "opening a
+        /// job replaces the saved defaults" decision). The many property writes are batched behind
+        /// <see cref="_isRestoring"/> so only a single settings publish happens at the end.
+        /// </summary>
+        public async Task ApplyJobAsync(JobSettingsSnapshot s)
+        {
+            await InitializeAsync();
+
+            _isRestoring = true;
+            try
+            {
+                PalletHeight = s.PalletHeight;
+                MaxStackHeight = s.MaxStackHeight;
+                MaxStackWeight = s.MaxStackWeight;
+                OverhangMode = s.OverhangMode;
+                MaxSkuOverhang = s.MaxSkuOverhang;
+                MaxTopHeavyPercent = s.MaxTopHeavyPercent;
+                UseCpsat = s.UseCpsat;
+                UseGreedy = s.UseGreedy;
+                UseCpsatSolution = s.UseCpsatSolution;
+                UseBranchAndPrice = s.UseBranchAndPrice;
+                SolverTimeLimit = s.SolverTimeLimit;
+                MaxCpsatCandidates = s.MaxCpsatCandidates;
+                BlfAttempts = s.BlfAttempts;
+
+                // Set dimensions last: this snapshot is authoritative, so keep the exact numbers even
+                // if they no longer match the remembered named pallet (the guard skips the pallet
+                // grid's dimension override while restoring).
+                PalletLength = s.PalletLength;
+                PalletWidth = s.PalletWidth;
+
+                _defaultCatalog = s.DefaultCatalog;
+                _defaultPalletName = s.DefaultPalletName;
+                ApplyPalletSelectionFromDefaults();
+
+                ApplySkuSelection(await _skuRepository.GetAllAsync(), s.Skus);
+            }
+            finally
+            {
+                _isRestoring = false;
+            }
+
+            PublishSettingsChanged();
+        }
+
+        // Reflect the remembered catalog/pallet name in the common-pallet grids without touching the
+        // (already-applied) dimensions.
+        private void ApplyPalletSelectionFromDefaults()
+        {
+            ClearInternationalSelection();
+            ClearAmericanSelection();
+            if (string.IsNullOrWhiteSpace(_defaultPalletName)) return;
+
+            if (string.Equals(_defaultCatalog, "America", StringComparison.OrdinalIgnoreCase))
+                SelectedAmericanPallet = CommonPalletsAmerica.FirstOrDefault(p => string.Equals(p.Name, _defaultPalletName, StringComparison.OrdinalIgnoreCase));
+            else
+                SelectedInternationalPallet = CommonPalletsInternational.FirstOrDefault(p => string.Equals(p.Name, _defaultPalletName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Select exactly the job's SKUs (with their quantities) in the live library, leaving everything
+        // else unchecked. Reassigning the collection forces the grid to rebind so the checkboxes and
+        // quantities visibly match the job (SKU is a plain POCO with no change notification).
+        private void ApplySkuSelection(IList<SKU> live, IReadOnlyList<JobSkuSnapshot> jobSkus)
+        {
+            var qtyById = jobSkus.ToDictionary(x => x.SkuId, x => x.Quantity, StringComparer.Ordinal);
+            foreach (var sku in live)
+            {
+                if (qtyById.TryGetValue(sku.SkuId, out var qty))
+                {
+                    sku.IsSelected = true;
+                    sku.Quantity = qty;
+                }
+                else
+                {
+                    sku.IsSelected = false;
+                }
+            }
+            Skus = new ObservableCollection<SKU>(live);
+        }
+
         public async Task UpdateSkuAsync(SKU sku, CancellationToken ct = default)
         {
             if (sku == null) return;
@@ -332,6 +414,10 @@ namespace Stack_Solver.ViewModels.Pages
 
         private void PublishSettingsChanged()
         {
+            // Bulk applies (restoring persisted settings, or mirroring an opened job) mutate many
+            // properties in turn; suppress the per-property publish and let the caller publish once.
+            if (_isRestoring) return;
+
             var dto = new PalletSettingsDto
             {
                 PalletLength = PalletLength,

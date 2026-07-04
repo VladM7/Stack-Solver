@@ -2,22 +2,52 @@ using Stack_Solver.Data.Repositories;
 using Stack_Solver.Models.Jobs;
 using System.Collections.ObjectModel;
 using System.Windows;
+using Wpf.Ui;
 
 namespace Stack_Solver.ViewModels.Pages
 {
     public partial class JobManagerViewModel : ObservableObject
     {
         private readonly IJobRepository _jobRepository;
+        private readonly INavigationService _navigationService;
+        private readonly PalletBuilderViewModel _palletBuilder;
         private bool _isInitialized;
 
         /// <summary>Stored jobs, newest first.</summary>
         public ObservableCollection<JobRowViewModel> Jobs { get; } = [];
 
-        public JobManagerViewModel(IJobRepository jobRepository)
+        public JobManagerViewModel(
+            IJobRepository jobRepository,
+            INavigationService navigationService,
+            PalletBuilderViewModel palletBuilder)
         {
             _jobRepository = jobRepository;
+            _navigationService = navigationService;
+            _palletBuilder = palletBuilder;
             _jobRepository.JobAdded += OnJobAdded;
             _jobRepository.JobUpdated += OnJobUpdated;
+        }
+
+        /// <summary>
+        /// Loads a job's full settings + results, hands them to the Pallet Builder, and navigates
+        /// there so the run is mirrored and its default solution is shown instantly.
+        /// </summary>
+        public async Task OpenJobAsync(string id)
+        {
+            Job? job;
+            try
+            {
+                job = await _jobRepository.GetAsync(id);
+            }
+            catch
+            {
+                return;
+            }
+
+            if (job is null || string.IsNullOrWhiteSpace(job.SettingsJson)) return;
+
+            await _palletBuilder.OpenJobAsync(job);
+            _navigationService.Navigate(typeof(Views.Pages.PalletBuilderPage));
         }
 
         public async Task InitializeAsync()

@@ -30,8 +30,13 @@ namespace Stack_Solver.Views.Pages
         {
             await ViewModel.OnNavigatedToAsync();
 
-            if (ViewModel.Results.ViewportController == null && MainPerspectiveCamera is PerspectiveCamera cam)
+            // If a job was opened before this page's first visit, the results were rendered with no
+            // camera to frame them; attaching it now and re-rendering frames the loaded scene.
+            bool firstAttach = ViewModel.Results.ViewportController == null;
+            if (firstAttach && MainPerspectiveCamera is PerspectiveCamera cam)
                 ViewModel.Results.AttachCamera(cam);
+            if (firstAttach)
+                ViewModel.Results.RefreshCurrentScene();
 
             ViewModel.Results.PropertyChanged += Results_PropertyChanged;
             if (MainPerspectiveCamera is PerspectiveCamera pc)

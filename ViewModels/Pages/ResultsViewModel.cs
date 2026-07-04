@@ -306,6 +306,93 @@ namespace Stack_Solver.ViewModels.Pages
             }
         }
 
+        // ── Open a saved job: rebuild solutions from the snapshot and display them instantly ─────
+        /// <summary>
+        /// Loads a persisted job's results into the drill-down and shows its default (first) solution
+        /// without re-solving. Pallet dimensions come from the job's own settings snapshot, so the
+        /// scene is correct even if the live setup has since changed.
+        /// </summary>
+        public void DisplayJob(Job job, JobSettingsSnapshot settings)
+        {
+            // A job may be opened while a generation is still running on this (singleton) view model.
+            if (_generationCts is { IsCancellationRequested: false })
+                _generationCts.Cancel();
+
+            var skusById = JobSnapshotMapper.BuildSkuLookup(settings);
+            var resultsSnapshot = JobSnapshotMapper.DeserializeResults(job.ResultsJson);
+            var data = resultsSnapshot is null
+                ? []
+                : JobSnapshotMapper.FromResultsSnapshot(resultsSnapshot, skusById);
+            var skuList = skusById.Values.ToList();
+
+            _palletLength = settings.PalletLength;
+            _palletWidth = settings.PalletWidth;
+            _palletHeight = (int)Math.Round(settings.PalletHeight);
+            _palletHeightExact = settings.PalletHeight;
+            if (_viewportController != null)
+                _viewportController.Target = CurrentPalletCenter;
+
+            _currentJobLabel = $"Job @ {job.CreatedAt.ToLocalTime():yyyy-MM-dd HH:mm}";
+
+            Solutions.Clear();
+            SelectedSolution = null;
+            Assignments.Clear();
+            SelectedLayerTypes = [];
+            SelectedAssignment = null;
+            SelectedLayerType = null;
+            ClearHighlights();
+            Scene.Children.Clear();
+            Breadcrumbs.Clear();
+            SelectedItemInfo = string.Empty;
+
+            int number = 1;
+            foreach (var d in data)
+            {
+                if (d.Result.Assignments.Count == 0) continue;
+                Solutions.Add(new SolutionDisplay(number++, d.Name, d.Result, skuList,
+                    _palletLength, _palletWidth, _palletHeight, d.IsProvenOptimal, d.LowerBound));
+            }
+
+            HasResults = Solutions.Count > 0;
+            if (HasResults)
+            {
+                GenStats = $"Loaded {Solutions.Count} {(Solutions.Count == 1 ? "solution" : "solutions")} from this job.";
+                // Selecting the first solution enters the Solution level, which rebuilds the
+                // breadcrumbs (now led by the job) and renders the overview scene.
+                SelectedSolution = Solutions[0];
+            }
+            else
+            {
+                GenStats = "This job has no displayable solutions.";
+                DetailTitle = string.Empty;
+                DetailText = string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Re-renders (and re-frames) the scene for the current level. Used when the viewport's camera
+        /// only attaches after results were already loaded (e.g. a job opened before the page's first
+        /// visit), so the initial render happened with no controller to frame it.
+        /// </summary>
+        public void RefreshCurrentScene()
+        {
+            if (!HasResults) return;
+            switch (Level)
+            {
+                case DrillLevel.Pallet when SelectedAssignment != null:
+                    FramePallet(SelectedAssignment.Template);
+                    RenderPalletSceneAsync(SelectedAssignment.Template);
+                    break;
+                case DrillLevel.Layer when SelectedLayerType != null:
+                    FrameLayer();
+                    RenderLayerSceneAsync(SelectedLayerType.Layer);
+                    break;
+                default:
+                    RenderWarehouseSceneAsync();
+                    break;
+            }
+        }
+
         [RelayCommand]
         private void Cancel()
         {

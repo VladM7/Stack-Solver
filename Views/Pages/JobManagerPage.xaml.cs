@@ -1,5 +1,7 @@
 using Stack_Solver.ViewModels.Pages;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using Wpf.Ui.Abstractions.Controls;
 
 namespace Stack_Solver.Views.Pages
@@ -20,6 +22,14 @@ namespace Stack_Solver.Views.Pages
         private async void OnLoaded(object sender, RoutedEventArgs e)
         {
             await ViewModel.InitializeAsync();
+        }
+
+        private async void JobsGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is DataGrid { SelectedItem: JobRowViewModel row })
+            {
+                await ViewModel.OpenJobAsync(row.Id);
+            }
         }
     }
 }

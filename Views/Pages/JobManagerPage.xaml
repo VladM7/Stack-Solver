@@ -23,7 +23,8 @@
         <ui:DataGrid Grid.Row="0"
                      ItemsSource="{Binding ViewModel.Jobs}"
                      AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
-                     IsReadOnly="True" HeadersVisibility="Column"
+                     IsReadOnly="True" HeadersVisibility="Column" SelectionMode="Single"
+                     MouseDoubleClick="JobsGrid_MouseDoubleClick"
                      ScrollViewer.VerticalScrollBarVisibility="Auto">
             <ui:DataGrid.Columns>
                 <DataGridTextColumn Header="Job ID" Binding="{Binding Id}" Width="Auto" />
