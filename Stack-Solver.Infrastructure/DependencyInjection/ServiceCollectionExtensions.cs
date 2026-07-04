@@ -24,6 +24,7 @@ namespace Microsoft.Extensions.DependencyInjection
             });
 
             services.AddSingleton<ISkuRepository, SkuRepository>();
+            services.AddSingleton<IJobRepository, JobRepository>();
             services.AddSingleton<DatabaseInitializer>();
             services.AddSingleton<IUserSettingsService, UserSettingsService>();
 

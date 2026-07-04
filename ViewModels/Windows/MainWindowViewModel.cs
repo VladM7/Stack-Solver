@@ -26,7 +26,7 @@ namespace Stack_Solver.ViewModels.Windows
             new NavigationViewItem()
             {
                 Content = "Pallet Builder",
-                Icon = new SymbolIcon { Symbol = SymbolRegular.SlideGrid24 },
+                Icon = new SymbolIcon { Symbol = SymbolRegular.BuildingFactory24 },
                 TargetPageType = typeof(Views.Pages.PalletBuilderPage)
             },
             new NavigationViewItem()

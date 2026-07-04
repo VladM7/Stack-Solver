@@ -1,7 +1,9 @@
+using Stack_Solver.Data.Repositories;
 using Stack_Solver.Helpers.Rendering;
 using Stack_Solver.Infrastructure;
 using Stack_Solver.Models;
 using Stack_Solver.Models.Assignment;
+using Stack_Solver.Models.Jobs;
 using Stack_Solver.Models.Layering;
 using Stack_Solver.Models.Supports;
 using Stack_Solver.Services;
@@ -35,6 +37,7 @@ namespace Stack_Solver.ViewModels.Pages
         private readonly IEventAggregator _events;
         private readonly ILayerVisualizationService _viz;
         private readonly ISnackbarService _snackbarService;
+        private readonly IJobRepository _jobRepository;
 
         private readonly PalletSceneBuilder _palletSceneBuilder = new();
         private readonly LayerSceneBuilder _layerSceneBuilder = new();
@@ -53,6 +56,7 @@ namespace Stack_Solver.ViewModels.Pages
 
         // ── Settings snapshot (kept in sync via SettingsChangedMessage) ──────────────
         private int _palletLength, _palletWidth, _palletHeight;
+        private double _palletHeightExact = 14.4;
         private int _maxStackHeight = 180, _maxStackWeight = 950;
         private double _maxSkuOverhang;
         private OverhangMode _overhangMode;
@@ -61,6 +65,12 @@ namespace Stack_Solver.ViewModels.Pages
         private bool _useGreedy = true;
         private bool _useCpsatSolution = true;
         private bool _useBranchAndPrice = true;
+        private string? _defaultCatalog;
+        private string? _defaultPalletName;
+
+        // Label of the job the currently displayed results belong to; shown as the top breadcrumb.
+        private string _currentJobLabel = string.Empty;
+
         private List<SKU> _selectedSkus = [];
         private GenerationOptions _generationOptions = new();
 
@@ -127,11 +137,12 @@ namespace Stack_Solver.ViewModels.Pages
         public ICommand BeginPanCommand { get; }
         public ICommand PanCommand { get; }
 
-        public ResultsViewModel(IEventAggregator events, ILayerVisualizationService viz, ISnackbarService snackbarService)
+        public ResultsViewModel(IEventAggregator events, ILayerVisualizationService viz, ISnackbarService snackbarService, IJobRepository jobRepository)
         {
             _events = events;
             _viz = viz;
             _snackbarService = snackbarService;
+            _jobRepository = jobRepository;
             _events.Subscribe<SettingsChangedMessage>(OnSettingsChanged);
             ZoomCommand = new RelayCommand<double>(delta => _viewportController?.Zoom(delta));
             BeginPanCommand = new RelayCommand<Point>(p => _viewportController?.BeginPan(p));
@@ -160,6 +171,7 @@ namespace Stack_Solver.ViewModels.Pages
             _palletLength = msg.PalletLength;
             _palletWidth = msg.PalletWidth;
             _palletHeight = (int)Math.Round(msg.PalletHeight);
+            _palletHeightExact = msg.PalletHeight;
             _maxStackHeight = msg.MaxStackHeight;
             _maxStackWeight = msg.MaxStackWeight;
             _maxSkuOverhang = msg.MaxSkuOverhang;
@@ -169,6 +181,8 @@ namespace Stack_Solver.ViewModels.Pages
             _useGreedy = msg.UseGreedy;
             _useCpsatSolution = msg.UseCpsatSolution;
             _useBranchAndPrice = msg.UseBranchAndPrice;
+            _defaultCatalog = msg.DefaultCatalog;
+            _defaultPalletName = msg.DefaultPalletName;
             _selectedSkus = [.. msg.Skus.Where(s => s.IsSelected && s.Quantity > 0)];
             _generationOptions = new GenerationOptions(msg.SolverTimeLimit, msg.MaxCpsatCandidates, msg.BlfAttempts);
             if (_viewportController != null)
@@ -202,8 +216,12 @@ namespace Stack_Solver.ViewModels.Pages
             DetailText = string.Empty;
             SelectedItemInfo = string.Empty;
             Breadcrumbs.Clear();
+            _currentJobLabel = string.Empty;
             GenStats = "Generating...";
             var stopwatch = Stopwatch.StartNew();
+
+            // Recorded as a Job the moment real work starts; finalized on every exit path below.
+            Job? job = null;
 
             try
             {
@@ -213,6 +231,10 @@ namespace Stack_Solver.ViewModels.Pages
                     _snackbarService.Show("Generation failed", "Select at least one SKU with a quantity greater than 0.", ControlAppearance.Danger, null, TimeSpan.FromSeconds(5));
                     return;
                 }
+
+                job = await StartJobAsync(ct);
+                if (job is not null)
+                    _currentJobLabel = $"Job @ {job.CreatedAt.ToLocalTime():yyyy-MM-dd HH:mm}";
 
                 var pallet = new Pallet("Pallet", _palletLength, _palletWidth, _palletHeight)
                 {
@@ -236,6 +258,7 @@ namespace Stack_Solver.ViewModels.Pages
                 {
                     GenStats = "No layers generated.";
                     _snackbarService.Show("Generation failed", "No layers were generated for the selected SKUs.", ControlAppearance.Danger, null, TimeSpan.FromSeconds(5));
+                    await FinishJobAsync(job, []);
                     return;
                 }
 
@@ -261,21 +284,112 @@ namespace Stack_Solver.ViewModels.Pages
                 {
                     GenStats = "No assignments produced.";
                 }
+
+                await FinishJobAsync(job, [.. Solutions]);
             }
             catch (OperationCanceledException)
             {
                 GenStats = "Generation canceled.";
+                await EndJobAsync(job, JobStatus.Canceled);
             }
             catch (Exception ex)
             {
                 GenStats = $"Error: {ex.Message}";
                 _snackbarService.Show("Generation failed", ex.Message, ControlAppearance.Danger, null, TimeSpan.FromSeconds(5));
+                await EndJobAsync(job, JobStatus.Failed, ex.Message);
             }
             finally
             {
                 IsGenerating = false;
                 _generationCts?.Dispose();
                 _generationCts = null;
+            }
+        }
+
+        // ── Open a saved job: rebuild solutions from the snapshot and display them instantly ─────
+        /// <summary>
+        /// Loads a persisted job's results into the drill-down and shows its default (first) solution
+        /// without re-solving. Pallet dimensions come from the job's own settings snapshot, so the
+        /// scene is correct even if the live setup has since changed.
+        /// </summary>
+        public void DisplayJob(Job job, JobSettingsSnapshot settings)
+        {
+            // A job may be opened while a generation is still running on this (singleton) view model.
+            if (_generationCts is { IsCancellationRequested: false })
+                _generationCts.Cancel();
+
+            var skusById = JobSnapshotMapper.BuildSkuLookup(settings);
+            var resultsSnapshot = JobSnapshotMapper.DeserializeResults(job.ResultsJson);
+            var data = resultsSnapshot is null
+                ? []
+                : JobSnapshotMapper.FromResultsSnapshot(resultsSnapshot, skusById);
+            var skuList = skusById.Values.ToList();
+
+            _palletLength = settings.PalletLength;
+            _palletWidth = settings.PalletWidth;
+            _palletHeight = (int)Math.Round(settings.PalletHeight);
+            _palletHeightExact = settings.PalletHeight;
+            if (_viewportController != null)
+                _viewportController.Target = CurrentPalletCenter;
+
+            _currentJobLabel = $"Job @ {job.CreatedAt.ToLocalTime():yyyy-MM-dd HH:mm}";
+
+            Solutions.Clear();
+            SelectedSolution = null;
+            Assignments.Clear();
+            SelectedLayerTypes = [];
+            SelectedAssignment = null;
+            SelectedLayerType = null;
+            ClearHighlights();
+            Scene.Children.Clear();
+            Breadcrumbs.Clear();
+            SelectedItemInfo = string.Empty;
+
+            int number = 1;
+            foreach (var d in data)
+            {
+                if (d.Result.Assignments.Count == 0) continue;
+                Solutions.Add(new SolutionDisplay(number++, d.Name, d.Result, skuList,
+                    _palletLength, _palletWidth, _palletHeight, d.IsProvenOptimal, d.LowerBound));
+            }
+
+            HasResults = Solutions.Count > 0;
+            if (HasResults)
+            {
+                GenStats = $"Loaded {Solutions.Count} {(Solutions.Count == 1 ? "solution" : "solutions")} from this job.";
+                // Selecting the first solution enters the Solution level, which rebuilds the
+                // breadcrumbs (now led by the job) and renders the overview scene.
+                SelectedSolution = Solutions[0];
+            }
+            else
+            {
+                GenStats = "This job has no displayable solutions.";
+                DetailTitle = string.Empty;
+                DetailText = string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Re-renders (and re-frames) the scene for the current level. Used when the viewport's camera
+        /// only attaches after results were already loaded (e.g. a job opened before the page's first
+        /// visit), so the initial render happened with no controller to frame it.
+        /// </summary>
+        public void RefreshCurrentScene()
+        {
+            if (!HasResults) return;
+            switch (Level)
+            {
+                case DrillLevel.Pallet when SelectedAssignment != null:
+                    FramePallet(SelectedAssignment.Template);
+                    RenderPalletSceneAsync(SelectedAssignment.Template);
+                    break;
+                case DrillLevel.Layer when SelectedLayerType != null:
+                    FrameLayer();
+                    RenderLayerSceneAsync(SelectedLayerType.Layer);
+                    break;
+                default:
+                    RenderWarehouseSceneAsync();
+                    break;
             }
         }
 
@@ -288,6 +402,91 @@ namespace Stack_Solver.ViewModels.Pages
                 GenStats = "Canceling...";
             }
         }
+
+        // ── Job lifecycle ────────────────────────────────────────────────────────────
+        // Job tracking is best-effort: a persistence hiccup must never break a generation, so
+        // failures here are swallowed and generation continues with a null job.
+        private async Task<Job?> StartJobAsync(CancellationToken ct)
+        {
+            try
+            {
+                var job = new Job
+                {
+                    Status = JobStatus.Ongoing,
+                    CreatedAt = DateTime.UtcNow,
+                    SettingsJson = JobSnapshotMapper.Serialize(BuildSettingsSnapshot())
+                };
+                await _jobRepository.AddAsync(job, ct);
+                return job;
+            }
+            catch (OperationCanceledException) { throw; }
+            catch { return null; }
+        }
+
+        private async Task FinishJobAsync(Job? job, IReadOnlyList<SolutionDisplay> solutions)
+        {
+            if (job is null) return;
+            try
+            {
+                var data = solutions
+                    .Select(s => new JobSolutionData(s.Name, s.IsProvenOptimal, s.LowerBound, s.Result))
+                    .ToList();
+                job.ResultsJson = JobSnapshotMapper.Serialize(JobSnapshotMapper.ToResultsSnapshot(data));
+                job.SolutionCount = solutions.Count;
+                job.TotalPallets = solutions.Count > 0 ? solutions[0].TotalPallets : 0;
+                job.Status = JobStatus.Finished;
+                job.CompletedAt = DateTime.UtcNow;
+                // Finalize with None: the generation token may already be canceled/disposed.
+                await _jobRepository.UpdateAsync(job, CancellationToken.None);
+            }
+            catch { /* best-effort */ }
+        }
+
+        private async Task EndJobAsync(Job? job, JobStatus status, string? error = null)
+        {
+            if (job is null) return;
+            try
+            {
+                job.Status = status;
+                job.Error = error;
+                job.CompletedAt = DateTime.UtcNow;
+                await _jobRepository.UpdateAsync(job, CancellationToken.None);
+            }
+            catch { /* best-effort */ }
+        }
+
+        private JobSettingsSnapshot BuildSettingsSnapshot() => new()
+        {
+            DefaultCatalog = _defaultCatalog,
+            DefaultPalletName = _defaultPalletName,
+            PalletLength = _palletLength,
+            PalletWidth = _palletWidth,
+            PalletHeight = _palletHeightExact,
+            MaxStackHeight = _maxStackHeight,
+            MaxStackWeight = _maxStackWeight,
+            OverhangMode = _overhangMode,
+            MaxSkuOverhang = _maxSkuOverhang,
+            MaxTopHeavyPercent = _maxTopHeavyPercent,
+            UseCpsat = _useCpsat,
+            UseGreedy = _useGreedy,
+            UseCpsatSolution = _useCpsatSolution,
+            UseBranchAndPrice = _useBranchAndPrice,
+            SolverTimeLimit = _generationOptions.MaxSolverTime,
+            MaxCpsatCandidates = _generationOptions.MaxCPSATCandidates,
+            BlfAttempts = _generationOptions.BLFAttempts,
+            Skus = [.. _selectedSkus.Select(s => new JobSkuSnapshot
+            {
+                SkuId = s.SkuId,
+                Name = s.Name,
+                Length = s.Length,
+                Width = s.Width,
+                Height = s.Height,
+                Weight = s.Weight,
+                Rotatable = s.Rotatable,
+                Notes = s.Notes,
+                Quantity = s.Quantity
+            })]
+        };
 
         private List<SolutionDisplay> BuildSolutions(
             List<Layer> allLayers, List<SKU> skus, Dictionary<string, int> demand,
@@ -648,12 +847,32 @@ namespace Stack_Solver.ViewModels.Pages
 
             bool atSolution = Level == DrillLevel.Solution;
             bool atLayer = Level == DrillLevel.Layer;
+            bool hasJob = _currentJobLabel.Length > 0;
+
+            // Job segment sits above everything; clicking it returns to the solution overview.
+            if (hasJob)
+            {
+                Breadcrumbs.Add(new BreadcrumbItem(
+                    _currentJobLabel,
+                    isCurrent: false,
+                    showSeparator: false,
+                    new RelayCommand(EnterSolutionLevel)));
+            }
+
+            // Solution segment carries an Explorer-style dropdown of the sibling solutions.
+            var choices = Solutions
+                .Select(s => new BreadcrumbChoice(
+                    s.Name,
+                    ReferenceEquals(s, SelectedSolution),
+                    new RelayCommand(() => SelectedSolution = s)))
+                .ToList();
 
             Breadcrumbs.Add(new BreadcrumbItem(
                 SelectedSolution.Name,
                 isCurrent: atSolution,
-                showSeparator: false,
-                new RelayCommand(EnterSolutionLevel)));
+                showSeparator: hasJob,
+                new RelayCommand(EnterSolutionLevel),
+                choices));
 
             if (!atSolution && SelectedAssignment != null)
             {
@@ -778,14 +997,24 @@ namespace Stack_Solver.ViewModels.Pages
         }
     }
 
-    public partial class BreadcrumbItem(string label, bool isCurrent, bool showSeparator, ICommand? command) : ObservableObject
+    public partial class BreadcrumbItem(
+        string label, bool isCurrent, bool showSeparator, ICommand? command,
+        IReadOnlyList<BreadcrumbChoice>? choices = null) : ObservableObject
     {
         public string Label { get; } = label;
         public bool IsCurrent { get; } = isCurrent;
         public bool ShowSeparator { get; } = showSeparator;
         public ICommand? Command { get; } = command;
+
+        /// <summary>Alternatives reachable from this segment via an Explorer-style dropdown (e.g. sibling solutions).</summary>
+        public IReadOnlyList<BreadcrumbChoice>? Choices { get; } = choices;
+        public bool HasDropdown => Choices is { Count: > 0 };
+
         public bool IsClickable => Command != null && !IsCurrent;
     }
+
+    /// <summary>One entry in a breadcrumb segment's dropdown.</summary>
+    public sealed record BreadcrumbChoice(string Label, bool IsSelected, ICommand Command);
 
     public class TemplateAssignmentDisplay
     {

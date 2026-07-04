@@ -1,21 +1,122 @@
-﻿<Page x:Class="Stack_Solver.Views.Pages.JobManagerPage"
+<Page x:Class="Stack_Solver.Views.Pages.JobManagerPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="clr-namespace:Stack_Solver.Views.Pages"
+    xmlns:conv="clr-namespace:Stack_Solver.Converters"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    mc:Ignorable="d" 
+    mc:Ignorable="d"
     d:DesignHeight="450" d:DesignWidth="800"
     Title="JobManagerPage"
-      
-    d:DataContext="{d:DesignInstance local:PalletBuilderPage,
+
+    d:DataContext="{d:DesignInstance local:JobManagerPage,
                 IsDesignTimeCreatable=False}"
     ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
     ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
     Foreground="{DynamicResource TextFillColorPrimaryBrush}">
 
-    <Grid>
-        <TextBlock Text="Coming soon!" />
+    <Page.Resources>
+        <conv:JobStatusToSymbolConverter x:Key="JobStatusToSymbolConverter" />
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    </Page.Resources>
+
+    <Grid Margin="0,0,0,8">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" MinWidth="360" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" MinWidth="300" />
+        </Grid.ColumnDefinitions>
+
+        <ui:DataGrid Grid.Column="0"
+                     ItemsSource="{Binding ViewModel.Jobs}"
+                     SelectedItem="{Binding ViewModel.SelectedRow, Mode=TwoWay}"
+                     AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                     IsReadOnly="True" HeadersVisibility="Column" SelectionMode="Single"
+                     MouseDoubleClick="JobsGrid_MouseDoubleClick"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+            <ui:DataGrid.Columns>
+                <DataGridTextColumn Header="Job ID" Binding="{Binding Id}" Width="Auto" />
+                <DataGridTextColumn Header="Date created" Binding="{Binding CreatedAtDisplay}" Width="Auto" />
+                <DataGridTemplateColumn Header="Status" Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <ui:SymbolIcon Symbol="{Binding Status, Converter={StaticResource JobStatusToSymbolConverter}}"
+                                               FontSize="16" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Status}" Margin="6,0,0,0" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </ui:DataGrid.Columns>
+        </ui:DataGrid>
+
+        <GridSplitter Grid.Column="1" Width="3" HorizontalAlignment="Center" VerticalAlignment="Stretch" Margin="4,0"
+                      ResizeBehavior="PreviousAndNext" ResizeDirection="Columns"
+                      Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
+
+        <Border Grid.Column="2" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="1" CornerRadius="4" Padding="16">
+            <Grid>
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              DataContext="{Binding ViewModel.Details}"
+                              Visibility="{Binding ViewModel.HasDetails, RelativeSource={RelativeSource AncestorType=Page}, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel>
+                        <ui:TextBlock Text="Job details" FontTypography="Subtitle" Margin="0,0,0,12" />
+
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Date created" Opacity="0.7" Margin="0,0,16,4" />
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding CreatedAtDisplay}" Margin="0,0,0,4" />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Status" Opacity="0.7" Margin="0,0,16,4" />
+                            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,4">
+                                <ui:SymbolIcon Symbol="{Binding Status, Converter={StaticResource JobStatusToSymbolConverter}}"
+                                               FontSize="16" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Status}" Margin="6,0,0,0" VerticalAlignment="Center" />
+                            </StackPanel>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Generation time" Opacity="0.7" Margin="0,0,16,4" />
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding DurationDisplay}" Margin="0,0,0,4" />
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Solutions" Opacity="0.7" Margin="0,0,16,4" />
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SolutionCount}" Margin="0,0,0,4" />
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Pallets" Opacity="0.7" Margin="0,0,16,4" />
+                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding TotalPallets}" Margin="0,0,0,4" />
+
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Pallet size" Opacity="0.7" Margin="0,0,16,4" />
+                            <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding PalletSizeDisplay}" Margin="0,0,0,4" />
+                        </Grid>
+
+                        <ui:TextBlock Text="SKUs used" FontTypography="BodyStrong" Margin="0,12,0,6" />
+                        <ui:DataGrid ItemsSource="{Binding Skus}"
+                                     AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                                     IsReadOnly="True" HeadersVisibility="Column" BorderThickness="1"
+                                     ScrollViewer.CanContentScroll="False" ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                            <ui:DataGrid.Columns>
+                                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="Auto" />
+                                <DataGridTextColumn Header="L×W×H" Binding="{Binding Dimensions}" Width="Auto" />
+                                <DataGridTextColumn Header="Weight" Binding="{Binding Weight}" Width="Auto" />
+                                <DataGridTextColumn Header="Qty" Binding="{Binding Quantity}" Width="Auto" />
+                            </ui:DataGrid.Columns>
+                        </ui:DataGrid>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
     </Grid>
 </Page>

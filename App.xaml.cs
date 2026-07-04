@@ -86,7 +86,8 @@ namespace Stack_Solver
                     sp.GetRequiredService<IValidator<PalletSettingsDto>>(),
                     sp.GetRequiredService<IValidator<SkuQuantityDto>>(),
                     sp.GetRequiredService<IUserSettingsService>(),
-                    sp.GetRequiredService<ISnackbarService>()));
+                    sp.GetRequiredService<ISnackbarService>(),
+                    sp.GetRequiredService<IJobRepository>()));
                 services.AddSingleton<TruckLoadingPage>();
                 services.AddSingleton<TruckLoadingViewModel>();
                 services.AddSingleton<JobManagerPage>();
@@ -123,6 +124,13 @@ namespace Stack_Solver
                 var dbInit = Services.GetRequiredService<DatabaseInitializer>();
                 await dbInit.InitializeAsync();
                 Log.Information("Database initialized");
+
+                // Any job still marked "Ongoing" belongs to a run that never finished because a
+                // previous session was killed mid-generation; flag those as failed so they don't
+                // linger as perpetually-running rows in the Job Manager.
+                var healed = await Services.GetRequiredService<IJobRepository>().FailOrphanedOngoingAsync();
+                if (healed > 0)
+                    Log.Warning("Marked {Count} interrupted job(s) as failed on startup", healed);
             }
             catch (Exception ex)
             {
