@@ -33,6 +33,18 @@ namespace Stack_Solver.Services.BranchAndPrice
         private const double IpFinalTimeFraction = 0.9;
         private static readonly TimeSpan IpFinalMaxTime = TimeSpan.FromSeconds(60);
 
+        // Wall-clock slice for the Solution-A purity re-selection pass (see TryImprovePurity): a
+        // same-pallet-count re-solve over the already-generated pool, so it is typically fast.
+        // Runs unconditionally at the end of every solve — including the common, fast certification
+        // paths — so it is kept small relative to the heuristic/final IP slices above.
+        private const double PurityPolishTimeFraction = 0.2;
+        private static readonly TimeSpan PurityPolishMaxTime = TimeSpan.FromSeconds(10);
+
+        // Solution B ("purity-first re-packing", see TryFindPurerAlternative) may spend up to this
+        // fraction of the pallet count (rounded up, at least one) on extra pallets to cut impurity.
+        // It never replaces the count-optimal incumbent — the purer arrangement is offered alongside.
+        private const double PurityAlternativeBudgetFraction = 0.10;
+
         private readonly RestrictedMasterProblem _rmp;
         private readonly ColumnPool _pool = new();
         private readonly PricingSolver _heuristic;
@@ -41,6 +53,7 @@ namespace Stack_Solver.Services.BranchAndPrice
         private readonly HashSet<string> _forbidden = new(StringComparer.Ordinal);
         private readonly IReadOnlyList<string> _placeableSkus;
         private readonly IReadOnlyDictionary<string, int> _placeableDemand;
+        private readonly Pallet _pallet;
         private readonly double _combinatorialBound;
         private readonly CancellationToken _ct;
 
@@ -57,6 +70,10 @@ namespace Stack_Solver.Services.BranchAndPrice
         private List<(BnpColumn Column, int Count)>? _best;
         private IReadOnlyDictionary<string, int> _bestLeftovers = new Dictionary<string, int>(StringComparer.Ordinal);
 
+        // Solution B: a strictly-purer, zero-leftover regrouping that uses a few more pallets than the
+        // proven optimum. Null unless one was found; offered alongside _best, never replacing it.
+        private List<(BnpColumn Column, int Count)>? _purer;
+
         public BranchAndPriceSearch(
             IReadOnlyList<Layer> layers,
             IReadOnlyList<string> placeableSkus,
@@ -72,6 +89,7 @@ namespace Stack_Solver.Services.BranchAndPrice
             _timeBudget = timeBudget;
             _placeableSkus = placeableSkus;
             _placeableDemand = placeableDemand;
+            _pallet = pallet;
             var skuMap = BuildSkuMap(layers);
             _combinatorialBound = CombinatorialBound.Compute(placeableDemand, skuMap, pallet);
             _rmp = new RestrictedMasterProblem(placeableSkus, placeableDemand);
@@ -99,6 +117,13 @@ namespace Stack_Solver.Services.BranchAndPrice
 
         /// <summary>The optimal (or best-found) integer column multiset, or null if none was found.</summary>
         public IReadOnlyList<(BnpColumn Column, int Count)>? OptimalColumns => _best;
+
+        /// <summary>
+        /// A strictly-purer, zero-leftover regrouping that trades a few extra pallets for lower
+        /// impurity (Solution B), or null when none improves on the count-optimal incumbent. Offered
+        /// alongside <see cref="OptimalColumns"/>; it is never the certified minimum-pallet solution.
+        /// </summary>
+        public IReadOnlyList<(BnpColumn Column, int Count)>? PurerColumns => _purer;
 
         /// <summary>Leftover (unmet) units per SKU in the returned solution.</summary>
         public IReadOnlyDictionary<string, int> OptimalLeftovers => _bestLeftovers;
@@ -149,33 +174,36 @@ namespace Stack_Solver.Services.BranchAndPrice
             // branch: a tight integer solution over the root column pool often matches ⌈bound⌉ and
             // certifies optimality here, skipping the tree entirely.
             TryImproveIncumbentWithIp(IpHeuristicTimeFraction, IpHeuristicMaxTime);
-            if (TryCertifyByBound())
-            {
-                FinalizeStats();
-                return;
-            }
 
             // Pallet-count certification: prove the round-up gap by testing whether all demand fits
             // in K pallets for K from the lower bound up to the incumbent. The cardinality cap makes
             // these subproblems tight (≤ K columns), cracking the round-up cases the uncapped tree
             // cannot. Runs before the expensive uncapped tree so the budget isn't wasted on it.
-            if (CertifyByPalletCount())
+            if (!TryCertifyByBound() && !CertifyByPalletCount())
             {
-                FinalizeStats();
-                return;
+                BranchAndBound(root);
+
+                // Final polish: the tree has built a far richer column pool than the root had. If the
+                // search stopped early (node/time budget) without proving optimality, an exact IP over
+                // all generated columns may assemble an incumbent that matches ⌈bound⌉ — certifying an
+                // optimum the column-variable branching never reached — using any leftover wall-clock.
+                if (!ProvedOptimal)
+                {
+                    TryImproveIncumbentWithIp(IpFinalTimeFraction, IpFinalMaxTime);
+                    TryCertifyByBound();
+                }
             }
 
-            BranchAndBound(root);
+            // Solution A: once the pallet count is settled — by whichever path above got there —
+            // check for a purer same-count, zero-leftover assignment in the pool and adopt it if
+            // found. Must run after every path (not just the tree fallback), since the fast
+            // certification paths above are the common case.
+            TryImprovePurity();
 
-            // Final polish: the tree has built a far richer column pool than the root had. If the
-            // search stopped early (node/time budget) without proving optimality, an exact IP over
-            // all generated columns may assemble an incumbent that matches ⌈bound⌉ — certifying an
-            // optimum the column-variable branching never reached — using any leftover wall-clock.
-            if (!ProvedOptimal)
-            {
-                TryImproveIncumbentWithIp(IpFinalTimeFraction, IpFinalMaxTime);
-                TryCertifyByBound();
-            }
+            // Solution B: with the count optimum settled and polished, look for a strictly purer
+            // regrouping that is willing to spend a few extra pallets. Recorded separately (never
+            // replacing the incumbent) and surfaced as an alternative for the user to choose.
+            TryFindPurerAlternative();
 
             FinalizeStats();
         }
@@ -244,12 +272,118 @@ namespace Stack_Solver.Services.BranchAndPrice
             _bestLeftovers = new Dictionary<string, int>(StringComparer.Ordinal);
         }
 
+        /// <summary>
+        /// Solution A ("layer re-packing"): once the pallet count is settled, regroups the settled
+        /// solution's <i>exact</i> layer multiset into the <i>same</i> number of pallets to minimize
+        /// impurity (see <see cref="LayerRepackSolver"/>), and adopts the result when it is strictly
+        /// purer. Every layer is placed exactly once, so the per-SKU box totals — hence demand
+        /// coverage and the pallet count — are preserved; the pass can neither add a pallet nor
+        /// introduce leftover, so it can never regress the incumbent or invalidate
+        /// <see cref="ProvedOptimal"/>.
+        /// </summary>
+        private void TryImprovePurity()
+        {
+            if (_best == null || !AllZero(_bestLeftovers)) return;
+
+            long currentImpurity = PurityMetric.TotalImpurity(_best);
+            if (currentImpurity == 0) return; // already perfectly pure
+
+            var remaining = _timeBudget - _stopwatch.Elapsed;
+            if (remaining <= TimeSpan.Zero) return;
+
+            var slice = TimeSpan.FromMilliseconds(remaining.TotalMilliseconds * PurityPolishTimeFraction);
+            if (slice > PurityPolishMaxTime) slice = PurityPolishMaxTime;
+            if (slice <= TimeSpan.Zero) return;
+
+            _stats.PurityPolishRan = true;
+
+            var repacked = LayerRepackSolver.Solve(_best, _pallet, slice, _ct);
+            if (repacked == null) return;
+
+            // Same pallet count only: layer re-packing preserves the count by construction, but guard
+            // it anyway so a purity pass can never be blamed for a count change.
+            int k = (int)Math.Round(_bestObjective);
+            int palletCount = repacked.Sum(c => c.Count);
+            if (palletCount != k) return;
+
+            long candidateImpurity = PurityMetric.TotalImpurity(repacked);
+            if (candidateImpurity >= currentImpurity) return;
+
+            _best = repacked.Where(c => c.Count > 0).ToList();
+            _bestLeftovers = new Dictionary<string, int>(StringComparer.Ordinal);
+            _stats.PurityImproved = true;
+        }
+
+        /// <summary>
+        /// Solution B ("purity-first re-packing"): once the count optimum is settled and polished by
+        /// Solution A, regroups the settled solution's <i>exact</i> layer multiset allowing up to
+        /// ⌈<see cref="PurityAlternativeBudgetFraction"/>·K⌉ extra pallets (at least one), and — when
+        /// that yields a <i>strictly</i> purer arrangement — records it as a separate alternative (see
+        /// <see cref="PurerColumns"/>). The incumbent is never touched, so the certified minimum-pallet
+        /// solution and its proof stand; the purer arrangement is offered alongside for the user to
+        /// pick when they would trade a little efficiency for less SKU mixing.
+        ///
+        /// <para>An extra pallet is spent only when it strictly lowers impurity: the solver's ε
+        /// tie-break already prefers the fewest pallets that reach a given impurity (and none when the
+        /// incumbent count already does), and the strict-improvement guard below discards anything
+        /// that merely matches the incumbent — so an already-good solution (pure pallets, or a pallet
+        /// of pure single-SKU layers) is never inflated with a needless extra pallet.</para>
+        /// </summary>
+        private void TryFindPurerAlternative()
+        {
+            if (_best == null || !AllZero(_bestLeftovers)) return;
+
+            long currentImpurity = PurityMetric.TotalImpurity(_best);
+            if (currentImpurity == 0) return; // already perfectly pure — no extra pallet could help
+
+            int k = (int)Math.Round(_bestObjective);
+            if (k <= 1) return; // a single pallet cannot be regrouped
+
+            var remaining = _timeBudget - _stopwatch.Elapsed;
+            if (remaining <= TimeSpan.Zero) return;
+
+            var slice = TimeSpan.FromMilliseconds(remaining.TotalMilliseconds * PurityPolishTimeFraction);
+            if (slice > PurityPolishMaxTime) slice = PurityPolishMaxTime;
+            if (slice <= TimeSpan.Zero) return;
+
+            // At most ⌈10% of K⌉ extra pallets (always at least one), so the efficiency sacrifice stays
+            // proportional to the job size.
+            int extra = Math.Max(1, (int)Math.Ceiling(PurityAlternativeBudgetFraction * k));
+
+            _stats.PurityAlternativeRan = true;
+
+            var repacked = LayerRepackSolver.Solve(_best, _pallet, slice, _ct, extraPalletBudget: extra);
+            if (repacked == null) return;
+
+            long candidateImpurity = PurityMetric.TotalImpurity(repacked);
+            if (candidateImpurity >= currentImpurity) return; // not strictly purer — offer nothing
+
+            int candidateCount = repacked.Sum(c => c.Count);
+            if (candidateCount <= k)
+            {
+                // A strictly purer regrouping at the *same* pallet count (only reachable when Solution A
+                // was cut short of its optimum): this preserves the count optimum and its proof, so
+                // fold it straight into the incumbent rather than offering a redundant same-count
+                // alternative.
+                _best = repacked.Where(c => c.Count > 0).ToList();
+                _bestLeftovers = new Dictionary<string, int>(StringComparer.Ordinal);
+                _stats.PurityImproved = true;
+                return;
+            }
+
+            _purer = repacked.Where(c => c.Count > 0).ToList();
+            _stats.PurityAlternativeOffered = true;
+            _stats.PurityAlternativePallets = candidateCount;
+            _stats.PurityAlternativeImpurity = candidateImpurity;
+        }
+
         private void FinalizeStats()
         {
             _stats.Completed = _completed;
             _stats.AllCertified = _allCertified;
             _stats.RootBound = RootBound;
             _stats.BestObjective = _best != null ? _bestObjective : double.NaN;
+            _stats.FinalImpurity = _best != null ? PurityMetric.TotalImpurity(_best) : 0;
             _stats.Elapsed = _stopwatch.Elapsed;
         }
 

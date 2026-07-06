@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Realistic Pallet Packing — Warehouse &amp; Logistics Constraints for Stack-Solver</title>
+<style>
+  :root{
+    --bg:#f6f8fb; --surface:#ffffff; --ink:#1e2228; --muted:#66707d;
+    --navy:#172a46; --blue:#2563af; --steel:#465a78; --accent:#c85a28;
+    --green:#227850; --rule:#dbe1ec; --light:#eef2f8; --code:#0f2033;
+    --shadow:0 1px 3px rgba(16,32,56,.08),0 8px 24px rgba(16,32,56,.06);
+    --hard:#b23b2e; --soft:#2563af; --hardsoft:#7a5aa8;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0f151d; --surface:#161e29; --ink:#e6ebf2; --muted:#93a0b1;
+      --navy:#0c1626; --blue:#6ba4e6; --steel:#9fb2cc; --accent:#f0955e;
+      --green:#5cc493; --rule:#26313f; --light:#1b2531; --code:#0a1420;
+      --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+      --hard:#e8887c; --soft:#7fb2ee; --hardsoft:#b79ce0;
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#f6f8fb; --surface:#ffffff; --ink:#1e2228; --muted:#66707d;
+    --navy:#172a46; --blue:#2563af; --steel:#465a78; --accent:#c85a28;
+    --green:#227850; --rule:#dbe1ec; --light:#eef2f8; --code:#0f2033;
+    --hard:#b23b2e; --soft:#2563af; --hardsoft:#7a5aa8;
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f151d; --surface:#161e29; --ink:#e6ebf2; --muted:#93a0b1;
+    --navy:#0c1626; --blue:#6ba4e6; --steel:#9fb2cc; --accent:#f0955e;
+    --green:#5cc493; --rule:#26313f; --light:#1b2531; --code:#0a1420;
+    --hard:#e8887c; --soft:#7fb2ee; --hardsoft:#b79ce0;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:900px; margin:0 auto; padding:0 20px 80px}
+  a{color:var(--blue); text-decoration:none; word-break:break-word}
+  a:hover{text-decoration:underline}
+
+  /* hero */
+  .hero{
+    background:linear-gradient(135deg,var(--navy),#0d1c33);
+    color:#fff; margin:0 -20px 0; padding:56px 20px 40px;
+    border-bottom:3px solid var(--accent);
+  }
+  .hero .inner{max-width:900px; margin:0 auto}
+  .kicker{font-size:12px; letter-spacing:.16em; font-weight:700; color:#9fc0e6; margin:0 0 14px}
+  .hero h1{font-size:clamp(28px,5vw,42px); line-height:1.1; margin:0 0 12px; letter-spacing:-.02em}
+  .hero p.sub{font-size:clamp(15px,2.4vw,19px); color:#c6d6ea; margin:0; max-width:640px}
+  .meta{margin-top:22px; font-size:13px; color:#8fa6c2}
+
+  .lead{font-size:16.5px; color:var(--ink); margin:34px 0 8px}
+  .fit{
+    margin:26px 0 8px; background:var(--light); border:1px solid var(--rule);
+    border-left:4px solid var(--blue); border-radius:10px; padding:16px 20px;
+  }
+  .fit h4{margin:0 0 6px; color:var(--navy); font-size:15px}
+  :root[data-theme="dark"] .fit h4{color:var(--blue)}
+  @media (prefers-color-scheme:dark){.fit h4{color:var(--blue)}}
+  .fit p{margin:0; font-size:14.5px; color:var(--muted)}
+
+  h2.sec{
+    font-size:22px; letter-spacing:-.01em; margin:52px 0 6px; padding-left:14px;
+    border-left:5px solid var(--blue); color:var(--navy);
+  }
+  :root[data-theme="dark"] h2.sec{color:#dbe7f6}
+  @media (prefers-color-scheme:dark){h2.sec{color:#dbe7f6}}
+  h2.sec .n{color:var(--blue); font-variant-numeric:tabular-nums; margin-right:10px}
+  h3.sub{font-size:16.5px; color:var(--blue); margin:26px 0 6px}
+  p{margin:10px 0}
+
+  ul.clean{list-style:none; padding:0; margin:12px 0}
+  ul.clean>li{position:relative; padding:4px 0 4px 22px; margin:2px 0}
+  ul.clean>li::before{content:""; position:absolute; left:2px; top:12px;
+    width:7px; height:7px; border-radius:2px; background:var(--accent)}
+  ul.clean b{color:var(--ink)}
+
+  .card{background:var(--surface); border:1px solid var(--rule); border-radius:12px;
+    box-shadow:var(--shadow); padding:4px 0; margin:14px 0; overflow-x:auto}
+  table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:520px}
+  thead th{background:var(--navy); color:#fff; text-align:left; font-weight:600;
+    padding:10px 12px; font-size:12.5px; letter-spacing:.02em; vertical-align:top}
+  tbody td{padding:9px 12px; border-top:1px solid var(--rule); vertical-align:top}
+  tbody tr:nth-child(even){background:var(--light)}
+  td.c{white-space:nowrap; font-variant-numeric:tabular-nums}
+
+  .tag{display:inline-block; font-size:11px; font-weight:700; letter-spacing:.04em;
+    padding:2px 7px; border-radius:5px; border:1px solid currentColor}
+  .tag.hard{color:var(--hard)} .tag.soft{color:var(--soft)} .tag.both{color:var(--hardsoft)}
+  code.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12.5px;
+    background:var(--light); border:1px solid var(--rule); border-radius:5px; padding:1px 5px}
+
+  .callout{border-radius:12px; padding:16px 18px 16px 20px; margin:22px 0;
+    border:1px solid var(--rule); position:relative}
+  .callout::before{content:""; position:absolute; left:0; top:0; bottom:0; width:5px;
+    border-radius:12px 0 0 12px}
+  .callout h4{margin:0 0 6px; font-size:14px; letter-spacing:.02em}
+  .callout p{margin:0; font-size:14.5px}
+  .callout.green{background:color-mix(in srgb,var(--green) 8%,var(--surface))}
+  .callout.green::before{background:var(--green)} .callout.green h4{color:var(--green)}
+  .callout.blue{background:color-mix(in srgb,var(--blue) 8%,var(--surface))}
+  .callout.blue::before{background:var(--blue)} .callout.blue h4{color:var(--blue)}
+  .callout.accent{background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+  .callout.accent::before{background:var(--accent)} .callout.accent h4{color:var(--accent)}
+
+  .legend{display:flex; gap:16px; flex-wrap:wrap; font-size:13px; color:var(--muted); margin:10px 0 0}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+
+  .srcgrid{display:grid; grid-template-columns:1fr; gap:6px; margin:12px 0}
+  .src{font-size:14px; padding:8px 0; border-bottom:1px solid var(--rule)}
+  .src .t{font-weight:600}
+  .foot{margin-top:34px; font-size:12.5px; color:var(--muted); font-style:italic;
+    border-top:1px solid var(--rule); padding-top:14px}
+
+  @media print{
+    body{background:#fff} .hero{background:var(--navy)!important; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+    .card,.callout{break-inside:avoid} thead th{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="inner">
+    <p class="kicker">STACK-SOLVER · RESEARCH BRIEF</p>
+    <h1>Realistic Pallet Packing</h1>
+    <p class="sub">Warehouse &amp; logistics constraints to make branch-and-price solutions warehouse-ready.</p>
+    <p class="meta">Prepared for the Stack-Solver project · July 4, 2026 · Scope: single- and mixed-SKU palletization for real logistics workflows</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <p class="lead">This brief surveys warehouse and logistics practice for building pallets — both academic
+  literature on the Distributor's Pallet Packing / mixed-case palletization problem and practitioner
+  guidance from 3PLs, palletizer vendors, and packaging engineers. It then derives a concrete set of
+  realism rules and additional constraints for Stack-Solver, and maps each one onto the existing
+  branch-and-price architecture (pricing-subproblem feasibility vs. objective penalties vs. master
+  constraints), with notes on how each interacts with optimality and branching.</p>
+
+  <div class="fit">
+    <h4>Where this fits</h4>
+    <p>Efficiency (pallet-count minimality via branch-and-price) is already covered. The goal now is a
+    controlled pivot toward <b>realism</b>: pallets that a human or robot can pack, wrap, ship, and
+    unpack safely and quickly. Rules already in the model — the 3-SKU-per-pallet cap, stack height /
+    weight limits, SKU overhang modes, and the load-density top-heavy stacking-order rule — are the
+    baseline this brief extends.</p>
+  </div>
+
+  <!-- 1 -->
+  <h2 class="sec"><span class="n">1</span>Executive summary</h2>
+  <p>Across the sources, the same message recurs: a mathematically minimal pallet count is worthless if
+  the resulting pallet cannot be built, wrapped, and unloaded without collapsing, damaging product, or
+  slowing the store down. Real palletization software is judged on stability, damage avoidance, pick/pack
+  ergonomics, and store-friendliness at least as much as on cube utilization. The academic framing agrees:
+  the Distributor's Pallet Packing Problem and mixed-case palletization are 3D bin-packing problems layered
+  with practical side constraints — item support, family grouping, aisle-friendliness, load-bearing,
+  fragility, compressibility, and incompatibility.</p>
+
+  <h3 class="sub">The highest-leverage additions for Stack-Solver</h3>
+  <ul class="clean">
+    <li><b>Layer &amp; pallet purity.</b> Prefer single-SKU pallets, and single-SKU (homogeneous) layers
+    within mixed pallets. This is the single biggest realism win: it makes builds predictable, wrapping
+    tighter, and put-away/pick far faster. Model as a reward, keep the 3-SKU cap as the hard ceiling.</li>
+    <li><b>Weight &amp; crush ordering.</b> Extend the existing load-density rule to per-carton weight and
+    carton crush strength, so heavy/strong cartons sit low and fragile/light cartons ride on top — the
+    universal "heaviest on the bottom" rule.</li>
+    <li><b>Compatibility / segregation matrix.</b> A hard incompatibility relation between SKUs (e.g.
+    chemicals vs. food, raw vs. ready) that forbids co-pallet or co-layer placement.</li>
+    <li><b>Overhang default alignment.</b> Tighten the default toward the retail norm of ≤ ~2.5&nbsp;cm
+    (1&nbsp;in) overhang; many receivers (e.g. Costco) mandate zero overhang.</li>
+    <li><b>Layer completeness &amp; COG centering.</b> Penalize partial top layers and off-center loads to
+    keep a low, centered center of gravity and a wrappable top surface.</li>
+  </ul>
+
+  <div class="callout green">
+    <h4>BOTTOM LINE</h4>
+    <p>None of these should displace the branch-and-price optimality guarantee for pallet count. Encode
+    hard, safety-critical rules as pricing-subproblem feasibility (columns are simply never generated if
+    they violate them); encode soft preferences (purity, centering, layer fill) as tunable objective
+    penalties so the operator can trade a little cube for a lot of build quality.</p>
+  </div>
+
+  <!-- 2 -->
+  <h2 class="sec"><span class="n">2</span>Baseline: constraints already in Stack-Solver</h2>
+  <p>For grounding, the model already enforces the following. The research below is framed as extensions
+  to these, not replacements.</p>
+  <div class="card"><table>
+    <thead><tr><th style="width:22%">Existing rule</th><th style="width:30%">Where</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td>3-SKU cap per pallet</td><td><code class="mono">PricingRules.MaxDistinctSkusPerTemplate = 3</code></td><td>Limits distinct SKUs on one pallet — the core mixed-SKU realism guard.</td></tr>
+      <tr><td>Stack height limit</td><td><code class="mono">Pallet.MaxStackHeight</code> / <code class="mono">AvailHeight</code></td><td>Caps buildable height above the pallet deck.</td></tr>
+      <tr><td>Stack weight limit</td><td><code class="mono">Pallet.MaxStackWeight</code></td><td>Caps total load weight per pallet.</td></tr>
+      <tr><td>SKU overhang rule</td><td><code class="mono">OverhangRule</code> (AbsoluteCm / MinSupportedPercent / Auto)</td><td>Controls how far a box may hang past its support; Auto keeps the box's center of weight over support (tip-safe).</td></tr>
+      <tr><td>Load-density stacking order</td><td><code class="mono">StackingLoadRule</code> + <code class="mono">LoadDensityTolerance</code></td><td>A denser (heavier-per-area) layer may not sit on a lighter one beyond a tolerance — a top-heavy guard.</td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- 3 -->
+  <h2 class="sec"><span class="n">3</span>Research findings</h2>
+
+  <h3 class="sub">3.1 · Weight distribution, center of gravity, and the pyramid principle</h3>
+  <p>Stability comes from a low, centered center of gravity and even weight distribution. The universal
+  rule is heaviest cartons at the bottom and toward the center; each layer supports the next, and mass
+  placed high wants to tip the stack. Practitioners describe two concrete heuristics:</p>
+  <ul class="clean">
+    <li><b>Pyramid principle.</b> Build like a pyramid — broad, heavy, dense base; progressively lighter above. Never invert density.</li>
+    <li><b>Quadrant balance.</b> Mentally divide the pallet into four quadrants and keep their weights approximately equal, so the load does not tilt during forklift turns or sudden stops.</li>
+  </ul>
+
+  <h3 class="sub">3.2 · Stacking pattern: column vs. interlock (a real trade-off)</h3>
+  <p>The choice of pattern is a genuine strength-vs-stability trade-off, and it depends on carton content:</p>
+  <div class="card"><table>
+    <thead><tr><th style="width:20%">Pattern</th><th style="width:30%">Strength</th><th style="width:25%">Stability</th><th>Best for</th></tr></thead>
+    <tbody>
+      <tr><td>Column (aligned)</td><td>Retains ~100% of carton compression strength; corners stack on corners. Boosts box stability 25–30%.</td><td>Lower lateral stability; needs wrap/tie to stop shear.</td><td>Strong, uniform cartons; canned/dense goods; single-SKU columns.</td></tr>
+      <tr><td>Interlock (brick)</td><td>Corner-on-side loading can cut compression strength sharply.</td><td>High lateral stability; layers lock like brickwork.</td><td>Weak/lightweight cartons, mixed-SKU builds, anything prone to sliding.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout blue">
+    <h4>DESIGN IMPLICATION</h4>
+    <p>Pattern choice should be driven by a per-SKU carton crush-strength / content-density attribute, not
+    chosen globally. Column-stack strong dense product; interlock weak or mixed product. Overhang of any
+    kind cuts box strength by 30%+, so it compounds the penalty for weak cartons.</p>
+  </div>
+
+  <h3 class="sub">3.3 · Overhang and footprint</h3>
+  <ul class="clean">
+    <li><b>Keep overhang near zero.</b> Retail/3PL norm is no more than ~1&nbsp;in (2.5&nbsp;cm) on any side; some receivers (Costco) require zero. Overhang past deck boards invites edge crush and cuts compression strength 30%+.</li>
+    <li><b>Mind narrow footprints.</b> Boxes narrower than the deck-board gap can dip between boards and deform; bridge with layer pads/slip-sheets, or avoid tiny footprints on the bottom layer.</li>
+    <li><b>Underhang wastes cube but is safe.</b> Under-sized loads are stable but lose pallet area — a soft efficiency signal, not a safety one.</li>
+  </ul>
+
+  <h3 class="sub">3.4 · Height and weight standards (numbers you can default to)</h3>
+  <div class="card"><table>
+    <thead><tr><th style="width:44%">Metric</th><th style="width:28%">Typical value</th><th>Source/context</th></tr></thead>
+    <tbody>
+      <tr><td>Pallet footprint (NA grocery)</td><td class="c">48 × 40 in GMA standard</td><td>Grocery Mfg Assoc.</td></tr>
+      <tr><td>Static load</td><td class="c">~4,600 lb (~2,090 kg)</td><td>48×40 GMA wood pallet on ground</td></tr>
+      <tr><td>Dynamic / racking load</td><td class="c">~2,500 lb (~1,135 kg)</td><td>Moved by forklift / on racking</td></tr>
+      <tr><td>Max load height (1 LTL position)</td><td class="c">~72 in (~183 cm)</td><td>To stay a single LTL slot</td></tr>
+      <tr><td>Trailer inside height</td><td class="c">~104 in (~264 cm)</td><td>Limits total build + pallet height</td></tr>
+      <tr><td>Overhang</td><td class="c">≤ 1 in (2.5 cm), often 0</td><td>Retail receiving rules</td></tr>
+    </tbody>
+  </table></div>
+  <p>These are defaults, not universals — the practitioner consensus is that height and weight caps are
+  site- and receiver-specific and should be configurable per job. Stack-Solver already exposes
+  height/weight limits; the value here is shipping sensible defaults and validating against them.</p>
+
+  <h3 class="sub">3.5 · Mixed-SKU / "rainbow" pallets: why they are hard</h3>
+  <p>Mixed-case (rainbow) palletizing forces the software to compute, for every unique SKU combination, the
+  placement order, weight distribution, crush risk, and height fit. The vendor consensus that makes builds
+  tractable and store-friendly:</p>
+  <ul class="clean">
+    <li><b>Pre-sequence by business rules.</b> Order SKUs by velocity, size, and product family before placement, so like goes with like.</li>
+    <li><b>Build in clean layers.</b> Layers are the unit practitioners actually build and that carry the practical constraints (support, family grouping, aisle-friendliness, load-bearing). Partial/ragged layers are the enemy of stability and speed.</li>
+    <li><b>Guided 2D build steps.</b> Robotic and semi-automated layer-pick systems execute a precomputed, position-by-position sequence — the plan must be expressible as an ordered build, not just a final arrangement.</li>
+  </ul>
+
+  <h3 class="sub">3.6 · Family grouping, compatibility, and fragility</h3>
+  <ul class="clean">
+    <li><b>Product families together.</b> Grouping a family on the same pallet/layer improves put-away and picking and is a standard packing rule.</li>
+    <li><b>Hard incompatibilities.</b> Segregation rules forbid co-location: chemicals vs. food, allergens, raw vs. ready-to-eat, dangerous-goods classes, temperature zones. In regulated (pharma/food) logistics these are non-negotiable.</li>
+    <li><b>Fragility class.</b> Store-friendly sequences put heavy/robust items low and fragile items on top, and cap the load allowed to bear on a fragile carton.</li>
+  </ul>
+
+  <h3 class="sub">3.7 · Store- / aisle-friendliness and delivery sequencing</h3>
+  <p>Beyond a single stable pallet, real workflows care about the order goods come off it:</p>
+  <ul class="clean">
+    <li><b>Aisle-friendly grouping.</b> Group SKUs that live in the same store aisle / warehouse zone so a pallet unloads in walk order — a recognized practical constraint in the palletization literature.</li>
+    <li><b>Reverse drop sequence (multi-drop).</b> For multi-stop routes, cases are loaded in reverse delivery order so the first stop's goods come off first; combine with FEFO (first-expired-first-out) for perishables.</li>
+    <li><b>LIFO/FIFO awareness.</b> Rack/flow type (drive-in = LIFO, flow rack = FIFO) affects the desired build order at the destination.</li>
+  </ul>
+
+  <h3 class="sub">3.8 · The academic constraint taxonomy</h3>
+  <p>The literature on the Distributor's Pallet Packing Problem and mixed-case palletization (3D bin packing
+  with practical constraints) repeatedly enumerates this constraint set, a useful checklist for what
+  "realistic" means formally:</p>
+  <ul class="clean">
+    <li>Orthogonal placement and allowed item rotations</li>
+    <li>Static stability / support — each item adequately supported from below</li>
+    <li>Load-bearing / weight limits — crush and compressibility of lower items</li>
+    <li>Fragility — fragile items not overloaded</li>
+    <li>Family grouping and aisle-friendliness</li>
+    <li>Incompatibility — certain items must not share a pallet/layer</li>
+    <li>Layer-buildability — packings decomposable into buildable layers</li>
+  </ul>
+
+  <!-- 4 -->
+  <h2 class="sec"><span class="n">4</span>Derived rules &amp; proposed constraints</h2>
+  <p>Each rule below is classified as <span class="tag hard">HARD</span> (encode as pricing-subproblem
+  feasibility — the pricer must never emit a column that violates it, keeping generated pallets always
+  valid) or <span class="tag soft">SOFT</span> (encode as a tunable objective term / reduced-cost
+  adjustment so the operator trades cube for build quality). This mapping matters: hard rules that only
+  shrink the feasible column set preserve the branch-and-price optimality argument for pallet count,
+  whereas soft rules change what "best" means and can interact with branching — see the note below.</p>
+  <div class="legend">
+    <span><span class="tag hard">HARD</span> pricer feasibility</span>
+    <span><span class="tag soft">SOFT</span> objective term</span>
+    <span><span class="tag both">BOTH</span> mixed</span>
+  </div>
+  <div class="card"><table>
+    <thead><tr><th style="width:5%">#</th><th style="width:23%">Proposed rule</th><th style="width:9%">Type</th><th style="width:30%">Rationale</th><th>Where to encode</th></tr></thead>
+    <tbody>
+      <tr><td class="c">R1</td><td>Single-SKU pallet preference</td><td><span class="tag soft">SOFT</span></td><td>Homogeneous pallets are fastest to build, wrap, put away, and pick; keep 3-SKU cap as the ceiling.</td><td>Reduced-cost bonus for pure columns in the pricer; or a small per-distinct-SKU penalty in the master objective.</td></tr>
+      <tr><td class="c">R2</td><td>Homogeneous (single-SKU) layer preference</td><td><span class="tag soft">SOFT</span></td><td>Even on mixed pallets, pure layers are cleanly buildable and aisle-friendly.</td><td>Penalize mixed layers when scoring candidate layers in <code class="mono">LayerGenerator</code> / the pricer.</td></tr>
+      <tr><td class="c">R3</td><td>Per-carton heavy-on-bottom ordering</td><td><span class="tag hard">HARD</span></td><td>Extends the load-density rule from layer density to actual carton weight so heavy cartons never ride on light ones.</td><td>Add to <code class="mono">PricingRules.TransitionValid</code> alongside the existing density check.</td></tr>
+      <tr><td class="c">R4</td><td>Crush-strength / fragility aware stacking</td><td><span class="tag hard">HARD</span></td><td>Cap the load a lower carton/SKU may bear; fragile SKUs only near the top.</td><td>New per-SKU CrushStrength/Fragility attribute; feasibility test on cumulative load above each layer.</td></tr>
+      <tr><td class="c">R5</td><td>SKU incompatibility / segregation matrix</td><td><span class="tag hard">HARD</span></td><td>Chemicals vs. food, allergens, temp zones must not co-locate.</td><td>Symmetric incompatibility set; reject any template/layer mixing an incompatible pair (like the 3-SKU cap).</td></tr>
+      <tr><td class="c">R6</td><td>Pattern selection by carton class</td><td><span class="tag both">BOTH</span></td><td>Column-stack strong dense cartons; interlock weak/mixed — real strength trade-off.</td><td>Drive <code class="mono">PalletTemplateEnumerator</code> pattern from the crush attribute; forbid column-stacking weak cartons (hard) but prefer it otherwise (soft).</td></tr>
+      <tr><td class="c">R7</td><td>Tighten overhang default</td><td><span class="tag hard">HARD</span></td><td>Retail norm ≤ 1 in; overhang cuts box strength 30%+.</td><td>Ship <code class="mono">OverhangRule</code> default at ≤ 2.5 cm (or Auto); validate user input against it.</td></tr>
+      <tr><td class="c">R8</td><td>Layer completeness / min fill</td><td><span class="tag soft">SOFT</span></td><td>Partial/ragged (esp. top) layers are unstable and un-wrappable.</td><td>Penalize low area-fill layers and partial top layers in layer scoring.</td></tr>
+      <tr><td class="c">R9</td><td>Center-of-gravity centering &amp; quadrant balance</td><td><span class="tag soft">SOFT</span></td><td>Low, centered COG resists tipping in transit.</td><td>Objective term on horizontal COG offset and inter-quadrant weight imbalance per materialized pallet.</td></tr>
+      <tr><td class="c">R10</td><td>Height cap as single LTL / trailer fit</td><td><span class="tag hard">HARD</span></td><td>Keep pallets within a shipping slot.</td><td>Already have <code class="mono">MaxStackHeight</code>; add validated presets (183 cm LTL, 264 cm trailer) and warn on breach.</td></tr>
+      <tr><td class="c">R11</td><td>Family grouping / aisle affinity</td><td><span class="tag soft">SOFT</span></td><td>Same-family/same-aisle SKUs on a pallet speed put-away and pick.</td><td>Per-SKU family/zone tag; reward co-pallet placement of same-tag SKUs in the pricer.</td></tr>
+      <tr><td class="c">R12</td><td>Buildable ordered plan (layer decomposability)</td><td><span class="tag hard">HARD</span></td><td>Robotic/manual layer-pick needs a position-by-position build order, not just a final arrangement.</td><td>Already layer-structured; ensure each pallet emits a bottom-up ordered build sequence in the result/visualizer.</td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- 5 -->
+  <h2 class="sec"><span class="n">5</span>Prioritized recommendations</h2>
+  <h3 class="sub">Phase 1 — highest leverage, lowest model risk</h3>
+  <ul class="clean">
+    <li><b>Layer &amp; pallet purity (R1, R2).</b> Add tunable purity rewards. Biggest realism gain, and as soft objective terms they leave the feasible set — and the pallet-count bound — intact.</li>
+    <li><b>Overhang default + height/weight presets (R7, R10).</b> Pure defaults/validation work; no solver change, immediate real-world credibility.</li>
+    <li><b>Per-carton heavy-on-bottom (R3).</b> Small, safe extension of an existing feasibility check.</li>
+  </ul>
+  <h3 class="sub">Phase 2 — new per-SKU attributes</h3>
+  <ul class="clean">
+    <li><b>Crush strength &amp; fragility (R4, R6).</b> Introduce a per-SKU crush/fragility field, then the load-bearing feasibility test and pattern selection follow.</li>
+    <li><b>Incompatibility matrix (R5).</b> Add the SKU-pair segregation relation and enforce it in the pricer exactly like the 3-SKU cap.</li>
+  </ul>
+  <h3 class="sub">Phase 3 — transit quality &amp; workflow</h3>
+  <ul class="clean">
+    <li><b>COG / quadrant balance and layer fill (R8, R9).</b> Objective refinements once the purity terms are stable.</li>
+    <li><b>Family/aisle affinity and ordered build plan (R11, R12).</b> Store-friendliness; pairs well with the job manager and pallet-builder views.</li>
+  </ul>
+
+  <div class="callout accent">
+    <h4>OPTIMALITY &amp; BRANCHING NOTE</h4>
+    <p>Hard rules that only remove columns (R3–R5, R7, R10, R12) keep pallets valid and do not weaken the
+    pallet-count optimality argument — they shrink the feasible region cleanly. Soft objective terms (R1,
+    R2, R6, R8, R9, R11) change the objective, so they should be behind explicit weights and, ideally,
+    applied as tie-breakers among minimal-pallet-count solutions rather than as primary objective. Given
+    the known column-variable branching timeout issue, prefer expressing preferences as pricer
+    reduced-cost bonuses (which keep the master LP structure) over adding master-level constraints that
+    would demand new branching rules.</p>
+  </div>
+
+  <!-- 6 -->
+  <h2 class="sec"><span class="n">6</span>Sources</h2>
+  <h3 class="sub">Academic / peer-reviewed</h3>
+  <div class="srcgrid">
+    <div class="src"><span class="t">Three-Dimensional Bin Packing and Mixed-Case Palletization</span> — INFORMS Journal on Optimization (2019). <a href="https://pubsonline.informs.org/doi/10.1287/ijoo.2019.0013">pubsonline.informs.org</a></div>
+    <div class="src"><span class="t">The Pallet Loading Problem: 3D bin packing with practical constraints</span> — European Journal of Operational Research. <a href="https://www.sciencedirect.com/science/article/abs/pii/S0377221720304069">sciencedirect.com</a></div>
+    <div class="src"><span class="t">Manufacturer's mixed pallet design problem</span> — European Journal of Operational Research. <a href="https://www.sciencedirect.com/science/article/abs/pii/S0377221707002147">sciencedirect.com</a></div>
+    <div class="src"><span class="t">A data-driven approach for mixed-case palletization with support</span> — Optimization and Engineering, Springer (2021). <a href="https://link.springer.com/article/10.1007/s11081-021-09673-5">link.springer.com</a></div>
+    <div class="src"><span class="t">Stable Stacking for the Distributor's Pallet Packing Problem</span> — Schuster et al., IEEE/RSJ IROS 2010. <a href="http://vigir.missouri.edu/~gdesouza/Research/Conference_CDs/IEEE_IROS_2010/data/papers/0645.pdf">vigir.missouri.edu (PDF)</a></div>
+    <div class="src"><span class="t">Solving a Real-Life Distributor's Pallet Loading Problem</span> — MDPI Math. &amp; Comp. Applications 26(3):53 (2021). <a href="https://www.mdpi.com/2297-8747/26/3/53">mdpi.com</a></div>
+    <div class="src"><span class="t">Pallet Distribution Affecting a Machine's Utilization Level and Picking Time</span> — MDPI Mathematics 11(13):2956. <a href="https://www.mdpi.com/2227-7390/11/13/2956">mdpi.com</a></div>
+  </div>
+
+  <h3 class="sub">Industry / practitioner</h3>
+  <div class="srcgrid">
+    <div class="src"><span class="t">Exotec</span> — Cracking the Case: Overcoming the Complexities of Mixed-SKU Pallet Building. <a href="https://www.exotec.com/insights/cracking-the-case-overcoming-the-complexities-of-mixed-sku-pallet-building/">exotec.com</a></div>
+    <div class="src"><span class="t">Cleverence</span> — Pallet Building 101: Stack Loads for Maximum Stability and Space. <a href="https://www.cleverence.com/articles/3pl-business/pallet-building-stable-space-optimized-loads-4821/">cleverence.com</a></div>
+    <div class="src"><span class="t">Optioryx</span> — Mixed Palletization: Types, Technologies, and When to Switch. <a href="https://www.optioryx.com/blog/mixed-palletization-types-technologies-and-when-to-go-from-manual-to-automated">optioryx.com</a></div>
+    <div class="src"><span class="t">Optioryx</span> — Mixed Palletizing in Pick and Pack Operations. <a href="https://www.optioryx.com/blog/mixed-palletizing-in-pick-and-pack-operations">optioryx.com</a></div>
+    <div class="src"><span class="t">Standard Bots</span> — Pallet stacking patterns every warehouse should know (2026). <a href="https://standardbots.com/blog/the-5-pallet-stacking-patterns-you-need-to-know">standardbots.com</a></div>
+    <div class="src"><span class="t">Packaging World</span> — Reducing the occurrence of collapsing pallet loads (Part II). <a href="https://www.packworld.com/home/article/13372817/reducing-the-occurrence-of-collapsing-pallet-loads-part-ii">packworld.com</a></div>
+    <div class="src"><span class="t">WebstaurantStore</span> — How to Properly Stack Pallets: Patterns &amp; Diagrams. <a href="https://www.webstaurantstore.com/article/716/pallet-stacking-patterns.html">webstaurantstore.com</a></div>
+    <div class="src"><span class="t">iGPS</span> — How to Ensure Pallet Load Stability. <a href="https://igps.net/how-to-ensure-pallet-load-stability/">igps.net</a></div>
+    <div class="src"><span class="t">Mallard Mfg</span> — Mixed-SKU Pallet Building: Insider Tips for Semi-Automated Layer Picking. <a href="https://mallardmfg.com/mixed-sku-pallet-building-insider-tips-for-semi-automated-layer-picking/">mallardmfg.com</a></div>
+    <div class="src"><span class="t">KPI Solutions</span> — How Mixed-Case Palletizing Can Revolutionize Beverage Distribution. <a href="https://kpisolutions.com/resources/how-mixed-case-palletizing-can-revolutionize-beverage-distribution/">kpisolutions.com</a></div>
+    <div class="src"><span class="t">Warp</span> — Standard Pallet Sizes Chart: 48×40 GMA + others (2026). <a href="https://www.wearewarp.com/standard-pallet-sizes">wearewarp.com</a></div>
+    <div class="src"><span class="t">Gruber</span> — Pallet Weight Limits Explained: How Much Can a Pallet Hold? <a href="https://gruberpallets.com/blogs/news/pallet-weight-limits-explained">gruberpallets.com</a></div>
+    <div class="src"><span class="t">Kamps Pallets</span> — GMA Pallet Guidelines for Food-Industry Pallets. <a href="https://www.kampspallets.com/gma-pallet-guidelines/">kampspallets.com</a></div>
+    <div class="src"><span class="t">SCDigest (Holste)</span> — Mixed SKU Pallet Loads Speed Product Restocking at the Store. <a href="https://www.scdigest.com/experts/Holste_14-07-09.php">scdigest.com</a></div>
+    <div class="src"><span class="t">Softguide</span> — What is Mixed Pallet Management? <a href="https://www.softguide.com/function/mixed-pallet-management">softguide.com</a></div>
+  </div>
+
+  <p class="foot">URLs were live at the time of research (July 2026). Numeric standards (GMA load ratings,
+  trailer/LTL heights, overhang tolerances) are industry-typical defaults and should be confirmed against
+  the specific pallet spec, carrier, and receiver rules for each deployment.</p>
+
+</div>
+</body>
+</html>

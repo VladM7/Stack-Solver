@@ -126,9 +126,21 @@ namespace Stack_Solver.Services.BranchAndPrice
             foreach (var (sku, count) in UnplaceableLeftovers(demand, seed.UnplaceableSkus))
                 leftovers[sku] = count;
 
+            // Solution B (optional): a strictly purer regrouping that spends a few extra pallets. It
+            // covers exactly the same demand, so it never carries leftovers of its own; materialize it
+            // the same way and offer it alongside the certified optimum.
+            AssignmentResult? purer = null;
+            if (search.PurerColumns is { Count: > 0 } purerColumns)
+            {
+                var purerAssignments = purerColumns
+                    .Select(c => (Materialize(c.Column.Template, pallet), c.Count))
+                    .ToList();
+                purer = new AssignmentResult { Assignments = purerAssignments, Leftovers = leftovers };
+            }
+
             return new BranchAndPriceSolution(
                 new AssignmentResult { Assignments = assignments, Leftovers = leftovers }, bound, search.ProvedOptimal,
-                search.Stats);
+                search.Stats, purer);
         }
 
         /// <summary>Runs root-node column generation and returns the LP optimum and final pool.</summary>
@@ -309,14 +321,19 @@ namespace Stack_Solver.Services.BranchAndPrice
         IReadOnlyList<string> PlaceableSkus,
         IReadOnlyList<string> UnplaceableSkus);
 
-    /// <param name="Result">The integer pallet assignment.</param>
+    /// <param name="Result">The integer pallet assignment (the certified minimum-pallet solution).</param>
     /// <param name="LowerBound">LP lower bound on the pallet count for the modeled (placeable) demand.</param>
     /// <param name="LowerBoundCertified">True when <paramref name="LowerBound"/> is the proven LP optimum.</param>
+    /// <param name="Stats">Diagnostic counters for the solve, or null.</param>
+    /// <param name="PurerAlternative">A strictly-purer, zero-leftover assignment that spends a few
+    /// extra pallets to reduce SKU mixing (Solution B), or null when none improves on
+    /// <paramref name="Result"/>. Offered alongside — never the certified optimum.</param>
     public sealed record BranchAndPriceSolution(
         AssignmentResult Result,
         double LowerBound,
         bool LowerBoundCertified,
-        BranchAndPriceStats? Stats = null)
+        BranchAndPriceStats? Stats = null,
+        AssignmentResult? PurerAlternative = null)
     {
         /// <summary>Pallets used by the integer solution.</summary>
         public int Pallets => Result.TotalPallets;

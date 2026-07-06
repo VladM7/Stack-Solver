@@ -548,8 +548,17 @@ namespace Stack_Solver.ViewModels.Pages
 
             var result = new List<SolutionDisplay>();
             if (bnp != null && bnp.Result.Assignments.Count > 0)
+            {
                 result.Add(new SolutionDisplay(result.Count + 1, "Branch & Price", bnp.Result, skus, _palletLength, _palletWidth, _palletHeight,
                     isProvenOptimal: bnp.LowerBoundCertified, lowerBound: bnp.LowerBound));
+
+                // Solution B: a strictly purer regrouping that trades a few extra pallets for less SKU
+                // mixing. Only present when it beats the optimum on purity; offered as a separate,
+                // user-selectable solution (never the certified minimum, so it is not marked optimal).
+                if (bnp.PurerAlternative is { Assignments.Count: > 0 } purer)
+                    result.Add(new SolutionDisplay(result.Count + 1, "Branch & Price (purer)", purer, skus, _palletLength, _palletWidth, _palletHeight,
+                        isProvenOptimal: false, lowerBound: bnp.LowerBound));
+            }
             if (cpsatResult != null && cpsatResult.Assignments.Count > 0)
                 result.Add(new SolutionDisplay(result.Count + 1, "CP-SAT", cpsatResult, skus, _palletLength, _palletWidth, _palletHeight));
             // Greedy always runs above as the warm-start seed for CP-SAT and B&P; it is only

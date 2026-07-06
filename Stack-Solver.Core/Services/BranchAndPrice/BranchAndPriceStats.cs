@@ -48,6 +48,27 @@ namespace Stack_Solver.Services.BranchAndPrice
         /// <summary>Pallet count of the restricted-master IP's assignment (NaN if it produced none).</summary>
         public double RestrictedMasterIpObjective { get; set; } = double.NaN;
 
+        /// <summary>True when the Solution-A purity re-selection pass ran.</summary>
+        public bool PurityPolishRan { get; set; }
+
+        /// <summary>True when the purity re-selection pass adopted a purer same-count assignment.</summary>
+        public bool PurityImproved { get; set; }
+
+        /// <summary>True when the Solution-B purity-first re-packing pass ran (extra-pallet budget).</summary>
+        public bool PurityAlternativeRan { get; set; }
+
+        /// <summary>True when Solution B found a strictly purer regrouping worth offering alongside the optimum.</summary>
+        public bool PurityAlternativeOffered { get; set; }
+
+        /// <summary>Pallet count of the Solution-B alternative (0 when none was offered).</summary>
+        public int PurityAlternativePallets { get; set; }
+
+        /// <summary>Total impurity of the Solution-B alternative (0 when none was offered).</summary>
+        public long PurityAlternativeImpurity { get; set; }
+
+        /// <summary>Total impurity (see <see cref="PurityMetric"/>) of the returned incumbent.</summary>
+        public long FinalImpurity { get; set; }
+
         /// <summary>True when the search exhausted the tree within budget.</summary>
         public bool Completed { get; set; }
 
@@ -75,6 +96,9 @@ namespace Stack_Solver.Services.BranchAndPrice
             $"completed={(Completed ? "Y" : "N")} " +
             $"allCertified={(AllCertified ? "Y" : "N")} " +
             $"rootBound={(double.IsInfinity(RootBound) ? "inf" : RootBound.ToString("0.##"))} " +
-            $"best={BestObjective:0.##}";
+            $"best={BestObjective:0.##} " +
+            $"purityPolish={(PurityPolishRan ? (PurityImproved ? "improved" : "kept") : "off")} " +
+            $"finalImpurity={FinalImpurity} " +
+            $"purityAlt={(PurityAlternativeRan ? (PurityAlternativeOffered ? $"offered(p={PurityAlternativePallets},imp={PurityAlternativeImpurity})" : "none") : "off")}";
     }
 }
