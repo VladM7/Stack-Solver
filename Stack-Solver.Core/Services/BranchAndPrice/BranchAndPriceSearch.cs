@@ -74,6 +74,11 @@ namespace Stack_Solver.Services.BranchAndPrice
         // proven optimum. Null unless one was found; offered alongside _best, never replacing it.
         private List<(BnpColumn Column, int Count)>? _purer;
 
+        // Level 2: a strictly-purer, zero-leftover arrangement whose layers were reformed pure at the
+        // box level (see LayerReformationSolver). Null unless one was found; offered alongside _best and
+        // independently of _purer, never replacing the optimum.
+        private List<(BnpColumn Column, int Count)>? _reformed;
+
         public BranchAndPriceSearch(
             IReadOnlyList<Layer> layers,
             IReadOnlyList<string> placeableSkus,
@@ -124,6 +129,14 @@ namespace Stack_Solver.Services.BranchAndPrice
         /// alongside <see cref="OptimalColumns"/>; it is never the certified minimum-pallet solution.
         /// </summary>
         public IReadOnlyList<(BnpColumn Column, int Count)>? PurerColumns => _purer;
+
+        /// <summary>
+        /// A strictly-purer, zero-leftover <i>reformed</i> arrangement (Level 2: layers rebuilt pure at
+        /// the box level, see <see cref="LayerReformationSolver"/>), or null when none improves on the
+        /// count-optimal incumbent. Offered alongside <see cref="OptimalColumns"/> and independently of
+        /// <see cref="PurerColumns"/>; never the certified minimum-pallet solution.
+        /// </summary>
+        public IReadOnlyList<(BnpColumn Column, int Count)>? ReformedColumns => _reformed;
 
         /// <summary>Leftover (unmet) units per SKU in the returned solution.</summary>
         public IReadOnlyDictionary<string, int> OptimalLeftovers => _bestLeftovers;
@@ -204,6 +217,11 @@ namespace Stack_Solver.Services.BranchAndPrice
             // regrouping that is willing to spend a few extra pallets. Recorded separately (never
             // replacing the incumbent) and surfaced as an alternative for the user to choose.
             TryFindPurerAlternative();
+
+            // Level 2: reform the layers pure at the box level and repack. Solves the case Level 1
+            // structurally cannot — a minority SKU riding inside every layer. Recorded separately from
+            // both the incumbent and the Solution-B alternative, and surfaced independently.
+            TryFindReformedAlternative();
 
             FinalizeStats();
         }
@@ -375,6 +393,87 @@ namespace Stack_Solver.Services.BranchAndPrice
             _stats.PurityAlternativeOffered = true;
             _stats.PurityAlternativePallets = candidateCount;
             _stats.PurityAlternativeImpurity = candidateImpurity;
+        }
+
+        /// <summary>
+        /// Level 2 ("layer reformation"): rebuilds the settled solution's boxes into <i>pure</i>
+        /// single-SKU layers and repacks them (see <see cref="LayerReformationSolver"/>), spending up to
+        /// ⌈<see cref="PurityAlternativeBudgetFraction"/>·K⌉ extra pallets. Unlike Level 1 this can drive
+        /// the per-layer impurity term to zero — the fix for a minority SKU riding inside every layer —
+        /// so it reaches arrangements no whole-layer move can. When the result is <i>strictly</i> purer
+        /// than the incumbent it is recorded as a separate alternative (see <see cref="ReformedColumns"/>).
+        ///
+        /// <para>The incumbent is never mutated: even a reform that reaches the optimal pallet count is a
+        /// physically distinct build (pure layers, re-picked boxes) rather than a mere regrouping, so —
+        /// per the "offer alongside" surfacing — it is presented for the user to choose rather than
+        /// silently folded into the optimum (contrast the same-count branch of
+        /// <see cref="TryFindPurerAlternative"/>, where the layers are identical and folding adds no
+        /// information). It is dropped only when it is indistinguishable from the Solution-B alternative,
+        /// to avoid offering the same arrangement twice.</para>
+        /// </summary>
+        private void TryFindReformedAlternative()
+        {
+            if (_best == null || !AllZero(_bestLeftovers)) return;
+
+            long currentImpurity = PurityMetric.TotalImpurity(_best);
+            if (currentImpurity == 0) return; // already perfectly pure — reformation cannot help
+
+            int k = (int)Math.Round(_bestObjective);
+            if (k <= 1) return; // a single pallet cannot be repacked
+
+            var remaining = _timeBudget - _stopwatch.Elapsed;
+            if (remaining <= TimeSpan.Zero) return;
+
+            var slice = TimeSpan.FromMilliseconds(remaining.TotalMilliseconds * PurityPolishTimeFraction);
+            if (slice > PurityPolishMaxTime) slice = PurityPolishMaxTime;
+            if (slice <= TimeSpan.Zero) return;
+
+            // Same ⌈10% of K⌉ (at least one) extra-pallet budget as the Solution-B alternative.
+            int extra = Math.Max(1, (int)Math.Ceiling(PurityAlternativeBudgetFraction * k));
+
+            _stats.ReformationRan = true;
+
+            var reformed = LayerReformationSolver.Solve(_best, _pallet, slice, _ct, extraPalletBudget: extra);
+            if (reformed == null) return;
+
+            long candidateImpurity = PurityMetric.TotalImpurity(reformed);
+            if (candidateImpurity >= currentImpurity) return; // not strictly purer — offer nothing
+
+            var cleaned = reformed.Where(c => c.Count > 0).ToList();
+
+            // Skip when it matches the Solution-B alternative both in per-pallet SKU makeup and impurity
+            // (they would render as the same solution); otherwise it is a genuinely distinct arrangement.
+            if (_purer != null
+                && PurityMetric.TotalImpurity(_purer) == candidateImpurity
+                && SameArrangement(cleaned, _purer))
+                return;
+
+            _reformed = cleaned;
+            _stats.ReformationOffered = true;
+            _stats.ReformationPallets = cleaned.Sum(c => c.Count);
+            _stats.ReformationImpurity = candidateImpurity;
+        }
+
+        /// <summary>True when two assignments use the same multiset of pallet columns (by SKU-count
+        /// signature) — i.e. the same pallets in the same quantities.</summary>
+        private static bool SameArrangement(
+            IReadOnlyList<(BnpColumn Column, int Count)> a,
+            IReadOnlyList<(BnpColumn Column, int Count)> b)
+        {
+            static Dictionary<string, int> Signatures(IReadOnlyList<(BnpColumn Column, int Count)> x)
+            {
+                var d = new Dictionary<string, int>(StringComparer.Ordinal);
+                foreach (var (col, count) in x)
+                    if (count > 0) d[col.Signature] = d.GetValueOrDefault(col.Signature) + count;
+                return d;
+            }
+
+            var da = Signatures(a);
+            var db = Signatures(b);
+            if (da.Count != db.Count) return false;
+            foreach (var (sig, count) in da)
+                if (!db.TryGetValue(sig, out int other) || other != count) return false;
+            return true;
         }
 
         private void FinalizeStats()

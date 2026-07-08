@@ -66,6 +66,18 @@ namespace Stack_Solver.Services.BranchAndPrice
         /// <summary>Total impurity of the Solution-B alternative (0 when none was offered).</summary>
         public long PurityAlternativeImpurity { get; set; }
 
+        /// <summary>True when the Level-2 layer-reformation pass ran (box-level pure-layer rebuild).</summary>
+        public bool ReformationRan { get; set; }
+
+        /// <summary>True when reformation found a strictly purer arrangement worth offering alongside the optimum.</summary>
+        public bool ReformationOffered { get; set; }
+
+        /// <summary>Pallet count of the reformed alternative (0 when none was offered).</summary>
+        public int ReformationPallets { get; set; }
+
+        /// <summary>Total impurity of the reformed alternative (0 when none was offered).</summary>
+        public long ReformationImpurity { get; set; }
+
         /// <summary>Total impurity (see <see cref="PurityMetric"/>) of the returned incumbent.</summary>
         public long FinalImpurity { get; set; }
 
@@ -99,6 +111,7 @@ namespace Stack_Solver.Services.BranchAndPrice
             $"best={BestObjective:0.##} " +
             $"purityPolish={(PurityPolishRan ? (PurityImproved ? "improved" : "kept") : "off")} " +
             $"finalImpurity={FinalImpurity} " +
-            $"purityAlt={(PurityAlternativeRan ? (PurityAlternativeOffered ? $"offered(p={PurityAlternativePallets},imp={PurityAlternativeImpurity})" : "none") : "off")}";
+            $"purityAlt={(PurityAlternativeRan ? (PurityAlternativeOffered ? $"offered(p={PurityAlternativePallets},imp={PurityAlternativeImpurity})" : "none") : "off")} " +
+            $"reform={(ReformationRan ? (ReformationOffered ? $"offered(p={ReformationPallets},imp={ReformationImpurity})" : "none") : "off")}";
     }
 }

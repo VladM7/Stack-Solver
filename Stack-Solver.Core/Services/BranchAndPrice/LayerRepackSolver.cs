@@ -34,24 +34,27 @@ namespace Stack_Solver.Services.BranchAndPrice
     /// extra pallet is always preferred). The caller keeps the count-optimal solution and offers this
     /// as a separate, purer alternative only when it is strictly purer.</para>
     ///
-    /// <para><b>Model.</b> An assignment IP places each layer on one of the pallet slots subject to
-    /// the additive per-pallet limits (stack height, stack weight, the 3-distinct-SKU cap) and
-    /// minimizes Σ_slots(distinctSkus − slotUsed). The additive limits are necessary but not
-    /// sufficient for a pallet to be physically stackable (inter-layer support and the top-heavy
-    /// load-density order depend on layer <i>ordering</i>, which an assignment model cannot see), so
-    /// each proposed pallet is validated by searching for a valid bottom-up stacking order; an
-    /// unstackable group is excluded by a no-good cut and the IP re-solved (a bounded branch-and-check
-    /// loop). The incumbent grouping is always feasible for the model, so the returned regrouping
-    /// never has higher impurity than the input — the caller adopts it only when it is strictly
-    /// lower.</para>
+    /// <para><b>Model.</b> The layer→pallet assignment IP and per-pallet stackability validation live
+    /// in <see cref="PackLayers"/>, which is shared with the Level-2 reformation mechanism (see
+    /// <see cref="LayerReformationSolver"/>): both hand it a layer multiset and a pallet-slot budget;
+    /// only the layers differ (Level 1 keeps the settled layers, Level 2 substitutes freshly-formed
+    /// pure ones). An assignment IP places each layer on one of the pallet slots subject to the
+    /// additive per-pallet limits (stack height, stack weight, the 3-distinct-SKU cap) and minimizes
+    /// Σ_slots(distinctSkus − slotUsed). The additive limits are necessary but not sufficient for a
+    /// pallet to be physically stackable (inter-layer support and the top-heavy load-density order
+    /// depend on layer <i>ordering</i>, which an assignment model cannot see), so each proposed pallet
+    /// is validated by searching for a valid bottom-up stacking order; an unstackable group is excluded
+    /// by a no-good cut and the IP re-solved (a bounded branch-and-check loop). The incumbent grouping
+    /// is always feasible for the model, so the returned regrouping never has higher impurity than the
+    /// input — the caller adopts it only when it is strictly lower.</para>
     /// </summary>
     public static class LayerRepackSolver
     {
         // Keep the polish cheap: skip instances whose assignment matrix (layers × slots) is large,
         // cap the per-pallet stacking-order search, and bound the no-good cut loop.
-        private const long MaxAssignmentCells = 6000;
-        private const int MaxStackOrderLayers = 14;
-        private const int MaxCutIterations = 64;
+        internal const long MaxAssignmentCells = 6000;
+        internal const int MaxStackOrderLayers = 14;
+        internal const int MaxCutIterations = 64;
 
         /// <summary>
         /// Regroups <paramref name="current"/>'s layers to minimize the per-pallet impurity term
@@ -86,13 +89,36 @@ namespace Stack_Solver.Services.BranchAndPrice
                     layers.AddRange(col.Template.Layers);
             }
 
-            int layerCount = layers.Count;
-            if (k <= 1 || layerCount <= 1) return null;           // a single pallet cannot be regrouped
+            if (k <= 1 || layers.Count <= 1) return null;         // a single pallet cannot be regrouped
 
             // Available pallet slots: the incumbent count plus the purity-first budget. Extra slots may
-            // be left empty; the ε tie-break below prefers using as few as achieve the best impurity.
+            // be left empty; the ε tie-break inside PackLayers prefers the fewest that achieve the best
+            // impurity.
             int extra = Math.Max(0, extraPalletBudget);
             int slots = k + extra;
+            return PackLayers(layers, pallet, slots, preferFewerPallets: extra > 0, timeLimit, ct);
+        }
+
+        /// <summary>
+        /// Shared layer→pallet packing core: assigns the <paramref name="layers"/> multiset onto up to
+        /// <paramref name="slots"/> pallet slots minimizing the per-pallet impurity term, validates each
+        /// proposed pallet for physical stackability, and returns one <c>(column, 1)</c> entry per
+        /// non-empty pallet. When <paramref name="preferFewerPallets"/> is true a tiny ε tie-break makes
+        /// the objective lexicographic (impurity first, then pallet count) so surplus slots are used only
+        /// when they strictly cut impurity. Returns null when no MIP backend is available, the instance
+        /// exceeds the size caps, the time budget is exhausted, or no fully-stackable grouping is found.
+        /// Used by both Level 1 (<see cref="Solve"/>) and Level 2 (<see cref="LayerReformationSolver"/>).
+        /// </summary>
+        internal static IReadOnlyList<(BnpColumn Column, int Count)>? PackLayers(
+            IReadOnlyList<Layer> layers,
+            Pallet pallet,
+            int slots,
+            bool preferFewerPallets,
+            TimeSpan timeLimit,
+            CancellationToken ct)
+        {
+            int layerCount = layers.Count;
+            if (layerCount <= 1 || slots < 1) return null;
             if ((long)layerCount * slots > MaxAssignmentCells) return null;
 
             var rules = new PricingRules(pallet);
@@ -122,11 +148,11 @@ namespace Stack_Solver.Services.BranchAndPrice
             var y = new Variable[skuCount, slots];       // SKU i present on slot s
             var used = new Variable[slots];              // slot s carries ≥ 1 layer
 
-            // Impurity objective is Σ_slots(distinctSkus − slotUsed). When extra slots are offered we
+            // Impurity objective is Σ_slots(distinctSkus − slotUsed). When surplus slots are offered we
             // add a tiny ε reward for leaving a slot unused (equivalently, a penalty for using it) so
             // that, among equal-impurity regroupings, the one with the fewest pallets wins. ε·slots < 1
             // keeps it strictly below any one-unit impurity gain, so it only ever breaks ties.
-            double eps = extra > 0 ? 1.0 / (slots + 1) : 0.0;
+            double eps = preferFewerPallets ? 1.0 / (slots + 1) : 0.0;
             double usedCoeff = -(1.0 - eps);
 
             var objective = solver.Objective();
@@ -222,11 +248,23 @@ namespace Stack_Solver.Services.BranchAndPrice
 
                 if (cuts.Count == 0)
                 {
-                    // Every pallet is stackable — materialize the regrouping, one column per pallet.
-                    var result = new List<(BnpColumn Column, int Count)>(pallets.Count);
+                    // Every pallet is stackable. Aggregate identical pallets (same SKU-count signature)
+                    // into one column with a count — matching how the main solution's columns are
+                    // grouped — so the UI shows "pallet type ×N" rather than N separate identical types.
+                    var order = new List<string>();
+                    var grouped = new Dictionary<string, (BnpColumn Column, int Count)>(StringComparer.Ordinal);
                     foreach (var ordered in pallets)
-                        result.Add((new BnpColumn(PalletTemplate.FromLayers(ordered)), 1));
-                    return result;
+                    {
+                        var column = new BnpColumn(PalletTemplate.FromLayers(ordered));
+                        if (grouped.TryGetValue(column.Signature, out var existing))
+                            grouped[column.Signature] = (existing.Column, existing.Count + 1);
+                        else
+                        {
+                            grouped[column.Signature] = (column, 1);
+                            order.Add(column.Signature);
+                        }
+                    }
+                    return order.Select(sig => grouped[sig]).ToList();
                 }
 
                 // Forbid each unstackable group from co-occupying any slot, then re-solve.
@@ -252,7 +290,7 @@ namespace Stack_Solver.Services.BranchAndPrice
         /// order is feasible.
         /// </summary>
         private static List<Layer>? TryFindStackingOrder(
-            List<int> group, List<Layer> layers, PricingRules rules, double tolerance)
+            List<int> group, IReadOnlyList<Layer> layers, PricingRules rules, double tolerance)
         {
             int n = group.Count;
             var order = new int[n];

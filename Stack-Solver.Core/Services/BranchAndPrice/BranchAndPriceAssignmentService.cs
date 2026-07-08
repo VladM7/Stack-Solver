@@ -138,9 +138,20 @@ namespace Stack_Solver.Services.BranchAndPrice
                 purer = new AssignmentResult { Assignments = purerAssignments, Leftovers = leftovers };
             }
 
+            // Level 2 (optional): a strictly purer arrangement with layers reformed pure at the box
+            // level. Like Solution B it covers the same demand with no leftovers of its own.
+            AssignmentResult? reformed = null;
+            if (search.ReformedColumns is { Count: > 0 } reformedColumns)
+            {
+                var reformedAssignments = reformedColumns
+                    .Select(c => (Materialize(c.Column.Template, pallet), c.Count))
+                    .ToList();
+                reformed = new AssignmentResult { Assignments = reformedAssignments, Leftovers = leftovers };
+            }
+
             return new BranchAndPriceSolution(
                 new AssignmentResult { Assignments = assignments, Leftovers = leftovers }, bound, search.ProvedOptimal,
-                search.Stats, purer);
+                search.Stats, purer, reformed);
         }
 
         /// <summary>Runs root-node column generation and returns the LP optimum and final pool.</summary>
@@ -328,12 +339,16 @@ namespace Stack_Solver.Services.BranchAndPrice
     /// <param name="PurerAlternative">A strictly-purer, zero-leftover assignment that spends a few
     /// extra pallets to reduce SKU mixing (Solution B), or null when none improves on
     /// <paramref name="Result"/>. Offered alongside — never the certified optimum.</param>
+    /// <param name="ReformedAlternative">A strictly-purer, zero-leftover assignment whose layers were
+    /// reformed pure at the box level (Level 2), or null when none improves on <paramref name="Result"/>.
+    /// Offered alongside and independently of <paramref name="PurerAlternative"/> — never the optimum.</param>
     public sealed record BranchAndPriceSolution(
         AssignmentResult Result,
         double LowerBound,
         bool LowerBoundCertified,
         BranchAndPriceStats? Stats = null,
-        AssignmentResult? PurerAlternative = null)
+        AssignmentResult? PurerAlternative = null,
+        AssignmentResult? ReformedAlternative = null)
     {
         /// <summary>Pallets used by the integer solution.</summary>
         public int Pallets => Result.TotalPallets;

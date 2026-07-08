@@ -558,6 +558,12 @@ namespace Stack_Solver.ViewModels.Pages
                 if (bnp.PurerAlternative is { Assignments.Count: > 0 } purer)
                     result.Add(new SolutionDisplay(result.Count + 1, "Branch & Price (purer)", purer, skus, _palletLength, _palletWidth, _palletHeight,
                         isProvenOptimal: false, lowerBound: bnp.LowerBound));
+
+                // Level 2: layers reformed pure at the box level. A physically distinct build from the
+                // regrouped alternative above, so it is surfaced as its own separate solution.
+                if (bnp.ReformedAlternative is { Assignments.Count: > 0 } reformed)
+                    result.Add(new SolutionDisplay(result.Count + 1, "Branch & Price (reformed)", reformed, skus, _palletLength, _palletWidth, _palletHeight,
+                        isProvenOptimal: false, lowerBound: bnp.LowerBound));
             }
             if (cpsatResult != null && cpsatResult.Assignments.Count > 0)
                 result.Add(new SolutionDisplay(result.Count + 1, "CP-SAT", cpsatResult, skus, _palletLength, _palletWidth, _palletHeight));
